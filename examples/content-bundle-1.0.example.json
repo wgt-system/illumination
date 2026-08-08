@@ -1,0 +1,56 @@
+{
+  "contract": "illumination.content-bundle",
+  "version": "1.0",
+  "bundleId": "java-basics-example",
+  "generatedFor": "Java interview preparation",
+  "operations": [
+    {
+      "op": "create_deck",
+      "localRef": "deck-java-basics",
+      "deck": {
+        "name": "Java Basics"
+      }
+    },
+    {
+      "op": "create_learning_item",
+      "localRef": "item-ssh",
+      "item": {
+        "prompt": "Wofür steht SSH?",
+        "referenceSolution": "Secure Shell",
+        "responseMode": "self_assessed",
+        "hints": [
+          "Das zweite S steht für Shell."
+        ],
+        "assistanceAnswerChoices": [
+          {
+            "id": "a",
+            "text": "Secure Shell",
+            "correct": true
+          },
+          {
+            "id": "b",
+            "text": "System Shell Host",
+            "correct": false
+          },
+          {
+            "id": "c",
+            "text": "Secure Socket Host",
+            "correct": false
+          }
+        ],
+        "lowInteractionEligible": true
+      }
+    },
+    {
+      "op": "assign_item_to_decks",
+      "item": {
+        "itemLocalRef": "item-ssh"
+      },
+      "decks": [
+        {
+          "deckLocalRef": "deck-java-basics"
+        }
+      ]
+    }
+  ]
+}

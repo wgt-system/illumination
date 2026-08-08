@@ -1,0 +1,122 @@
+# AGENTS.md
+
+## Project name
+
+The project name is **Illumination**.
+
+Do not introduce or use another project name or historical alias.
+
+## Purpose
+
+This repository contains Illumination, an independent bounded context for personal learning.
+
+The current phase is specification-first. Do not begin implementation until the domain, application design, public contracts, architecture, and acceptance criteria are sufficiently coherent.
+
+## Source of truth
+
+Repository documentation is the durable source of truth.
+
+Before proposing or implementing changes:
+
+1. read `README.md`,
+2. read the relevant files in `docs/`,
+3. identify explicit decisions and explicitly open questions,
+4. do not infer product behavior from analogies such as Anki unless the documentation states it.
+
+## Product boundaries
+
+Illumination owns:
+
+- learning content,
+- learning interactions,
+- reference solutions,
+- optional hints,
+- user-defined decks,
+- review history,
+- repetition state,
+- learning progress.
+
+Illumination does not own:
+
+- Vocation opportunities,
+- job-market research,
+- Vocation learning clusters as Vocation domain objects,
+- devices,
+- platform discovery,
+- generic service registration,
+- cross-application orchestration.
+
+## Integration rules
+
+Illumination is a separate bounded context from Vocation and Wiiii Got This.
+
+Do not introduce:
+
+- shared domain entities,
+- direct imports of foreign domain classes,
+- shared business-logic libraries that hide coupling,
+- direct persistence access across bounded contexts.
+
+Integration must use explicit published contracts.
+
+Shared physical infrastructure is not automatically forbidden, but domain ownership must remain separate.
+
+## Architecture discipline
+
+Do not invent:
+
+- a technology stack before the architecture documents justify it,
+- microservices merely because subdomains exist,
+- a server boundary merely because a server is available,
+- a local-only architecture merely because the application can run locally,
+- mobile-specific architecture merely because Wiiii Got This may later expose the service on mobile.
+
+A bounded context does not need multiple network services internally.
+
+## Working terminology
+
+Some terminology is still provisional.
+
+In particular:
+
+- `Learning Item` is a temporary neutral term for the smallest independently reviewable unit.
+- `Deck` is a temporary neutral term for an Anki-like user-defined deck/group.
+
+Do not silently turn these working terms into irreversible product decisions.
+
+## Implementation gate
+
+Implementation must wait until at least the following are coherent:
+
+- Domain Vision
+- Scenarios
+- Ubiquitous Language
+- Subdomains
+- Domain Model
+- Context Map
+- Application Design
+- required import/published contracts
+- Read Models
+- Architecture
+- Acceptance Tests
+- implementation plan
+- ADRs for actual architecture decisions
+
+## Agent behavior
+
+When a product decision is genuinely missing:
+
+- do not guess,
+- record the open decision,
+- continue with independent specification work where possible,
+- stop only when further progress would require choosing among materially different product semantics.
+
+Codex/Luna should later receive narrow implementation tasks only after the relevant contracts and acceptance criteria exist.
+
+## Data locality
+
+Authoritative learning data is local-first.
+
+Do not introduce a remote authoritative database or mandatory server dependency without an explicit new architecture decision.
+
+A local browser UI is not equivalent to a remotely hosted application.

@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://illumination.local/schemas/learning-content-bundle-1.0.schema.json",
+  "title": "Illumination Content Bundle 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "version",
+    "operations"
+  ],
+  "properties": {
+    "contract": {
+      "const": "illumination.content-bundle"
+    },
+    "version": {
+      "const": "1.0"
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "generatedFor": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "localRef": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "responseMode": {
+      "type": "string",
+      "enum": [
+        "self_assessed",
+        "selection",
+        "short_text",
+        "code"
+      ]
+    },
+    "answerChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/localRef"
+        },
+        "text": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "correct": {
+          "type": "boolean"
+        }
+      }
+    },
+    "itemPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prompt",
+        "referenceSolution",
+        "responseMode",
+        "lowInteractionEligible"
+      ],
+      "properties": {
+        "prompt": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "referenceSolution": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "responseMode": {
+          "$ref": "#/$defs/responseMode"
+        },
+        "hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          },
+          "default": []
+        },
+        "directAnswerChoices": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/answerChoice"
+          }
+        },
+        "assistanceAnswerChoices": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/answerChoice"
+          }
+        },
+        "acceptedShortAnswers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "lowInteractionEligible": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "responseMode": {
+                "const": "selection"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "directAnswerChoices"
+            ],
+            "properties": {
+              "directAnswerChoices": {
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "correct"
+                  ],
+                  "properties": {
+                    "correct": {
+                      "const": true
+                    }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "responseMode": {
+                "const": "short_text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "acceptedShortAnswers"
+            ]
+          }
+        }
+      ]
+    },
+    "deckPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "targetItemRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "itemId"
+          ],
+          "properties": {
+            "itemId": {
+              "$ref": "#/$defs/stableId"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "itemLocalRef"
+          ],
+          "properties": {
+            "itemLocalRef": {
+              "$ref": "#/$defs/localRef"
+            }
+          }
+        }
+      ]
+    },
+    "targetDeckRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deckId"
+          ],
+          "properties": {
+            "deckId": {
+              "$ref": "#/$defs/stableId"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deckLocalRef"
+          ],
+          "properties": {
+            "deckLocalRef": {
+              "$ref": "#/$defs/localRef"
+            }
+          }
+        }
+      ]
+    },
+    "createLearningItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "localRef",
+        "item"
+      ],
+      "properties": {
+        "op": {
+          "const": "create_learning_item"
+        },
+        "localRef": {
+          "$ref": "#/$defs/localRef"
+        },
+        "item": {
+          "$ref": "#/$defs/itemPayload"
+        }
+      }
+    },
+    "updateLearningItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "itemId",
+        "significance",
+        "item"
+      ],
+      "properties": {
+        "op": {
+          "const": "update_learning_item"
+        },
+        "itemId": {
+          "$ref": "#/$defs/stableId"
+        },
+        "significance": {
+          "type": "string",
+          "enum": [
+            "minor",
+            "semantic"
+          ]
+        },
+        "item": {
+          "$ref": "#/$defs/itemPayload"
+        }
+      }
+    },
+    "createDeck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "localRef",
+        "deck"
+      ],
+      "properties": {
+        "op": {
+          "const": "create_deck"
+        },
+        "localRef": {
+          "$ref": "#/$defs/localRef"
+        },
+        "deck": {
+          "$ref": "#/$defs/deckPayload"
+        }
+      }
+    },
+    "updateDeck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "deckId",
+        "deck"
+      ],
+      "properties": {
+        "op": {
+          "const": "update_deck"
+        },
+        "deckId": {
+          "$ref": "#/$defs/stableId"
+        },
+        "deck": {
+          "$ref": "#/$defs/deckPayload"
+        }
+      }
+    },
+    "assignItemToDecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "item",
+        "decks"
+      ],
+      "properties": {
+        "op": {
+          "const": "assign_item_to_decks"
+        },
+        "item": {
+          "$ref": "#/$defs/targetItemRef"
+        },
+        "decks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/targetDeckRef"
+          }
+        }
+      }
+    },
+    "operation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/createLearningItem"
+        },
+        {
+          "$ref": "#/$defs/updateLearningItem"
+        },
+        {
+          "$ref": "#/$defs/createDeck"
+        },
+        {
+          "$ref": "#/$defs/updateDeck"
+        },
+        {
+          "$ref": "#/$defs/assignItemToDecks"
+        }
+      ]
+    }
+  }
+}
