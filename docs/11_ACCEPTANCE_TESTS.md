@@ -261,13 +261,14 @@ And does not expose internal persistence or mutable domain objects.
 
 ## 15. Wiiii Got This Boundary
 
-Given Wiiii Got This is unavailable
-When the learner launches Illumination through its independent presentation
-Then core Illumination workflows remain usable.
+Given Wiiii Got This presents Illumination on Windows or iPhone
+When the learner invokes an Illumination capability
+Then the capability executes through an Illumination-owned application boundary
+And Illumination remains authoritative for the resulting learning-state change.
 
-Given a future Wiiii Got This capability integration
-When a capability is invoked
-Then Illumination remains authoritative for the resulting learning-state change.
+Given Wiiii Got This is unavailable
+When Illumination runtime/application capabilities are invoked locally
+Then core Illumination workflows remain available without requiring Wiiii Got This.
 
 ## 16. Acceptance Scope Notes
 
@@ -312,10 +313,15 @@ And it is not automatically marked Mastered.
 
 A normal Review never automatically Suspends or Masters an item.
 
-## 20. Reactivation
+## 20. Lifecycle Reactivation
 
-Given a Suspended or Mastered item
-When the learner reactivates it
+Given a Suspended item
+When the learner Reactivates it
+Then its prior Review history remains
+And it becomes immediately due.
+
+Given a Mastered item
+When the learner Unmarks Mastered
 Then its prior Review history remains
 And it becomes immediately due.
 
@@ -367,8 +373,8 @@ And current scheduling state resets to new.
 
 ## 26. Local-First Operation
 
-Given remote infrastructure is unavailable
-When Illumination is used through its independent local presentation
+Given no remote server is available
+When Illumination runtime/application capabilities are invoked locally
 Then core content, study, Review, scheduling, Deck, progress, and import workflows remain usable from local authoritative data.
 
 
@@ -411,11 +417,11 @@ Then Illumination creates a local backup before mutating the database.
 Given normal operation
 Then rolling local backups can be produced without remote infrastructure.
 
-## 31. Installed Local Operation
+## 31. Local Capability-Runtime Operation
 
 Given the remote network is unavailable
-When the learner starts the installed Illumination desktop application
-Then the local SQLite-backed core workflows remain usable.
+When Illumination runtime/application capabilities are invoked locally
+Then the local SQLite-backed core workflows remain usable without requiring a standalone Illumination UI.
 
 ## 32. Lapse After Long Stability
 
