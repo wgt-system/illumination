@@ -138,6 +138,10 @@ public sealed class StudySessionPersistenceTests
         await using var context = fixture.CreateContext();
         var item = await context.LearningItems.SingleAsync(x => x.LearningItemId == itemId);
         Assert.Equal("v0.1 prompt", item.Prompt);
+        Assert.Equal("v0.1 solution", item.ReferenceSolutionContent);
+        Assert.Equal(LearningItemLifecycleState.Active, item.LifecycleState);
+        Assert.True(item.IsNew);
+        Assert.Equal(fixture.Now, item.DueAt);
         Assert.Equal(deckId, (await context.DeckLearningItems.SingleAsync()).DeckId);
         Assert.Equal(5.0, item.Difficulty);
         Assert.Equal(0.5, item.StabilityDays);

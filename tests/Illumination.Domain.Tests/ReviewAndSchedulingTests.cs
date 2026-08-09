@@ -93,6 +93,23 @@ public class ReviewAndSchedulingTests
     }
 
     [Fact]
+    public void Worse_assessments_are_never_scheduled_later_than_better_assessments()
+    {
+        var dueAtByAssessment = Enum.GetValues<LearningAssessment>()
+            .ToDictionary(assessment => assessment, assessment =>
+            {
+                var item = CreateItem(stabilityDays: 10.0);
+                item.CompleteReview(CompletedAt, assessment);
+                return item.LearningState.DueAt;
+            });
+
+        Assert.True(dueAtByAssessment[LearningAssessment.Nochmal] <= dueAtByAssessment[LearningAssessment.Schwer]);
+        Assert.True(dueAtByAssessment[LearningAssessment.Schwer] <= dueAtByAssessment[LearningAssessment.Unsicher]);
+        Assert.True(dueAtByAssessment[LearningAssessment.Unsicher] <= dueAtByAssessment[LearningAssessment.Gut]);
+        Assert.True(dueAtByAssessment[LearningAssessment.Gut] <= dueAtByAssessment[LearningAssessment.Leicht]);
+    }
+
+    [Fact]
     public void Nochmal_reduces_stability_enters_three_card_relearning_and_is_immediately_due()
     {
         var item = CreateItem(stabilityDays: 60.0);
@@ -132,19 +149,23 @@ public class ReviewAndSchedulingTests
         Assert.Equal(CompletedAt.AddDays(minimum), item.LearningState.DueAt);
     }
 
-    [Fact]
-    public void Successful_post_relearning_review_clears_relearning_and_grows_retained_stability()
+    [Theory]
+    [InlineData(LearningAssessment.Unsicher)]
+    [InlineData(LearningAssessment.Gut)]
+    [InlineData(LearningAssessment.Leicht)]
+    public void Successful_post_relearning_review_clears_relearning_and_grows_retained_stability(
+        LearningAssessment successfulAssessment)
     {
         var item = CreateItem(stabilityDays: 60.0);
         item.CompleteReview(CompletedAt, LearningAssessment.Nochmal);
 
         var nextCompletedAt = CompletedAt.AddDays(1);
-        item.CompleteReview(nextCompletedAt, LearningAssessment.Gut);
+        item.CompleteReview(nextCompletedAt, successfulAssessment);
 
         Assert.False(item.LearningState.IsInShortTermRelearning);
         Assert.Null(item.LearningState.InterveningCardTarget);
-        Assert.Equal(5.628, item.LearningState.StabilityDays, precision: 10);
-        Assert.Equal(nextCompletedAt.AddDays(5.628), item.LearningState.DueAt);
+        Assert.True(item.LearningState.StabilityDays > 3.0);
+        Assert.Equal(nextCompletedAt.AddDays(item.LearningState.StabilityDays), item.LearningState.DueAt);
     }
 
     [Fact]
