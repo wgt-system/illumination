@@ -36,7 +36,7 @@ public static class DomainPersistenceMapper
     public static LearningItem ToDomain(LearningItemRecord record)
     {
         var choices = record.AnswerChoices.OrderBy(x => x.Role).ThenBy(x => x.Position);
-        return LearningItem.Rehydrate(
+        return LearningItem.Restore(
             LearningItemId.From(record.LearningItemId), record.Prompt, record.ReferenceSolutionContent,
             record.DueAt, record.IsNew, record.ResponseMode,
             record.Hints.OrderBy(x => x.Position).Select(x => new Hint(x.Text)),

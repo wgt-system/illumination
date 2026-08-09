@@ -86,7 +86,7 @@ public sealed class LearningItem
             lowInteractionEligible);
     }
 
-    internal static LearningItem Rehydrate(
+    public static LearningItem Restore(
         LearningItemId id,
         string prompt,
         string referenceSolution,
