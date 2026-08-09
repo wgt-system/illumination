@@ -25,7 +25,6 @@ internal static class PersistenceModelConfiguration
         learningItems.Property(x => x.Difficulty).HasColumnName("Difficulty").IsRequired();
         learningItems.Property(x => x.StabilityDays).HasColumnName("StabilityDays").IsRequired();
         learningItems.Property(x => x.IsInShortTermRelearning).HasColumnName("IsInShortTermRelearning").IsRequired();
-        learningItems.Property(x => x.InterveningCardTarget).HasColumnName("InterveningCardTarget");
         learningItems.HasIndex(x => x.DueAt).HasDatabaseName("IX_LearningItems_DueAt");
         learningItems.HasMany(x => x.Hints).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         learningItems.HasMany(x => x.AnswerChoices).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);

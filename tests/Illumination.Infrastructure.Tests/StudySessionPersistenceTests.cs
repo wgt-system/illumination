@@ -29,7 +29,7 @@ public sealed class StudySessionPersistenceTests
         await persistence.SaveStartedStudySessionAsync(started);
 
         var updatedItem = fixture.CreateSnapshot(itemId, deckId, isNew: false, dueAt: fixture.Now.AddDays(2), difficulty: 5.6,
-            stabilityDays: 2.0, isRelearning: false, interveningCardTarget: null);
+            stabilityDays: 2.0, isRelearning: false);
         var review = new StudyReviewSnapshot(reviewId, itemId, fixture.Now, StudyLearningAssessment.Gut, "submitted answer");
         var completed = started with { Queue = [], ReviewIds = [reviewId] };
         await persistence.CommitReviewAsync(updatedItem, review, completed);
@@ -44,7 +44,6 @@ public sealed class StudySessionPersistenceTests
         Assert.Equal(5.6, item.Difficulty);
         Assert.Equal(2.0, item.StabilityDays);
         Assert.False(item.IsInShortTermRelearning);
-        Assert.Null(item.InterveningCardTarget);
         Assert.Equal([deckId], session.SelectedDeckIds);
         Assert.Empty(session.Queue);
         Assert.Equal([reviewId], session.ReviewIds);
@@ -61,7 +60,7 @@ public sealed class StudySessionPersistenceTests
         await fixture.SeedItemAndDeckAsync(itemId, deckId);
         var persistence = fixture.CreatePersistence();
         var updatedItem = fixture.CreateSnapshot(itemId, deckId, isNew: false, dueAt: fixture.Now.AddDays(2), difficulty: 6.0,
-            stabilityDays: 2.0, isRelearning: false, interveningCardTarget: null);
+            stabilityDays: 2.0, isRelearning: false);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => persistence.CommitReviewAsync(
             updatedItem,
@@ -146,8 +145,39 @@ public sealed class StudySessionPersistenceTests
         Assert.Equal(5.0, item.Difficulty);
         Assert.Equal(0.5, item.StabilityDays);
         Assert.False(item.IsInShortTermRelearning);
-        Assert.Null(item.InterveningCardTarget);
         Assert.Empty(await context.Reviews.ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task V02_to_v03_migration_preserves_reinforcement_state_history_and_backup()
+    {
+        using var fixture = new DatabaseFixture();
+        await fixture.MigrateV02Async();
+        var itemId = Guid.NewGuid();
+        var deckId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        await fixture.SeedV02StateAsync(itemId, deckId, sessionId, reviewId);
+        var backupService = new LocalSqliteBackupService(fixture.BackupDirectory, 2, fixture.FixedTimeProvider);
+        var coordinator = new SqliteMigrationCoordinator(fixture.CreateOptions(), backupService);
+
+        await coordinator.MigrateAsync();
+
+        var backup = Assert.Single(Directory.GetFiles(fixture.BackupDirectory, "illumination-backup-*.sqlite"));
+        Assert.True(DatabaseFixture.HasColumn(backup, "LearningItems", "InterveningCardTarget"));
+        Assert.Equal(3L, DatabaseFixture.ReadScalar<long>(backup, "SELECT InterveningCardTarget FROM LearningItems WHERE LearningItemId = $id", itemId));
+        Assert.False(DatabaseFixture.HasColumn(fixture.DatabasePath, "LearningItems", "InterveningCardTarget"));
+
+        await using var context = fixture.CreateContext();
+        var item = await context.LearningItems.SingleAsync(x => x.LearningItemId == itemId);
+        var session = await context.StudySessions.Include(x => x.Queue).Include(x => x.Reviews).SingleAsync(x => x.StudySessionId == sessionId);
+        Assert.Equal(8.25, item.Difficulty);
+        Assert.Equal(2.75, item.StabilityDays);
+        Assert.True(item.IsInShortTermRelearning);
+        Assert.Equal(fixture.Now, item.DueAt);
+        Assert.Single(await context.Reviews.Where(x => x.ReviewId == reviewId).ToArrayAsync());
+        Assert.Single(session.Queue);
+        Assert.Single(session.Reviews);
     }
 
     private sealed class DatabaseFixture : IDisposable
@@ -187,6 +217,13 @@ public sealed class StudySessionPersistenceTests
             await migrator.MigrateAsync("20260809050452_InitialPersistence");
         }
 
+        public async Task MigrateV02Async()
+        {
+            await using var context = CreateContext();
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync("20260809183047_PersistV02StudyAndReviewState");
+        }
+
         public async Task SeedItemAndDeckAsync(Guid itemId, Guid deckId)
         {
             await using var context = CreateContext();
@@ -217,11 +254,56 @@ public sealed class StudySessionPersistenceTests
             await command.ExecuteNonQueryAsync();
         }
 
+        public async Task SeedV02StateAsync(Guid itemId, Guid deckId, Guid sessionId, Guid reviewId)
+        {
+            await using var connection = new SqliteConnection($"Data Source={DatabasePath};Pooling=False");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO LearningItems (LearningItemId, Prompt, ReferenceSolutionContent, ResponseMode, LowInteractionEligible, LifecycleState, IsNew, DueAt, Difficulty, StabilityDays, IsInShortTermRelearning, InterveningCardTarget) VALUES ($itemId, 'v0.2 prompt', 'v0.2 solution', 'SelfAssessed', 0, 'Active', 0, $dueAt, 8.25, 2.75, 1, 3);";
+            command.Parameters.AddWithValue("$itemId", itemId);
+            command.Parameters.AddWithValue("$dueAt", Now.ToUniversalTime().ToString("O"));
+            await command.ExecuteNonQueryAsync();
+            command.Parameters.Clear();
+            command.CommandText = "INSERT INTO Decks (DeckId, Name) VALUES ($deckId, 'v0.2 deck'); INSERT INTO DeckLearningItems (DeckId, LearningItemId) VALUES ($deckId, $itemId);";
+            command.Parameters.AddWithValue("$deckId", deckId);
+            command.Parameters.AddWithValue("$itemId", itemId);
+            await command.ExecuteNonQueryAsync();
+            command.Parameters.Clear();
+            command.CommandText = "INSERT INTO Reviews (ReviewId, LearningItemId, CompletedAt, Assessment, SubmittedResponse) VALUES ($reviewId, $itemId, $completedAt, 'Gut', 'opaque'); INSERT INTO StudySessions (StudySessionId, StartedAt, CompletedAt) VALUES ($sessionId, $startedAt, NULL); INSERT INTO StudySessionDecks (StudySessionId, DeckId) VALUES ($sessionId, $deckId); INSERT INTO StudySessionQueue (StudySessionId, Position, LearningItemId) VALUES ($sessionId, 0, $itemId); INSERT INTO StudySessionReviews (StudySessionId, Position, ReviewId) VALUES ($sessionId, 0, $reviewId);";
+            command.Parameters.AddWithValue("$reviewId", reviewId);
+            command.Parameters.AddWithValue("$itemId", itemId);
+            command.Parameters.AddWithValue("$completedAt", Now.ToUniversalTime().ToString("O"));
+            command.Parameters.AddWithValue("$sessionId", sessionId);
+            command.Parameters.AddWithValue("$startedAt", Now.ToUniversalTime().ToString("O"));
+            command.Parameters.AddWithValue("$deckId", deckId);
+            await command.ExecuteNonQueryAsync();
+        }
+
+        public static bool HasColumn(string databasePath, string tableName, string columnName)
+        {
+            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1 FROM pragma_table_info($table) WHERE name = $column";
+            command.Parameters.AddWithValue("$table", tableName);
+            command.Parameters.AddWithValue("$column", columnName);
+            return command.ExecuteScalar() is not null;
+        }
+
+        public static T ReadScalar<T>(string databasePath, string sql, Guid parameter)
+        {
+            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.AddWithValue("$id", parameter);
+            return (T)Convert.ChangeType(command.ExecuteScalar()!, typeof(T));
+        }
+
         public StudyLearningItemSnapshot CreateSnapshot(Guid itemId, Guid deckId, bool isNew, DateTimeOffset dueAt,
-            double difficulty, double stabilityDays, bool isRelearning, int? interveningCardTarget) => new(
+            double difficulty, double stabilityDays, bool isRelearning) => new(
             itemId, "prompt", "solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false,
-            LearningItemLifecycle.Active, isNew, dueAt, difficulty, stabilityDays, isRelearning,
-            interveningCardTarget, [deckId]);
+            LearningItemLifecycle.Active, isNew, dueAt, difficulty, stabilityDays, isRelearning, [deckId]);
 
         public void Dispose()
         {

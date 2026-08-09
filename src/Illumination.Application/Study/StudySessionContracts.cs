@@ -41,6 +41,26 @@ public sealed record StudyReviewResult(
     DateTimeOffset CompletedAt,
     StudySessionView Session);
 
+public sealed record StudyAssessmentPreview(
+    StudyLearningAssessment Assessment,
+    bool RemainsInSession,
+    bool Graduates,
+    int? ProjectedInterveningEntryCount,
+    int? ProjectedQueuePosition,
+    DateTimeOffset? ProjectedDueAt);
+
+public sealed record StudySessionQueueItemView(
+    Guid Id,
+    string Prompt,
+    bool ReinforcementRequired);
+
+public sealed record StudySessionTransparencyView(
+    StudySessionView Session,
+    StudySessionQueueItemView? CurrentItem,
+    int RemainingQueueEntryCount,
+    IReadOnlyList<StudySessionQueueItemView> UpcomingItems,
+    IReadOnlyList<StudyAssessmentPreview> AssessmentPreviews);
+
 public sealed record StudyDeckSnapshot(Guid Id, IReadOnlyList<Guid> LearningItemIds);
 
 public sealed record StudyLearningItemSnapshot(
@@ -59,7 +79,6 @@ public sealed record StudyLearningItemSnapshot(
     double Difficulty,
     double StabilityDays,
     bool IsInShortTermRelearning,
-    int? InterveningCardTarget,
     IReadOnlyList<Guid> DeckIds);
 
 public sealed record StudyReviewSnapshot(

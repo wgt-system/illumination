@@ -24,8 +24,7 @@ public sealed class LearningItem
         bool isNew = true,
         double difficulty = 5.0,
         double stabilityDays = 0.5,
-        bool isInShortTermRelearning = false,
-        int? interveningCardTarget = null)
+        bool isInShortTermRelearning = false)
     {
         DomainText.RequireNonWhitespace(prompt, nameof(prompt));
 
@@ -41,7 +40,7 @@ public sealed class LearningItem
         ResponseMode = responseMode;
         LowInteractionEligible = lowInteractionEligible;
         LifecycleState = lifecycleState;
-        LearningState = new LearningState(isNew, initialDueAt, difficulty, stabilityDays, isInShortTermRelearning, interveningCardTarget);
+        LearningState = new LearningState(isNew, initialDueAt, difficulty, stabilityDays, isInShortTermRelearning);
     }
 
     public LearningItemId Id { get; }
@@ -107,7 +106,7 @@ public sealed class LearningItem
         return Restore(
             id, prompt, referenceSolution, dueAt, isNew, responseMode, hints, directAnswerChoices,
             assistanceAnswerChoices, acceptedShortAnswers, lowInteractionEligible, lifecycleState,
-            difficulty: 5.0, stabilityDays: 0.5, isInShortTermRelearning: false, interveningCardTarget: null);
+            difficulty: 5.0, stabilityDays: 0.5, isInShortTermRelearning: false);
     }
 
     public static LearningItem Restore(
@@ -125,14 +124,13 @@ public sealed class LearningItem
         LearningItemLifecycleState lifecycleState,
         double difficulty,
         double stabilityDays,
-        bool isInShortTermRelearning,
-        int? interveningCardTarget)
+        bool isInShortTermRelearning)
     {
         return new LearningItem(
             id, prompt, new ReferenceSolution(referenceSolution), dueAt, responseMode,
             hints, directAnswerChoices, assistanceAnswerChoices, acceptedShortAnswers,
             lowInteractionEligible, lifecycleState, isNew, difficulty, stabilityDays,
-            isInShortTermRelearning, interveningCardTarget);
+            isInShortTermRelearning);
     }
 
     public static LearningItem Create(
@@ -242,6 +240,12 @@ public sealed class LearningItem
         var review = Review.Create(Id, completedAt, assessment, submittedResponse);
         LearningState.ApplyReview(completedAt, assessment);
         return review;
+    }
+
+    public LearningStateProjection PreviewReview(DateTimeOffset completedAt, LearningAssessment assessment)
+    {
+        RequireLifecycleState(LearningItemLifecycleState.Active);
+        return LearningState.ProjectReview(completedAt, assessment);
     }
 
     private void RequireLifecycleState(LearningItemLifecycleState expected)

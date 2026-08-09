@@ -68,6 +68,44 @@ public sealed class StudySessionService
         return new StudySessionItemView(item.Id, item.Prompt, item.ReferenceSolution);
     }
 
+    public async Task<IReadOnlyList<StudyAssessmentPreview>> GetAssessmentPreviewsAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await LoadSessionAsync(sessionId, cancellationToken);
+        var item = await LoadCurrentItemAsync(session, cancellationToken);
+        return BuildAssessmentPreviews(session, item, _timeProvider.GetUtcNow());
+    }
+
+    public async Task<StudySessionTransparencyView> GetStudySessionTransparencyAsync(
+        Guid sessionId,
+        int maxUpcomingEntries = 5,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxUpcomingEntries < 0)
+        {
+            throw new StudyValidationException("The upcoming-entry limit must not be negative.");
+        }
+
+        var session = await LoadSessionAsync(sessionId, cancellationToken);
+        if (session.Queue.Count == 0)
+        {
+            return new StudySessionTransparencyView(ToView(session), null, 0, [], []);
+        }
+
+        var current = await LoadQueueItemAsync(session.Queue[0], cancellationToken);
+        var upcomingSnapshots = new List<StudyLearningItemSnapshot>();
+        foreach (var id in session.Queue.Skip(1).Take(maxUpcomingEntries))
+        {
+            upcomingSnapshots.Add(await LoadQueueItemAsync(id, cancellationToken));
+        }
+
+        return new StudySessionTransparencyView(
+            ToView(session),
+            ToQueueItemView(current),
+            session.Queue.Count - 1,
+            upcomingSnapshots.Select(ToQueueItemView).ToArray(),
+            BuildAssessmentPreviews(session, current, _timeProvider.GetUtcNow()));
+    }
+
     public async Task<StudyReviewResult> SubmitReviewAsync(SubmitStudyReviewCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -91,11 +129,25 @@ public sealed class StudySessionService
             ?? throw new StudyNotFoundException($"Learning Item '{command.LearningItemId}' was not found.");
         var item = ToDomain(snapshot);
         var completedAt = _timeProvider.GetUtcNow();
-        var review = item.CompleteReview(completedAt, ToDomain(command.Assessment), command.SubmittedResponse);
-        var updatedQueue = session.Queue.Where(id => id != command.LearningItemId).ToList();
-        if (item.LearningState.IsInShortTermRelearning)
+        var assessment = ToDomain(command.Assessment);
+        var review = item.CompleteReview(completedAt, assessment, command.SubmittedResponse);
+        var updatedQueue = session.Queue.Skip(1).ToList();
+        switch (assessment)
         {
-            InsertRelearningItem(updatedQueue, command.LearningItemId, item.LearningState.InterveningCardTarget!.Value);
+            case LearningAssessment.Nochmal:
+                InsertReinforcementItem(updatedQueue, command.LearningItemId, 1);
+                break;
+            case LearningAssessment.Schwer:
+                InsertReinforcementItem(updatedQueue, command.LearningItemId, 5);
+                break;
+            case LearningAssessment.Unsicher:
+                updatedQueue.Add(command.LearningItemId);
+                break;
+            case LearningAssessment.Gut:
+            case LearningAssessment.Leicht:
+                break;
+            default:
+                throw new StudyValidationException("Unsupported Study Learning Assessment.");
         }
 
         var updatedSession = session with
@@ -126,6 +178,20 @@ public sealed class StudySessionService
         await _persistence.FindStudySessionAsync(sessionId, cancellationToken)
         ?? throw new StudyNotFoundException($"Study Session '{sessionId}' was not found.");
 
+    private async Task<StudyLearningItemSnapshot> LoadCurrentItemAsync(StudySessionSnapshot session, CancellationToken cancellationToken)
+    {
+        if (session.Queue.Count == 0)
+        {
+            throw new StudyValidationException("The Study Session has no current queue item.");
+        }
+
+        return await LoadQueueItemAsync(session.Queue[0], cancellationToken);
+    }
+
+    private async Task<StudyLearningItemSnapshot> LoadQueueItemAsync(Guid id, CancellationToken cancellationToken) =>
+        await _persistence.FindLearningItemAsync(id, cancellationToken)
+        ?? throw new StudyNotFoundException($"Learning Item '{id}' was not found.");
+
     private IReadOnlyList<Guid> Order(IReadOnlyList<Guid> ids)
     {
         var ordered = _ordering.Order(ids);
@@ -137,18 +203,46 @@ public sealed class StudySessionService
         return ordered;
     }
 
-    private static void InsertRelearningItem(List<Guid> queue, Guid learningItemId, int target)
+    private static void InsertReinforcementItem(List<Guid> queue, Guid learningItemId, int target)
     {
-        queue.RemoveAll(id => id == learningItemId);
-        if (queue.Count == 0)
-        {
-            return;
-        }
-
         queue.Insert(queue.Count >= target ? target : queue.Count, learningItemId);
     }
 
-    private static bool IsActive(StudyLearningItemSnapshot item) => item.Lifecycle == LearningItemLifecycle.Active;
+    private static IReadOnlyList<StudyAssessmentPreview> BuildAssessmentPreviews(
+        StudySessionSnapshot session,
+        StudyLearningItemSnapshot snapshot,
+        DateTimeOffset completedAt)
+    {
+        var item = ToDomain(snapshot);
+        var remainingCount = session.Queue.Count - 1;
+        return Enum.GetValues<StudyLearningAssessment>()
+            .Select(assessment =>
+            {
+                var projection = item.PreviewReview(completedAt, ToDomain(assessment));
+                var graduates = assessment is StudyLearningAssessment.Gut or StudyLearningAssessment.Leicht;
+                if (graduates)
+                {
+                    return new StudyAssessmentPreview(assessment, false, true, null, null, projection.DueAt);
+                }
+
+                var intervening = assessment switch
+                {
+                    StudyLearningAssessment.Nochmal => Math.Min(1, remainingCount),
+                    StudyLearningAssessment.Schwer => Math.Min(5, remainingCount),
+                    StudyLearningAssessment.Unsicher => remainingCount,
+                    _ => throw new StudyValidationException("Unsupported Study Learning Assessment."),
+                };
+                return new StudyAssessmentPreview(assessment, true, false, intervening, intervening, null);
+            })
+            .ToArray();
+    }
+
+    private static bool IsActive(StudyLearningItemSnapshot item) => item.Lifecycle switch
+    {
+        LearningItemLifecycle.Active => true,
+        LearningItemLifecycle.Suspended or LearningItemLifecycle.Mastered => false,
+        _ => throw new StudyValidationException("Unsupported Learning Item lifecycle."),
+    };
 
     private static IReadOnlyList<Guid> ValidateSelectedDecks(IReadOnlyList<Guid>? deckIds)
     {
@@ -183,6 +277,8 @@ public sealed class StudySessionService
 
     private static StudySessionView ToView(StudySessionSnapshot session) => new(session.Id, session.StartedAt, session.CompletedAt, session.SelectedDeckIds, session.Queue, session.ReviewIds);
 
+    private static StudySessionQueueItemView ToQueueItemView(StudyLearningItemSnapshot snapshot) => new(snapshot.Id, snapshot.Prompt, snapshot.IsInShortTermRelearning);
+
     private static StudyLearningItemSnapshot ToSnapshot(LearningItem item, IReadOnlyList<Guid> deckIds) => new(
         item.Id.Value, item.Prompt, item.ReferenceSolution.Content, ToApplication(item.ResponseMode),
         item.Hints.Select(x => new HintSnapshot(x.Text)).ToArray(),
@@ -190,8 +286,7 @@ public sealed class StudySessionService
         item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
         item.AcceptedShortAnswers.ToArray(), item.LowInteractionEligible, ToApplication(item.LifecycleState),
         item.LearningState.IsNew, item.LearningState.DueAt, item.LearningState.Difficulty,
-        item.LearningState.StabilityDays, item.LearningState.IsInShortTermRelearning,
-        item.LearningState.InterveningCardTarget, deckIds);
+        item.LearningState.StabilityDays, item.LearningState.IsInShortTermRelearning, deckIds);
 
     private static LearningItem ToDomain(StudyLearningItemSnapshot snapshot) => LearningItem.Restore(
         LearningItemId.From(snapshot.Id), snapshot.Prompt, snapshot.ReferenceSolution, snapshot.DueAt,
@@ -199,7 +294,7 @@ public sealed class StudySessionService
         snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)), snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible, ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays,
-        snapshot.IsInShortTermRelearning, snapshot.InterveningCardTarget);
+        snapshot.IsInShortTermRelearning);
 
     private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
     {

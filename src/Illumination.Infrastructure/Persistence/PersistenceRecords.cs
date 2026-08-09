@@ -17,7 +17,6 @@ public sealed class LearningItemRecord
     public double Difficulty { get; set; }
     public double StabilityDays { get; set; }
     public bool IsInShortTermRelearning { get; set; }
-    public int? InterveningCardTarget { get; set; }
     public List<HintRecord> Hints { get; } = [];
     public List<AnswerChoiceRecord> AnswerChoices { get; } = [];
     public List<AcceptedShortAnswerRecord> AcceptedShortAnswers { get; } = [];

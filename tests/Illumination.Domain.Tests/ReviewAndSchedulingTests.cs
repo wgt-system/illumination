@@ -35,7 +35,6 @@ public class ReviewAndSchedulingTests
         Assert.Equal(5.0, item.LearningState.Difficulty);
         Assert.Equal(0.5, item.LearningState.StabilityDays);
         Assert.False(item.LearningState.IsInShortTermRelearning);
-        Assert.Null(item.LearningState.InterveningCardTarget);
     }
 
     [Fact]
@@ -82,14 +81,14 @@ public class ReviewAndSchedulingTests
     }
 
     [Fact]
-    public void Positive_growth_uses_the_post_clamp_difficulty()
+    public void Gut_growth_uses_the_post_clamp_difficulty()
     {
         var item = CreateItem(difficulty: 9.0, stabilityDays: 10.0);
 
-        item.CompleteReview(CompletedAt, LearningAssessment.Unsicher);
+        item.CompleteReview(CompletedAt, LearningAssessment.Gut);
 
-        Assert.Equal(9.15, item.LearningState.Difficulty, precision: 10);
-        Assert.Equal(11.019, item.LearningState.StabilityDays, precision: 10);
+        Assert.Equal(8.80, item.LearningState.Difficulty, precision: 10);
+        Assert.Equal(16.408, item.LearningState.StabilityDays, precision: 10);
     }
 
     [Fact]
@@ -110,7 +109,7 @@ public class ReviewAndSchedulingTests
     }
 
     [Fact]
-    public void Nochmal_reduces_stability_enters_three_card_relearning_and_is_immediately_due()
+    public void Nochmal_reduces_stability_requires_reinforcement_and_is_immediately_due()
     {
         var item = CreateItem(stabilityDays: 60.0);
 
@@ -118,12 +117,11 @@ public class ReviewAndSchedulingTests
 
         Assert.Equal(3.0, item.LearningState.StabilityDays);
         Assert.True(item.LearningState.IsInShortTermRelearning);
-        Assert.Equal(3, item.LearningState.InterveningCardTarget);
         Assert.Equal(CompletedAt, item.LearningState.DueAt);
     }
 
     [Fact]
-    public void Schwer_reduces_stability_enters_ten_card_relearning_and_is_immediately_due()
+    public void Schwer_reduces_stability_requires_reinforcement_and_is_immediately_due()
     {
         var item = CreateItem(stabilityDays: 60.0);
 
@@ -131,15 +129,13 @@ public class ReviewAndSchedulingTests
 
         Assert.Equal(7.0, item.LearningState.StabilityDays);
         Assert.True(item.LearningState.IsInShortTermRelearning);
-        Assert.Equal(10, item.LearningState.InterveningCardTarget);
         Assert.Equal(CompletedAt, item.LearningState.DueAt);
     }
 
     [Theory]
-    [InlineData(LearningAssessment.Unsicher, 1.0)]
     [InlineData(LearningAssessment.Gut, 2.0)]
     [InlineData(LearningAssessment.Leicht, 4.0)]
-    public void Positive_assessments_respect_minimum_stability(LearningAssessment assessment, double minimum)
+    public void Graduating_assessments_respect_minimum_stability(LearningAssessment assessment, double minimum)
     {
         var item = CreateItem(stabilityDays: 0.5);
 
@@ -150,7 +146,6 @@ public class ReviewAndSchedulingTests
     }
 
     [Theory]
-    [InlineData(LearningAssessment.Unsicher)]
     [InlineData(LearningAssessment.Gut)]
     [InlineData(LearningAssessment.Leicht)]
     public void Successful_post_relearning_review_clears_relearning_and_grows_retained_stability(
@@ -163,9 +158,39 @@ public class ReviewAndSchedulingTests
         item.CompleteReview(nextCompletedAt, successfulAssessment);
 
         Assert.False(item.LearningState.IsInShortTermRelearning);
-        Assert.Null(item.LearningState.InterveningCardTarget);
         Assert.True(item.LearningState.StabilityDays > 3.0);
         Assert.Equal(nextCompletedAt.AddDays(item.LearningState.StabilityDays), item.LearningState.DueAt);
+    }
+
+    [Fact]
+    public void Unsicher_preserves_stability_requires_reinforcement_and_is_immediately_due()
+    {
+        var item = CreateItem(stabilityDays: 12.0);
+
+        item.CompleteReview(CompletedAt, LearningAssessment.Unsicher);
+
+        Assert.Equal(12.0, item.LearningState.StabilityDays);
+        Assert.True(item.LearningState.IsInShortTermRelearning);
+        Assert.Equal(CompletedAt, item.LearningState.DueAt);
+        Assert.False(item.LearningState.IsNew);
+    }
+
+    [Fact]
+    public void Review_projection_is_side_effect_free_and_matches_actual_transition()
+    {
+        var item = CreateItem(difficulty: 6.0, stabilityDays: 4.0);
+        var before = item.LearningState;
+
+        var projection = item.PreviewReview(CompletedAt, LearningAssessment.Gut);
+
+        Assert.Same(before, item.LearningState);
+        Assert.Equal(6.0, item.LearningState.Difficulty);
+        var review = item.CompleteReview(CompletedAt, LearningAssessment.Gut);
+        Assert.Equal(LearningAssessment.Gut, review.Assessment);
+        Assert.Equal(projection.Difficulty, item.LearningState.Difficulty);
+        Assert.Equal(projection.StabilityDays, item.LearningState.StabilityDays);
+        Assert.Equal(projection.DueAt, item.LearningState.DueAt);
+        Assert.Equal(projection.IsInShortTermRelearning, item.LearningState.IsInShortTermRelearning);
     }
 
     [Fact]
@@ -218,14 +243,12 @@ public class ReviewAndSchedulingTests
         mastered.CompleteReview(CompletedAt, LearningAssessment.Nochmal);
         var masteredDifficulty = mastered.LearningState.Difficulty;
         var masteredStability = mastered.LearningState.StabilityDays;
-        var masteredTarget = mastered.LearningState.InterveningCardTarget;
         mastered.MarkMastered();
         var unmarkedAt = CompletedAt.AddDays(4);
         mastered.UnmarkMastered(unmarkedAt);
 
         Assert.Equal(masteredDifficulty, mastered.LearningState.Difficulty);
         Assert.Equal(masteredStability, mastered.LearningState.StabilityDays);
-        Assert.Equal(masteredTarget, mastered.LearningState.InterveningCardTarget);
         Assert.Equal(unmarkedAt, mastered.LearningState.DueAt);
     }
 
@@ -258,6 +281,5 @@ public class ReviewAndSchedulingTests
             lifecycleState,
             difficulty,
             stabilityDays,
-            isInShortTermRelearning: false,
-            interveningCardTarget: null);
+            isInShortTermRelearning: false);
 }

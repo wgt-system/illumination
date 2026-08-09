@@ -31,7 +31,7 @@ Each active Learning Item has scheduling state containing conceptually:
 - `dueAt`,
 - whether short-term reinforcement remains required across sessions.
 
-The current Study Session owns the temporary `session learning stack`: its queue, repeated appearances, and relative reinsertion positions. Queue position is not durable Learning State. The existing persisted `InterveningCardTarget` concept is superseded conceptually; a later implementation slice may retire or deprecate it without this document prescribing a migration.
+The current Study Session owns the temporary `session learning stack`: its queue, repeated appearances, and relative reinsertion positions. Queue position is not durable Learning State. Durable Learning State records only whether short-term reinforcement remains required; exact intervening-card position is session-local.
 
 The implementation may use different internal names, but these semantics must remain visible in tests.
 
@@ -43,7 +43,9 @@ A new item begins with:
 - `stabilityDays = 0.5`,
 - immediately eligible for introduction according to the current Study Session's new-item limit.
 
-The first completed Review establishes its first scheduled interval.
+The first completed Review changes `IsNew` to `false`. `Nochmal`, `Schwer`, and
+`Unsicher` may keep the item reinforcement-required without establishing a normal
+future interval; `Gut` and `Leicht` establish normal future scheduling.
 
 ## 4. Grade Semantics
 
@@ -161,9 +163,9 @@ For every completed Review, the transition order is deterministic:
 
 1. Apply the grade's difficulty delta.
 2. Clamp difficulty to `1.0`–`10.0`.
-3. For `Unsicher`, `Gut`, or `Leicht`, calculate the positive-grade growth using that resulting clamped difficulty.
-4. Apply the grade's stability rule and minimum to obtain the resulting `stabilityDays`.
-5. For normal scheduling, calculate `dueAt` from the Review completion time plus the resulting stability.
+3. Only for `Gut` or `Leicht`, calculate positive stability growth using that resulting clamped difficulty.
+4. Apply the grade's retained-stability rule: reduce stability for `Nochmal` or `Schwer`, preserve retained stability for `Unsicher`, and apply positive growth for `Gut` or `Leicht`.
+5. Only for `Gut` or `Leicht`, calculate `dueAt` from the Review completion time plus the resulting stability.
 
 Every completed Review also changes `IsNew` to `false`, including a Review that leaves the item reinforcement-required in the session learning stack. `Nochmal`, `Schwer`, and `Unsicher` do not receive a normal future `dueAt` while they remain in that stack.
 
@@ -179,7 +181,7 @@ Gut     : stability *= growth(2.20)
 Leicht  : stability *= growth(3.60)
 ```
 
-For positive grades, growth is dampened as difficulty increases:
+For graduating grades (`Gut` and `Leicht`), growth is dampened as difficulty increases:
 
 ```text
 effectiveGrowth = 1 + (baseGrowth - 1) * difficultyFactor

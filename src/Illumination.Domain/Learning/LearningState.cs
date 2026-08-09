@@ -8,7 +8,7 @@ public sealed class LearningState
     }
 
     internal LearningState(bool isNew, DateTimeOffset dueAt)
-        : this(isNew, dueAt, difficulty: 5.0, stabilityDays: 0.5, isInShortTermRelearning: false, interveningCardTarget: null)
+        : this(isNew, dueAt, difficulty: 5.0, stabilityDays: 0.5, isInShortTermRelearning: false)
     {
     }
 
@@ -17,16 +17,14 @@ public sealed class LearningState
         DateTimeOffset dueAt,
         double difficulty,
         double stabilityDays,
-        bool isInShortTermRelearning,
-        int? interveningCardTarget)
+        bool isInShortTermRelearning)
     {
-        ValidateSchedulingState(difficulty, stabilityDays, isInShortTermRelearning, interveningCardTarget);
+        ValidateSchedulingState(difficulty, stabilityDays);
         DueAt = dueAt;
         IsNew = isNew;
         Difficulty = difficulty;
         StabilityDays = stabilityDays;
         IsInShortTermRelearning = isInShortTermRelearning;
-        InterveningCardTarget = interveningCardTarget;
     }
 
     public bool IsNew { get; private set; }
@@ -39,8 +37,6 @@ public sealed class LearningState
 
     public bool IsInShortTermRelearning { get; private set; }
 
-    public int? InterveningCardTarget { get; private set; }
-
     public bool IsDueAt(DateTimeOffset instant) => DueAt <= instant;
 
     internal void MarkImmediatelyDue(DateTimeOffset dueAt)
@@ -48,7 +44,7 @@ public sealed class LearningState
         DueAt = dueAt;
     }
 
-    internal void ApplyReview(DateTimeOffset completedAt, LearningAssessment assessment)
+    public LearningStateProjection ProjectReview(DateTimeOffset completedAt, LearningAssessment assessment)
     {
         if (!Enum.IsDefined(assessment))
         {
@@ -57,56 +53,56 @@ public sealed class LearningState
 
         var difficulty = Math.Clamp(Difficulty + DifficultyDelta(assessment), 1.0, 10.0);
         var stabilityDays = StabilityDays;
-        var isInShortTermRelearning = false;
-        int? interveningCardTarget = null;
-        DateTimeOffset dueAt;
+        var reinforcementRequired = true;
+        DateTimeOffset dueAt = completedAt;
 
         switch (assessment)
         {
             case LearningAssessment.Nochmal:
                 stabilityDays = Math.Min(StabilityDays * 0.25, 3.0);
-                isInShortTermRelearning = true;
-                interveningCardTarget = 3;
-                dueAt = completedAt;
                 break;
             case LearningAssessment.Schwer:
                 stabilityDays = Math.Min(StabilityDays * 0.55, 7.0);
-                isInShortTermRelearning = true;
-                interveningCardTarget = 10;
-                dueAt = completedAt;
                 break;
             case LearningAssessment.Unsicher:
+                break;
             case LearningAssessment.Gut:
+                stabilityDays = CalculateGraduatingStability(stabilityDays, difficulty, baseGrowth: 2.20, minimum: 2.0);
+                reinforcementRequired = false;
+                dueAt = completedAt.AddDays(stabilityDays);
+                break;
             case LearningAssessment.Leicht:
-                var baseGrowth = assessment switch
-                {
-                    LearningAssessment.Unsicher => 1.20,
-                    LearningAssessment.Gut => 2.20,
-                    LearningAssessment.Leicht => 3.60,
-                    _ => throw new ArgumentOutOfRangeException(nameof(assessment), assessment, "Unsupported Learning Assessment."),
-                };
-                var minimumStability = assessment switch
-                {
-                    LearningAssessment.Unsicher => 1.0,
-                    LearningAssessment.Gut => 2.0,
-                    LearningAssessment.Leicht => 4.0,
-                    _ => throw new ArgumentOutOfRangeException(nameof(assessment), assessment, "Unsupported Learning Assessment."),
-                };
-                var difficultyFactor = Math.Clamp(1.15 - (0.07 * difficulty), 0.45, 1.05);
-                var effectiveGrowth = 1 + ((baseGrowth - 1) * difficultyFactor);
-                stabilityDays = Math.Max(minimumStability, StabilityDays * effectiveGrowth);
+                stabilityDays = CalculateGraduatingStability(stabilityDays, difficulty, baseGrowth: 3.60, minimum: 4.0);
+                reinforcementRequired = false;
                 dueAt = completedAt.AddDays(stabilityDays);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(assessment), assessment, "Unsupported Learning Assessment.");
         }
 
-        IsNew = false;
-        Difficulty = difficulty;
-        StabilityDays = stabilityDays;
-        IsInShortTermRelearning = isInShortTermRelearning;
-        InterveningCardTarget = interveningCardTarget;
-        DueAt = dueAt;
+        return new LearningStateProjection(
+            IsNew: false,
+            DueAt: dueAt,
+            Difficulty: difficulty,
+            StabilityDays: stabilityDays,
+            IsInShortTermRelearning: reinforcementRequired);
+    }
+
+    internal void ApplyReview(DateTimeOffset completedAt, LearningAssessment assessment)
+    {
+        var projection = ProjectReview(completedAt, assessment);
+        IsNew = projection.IsNew;
+        Difficulty = projection.Difficulty;
+        StabilityDays = projection.StabilityDays;
+        IsInShortTermRelearning = projection.IsInShortTermRelearning;
+        DueAt = projection.DueAt;
+    }
+
+    private static double CalculateGraduatingStability(double oldStability, double difficulty, double baseGrowth, double minimum)
+    {
+        var difficultyFactor = Math.Clamp(1.15 - (0.07 * difficulty), 0.45, 1.05);
+        var effectiveGrowth = 1 + ((baseGrowth - 1) * difficultyFactor);
+        return Math.Max(minimum, oldStability * effectiveGrowth);
     }
 
     private static double DifficultyDelta(LearningAssessment assessment) => assessment switch
@@ -119,11 +115,7 @@ public sealed class LearningState
         _ => throw new ArgumentOutOfRangeException(nameof(assessment), assessment, "Unsupported Learning Assessment."),
     };
 
-    private static void ValidateSchedulingState(
-        double difficulty,
-        double stabilityDays,
-        bool isInShortTermRelearning,
-        int? interveningCardTarget)
+    private static void ValidateSchedulingState(double difficulty, double stabilityDays)
     {
         if (double.IsNaN(difficulty) || double.IsInfinity(difficulty) || difficulty < 1.0 || difficulty > 10.0)
         {
@@ -133,16 +125,6 @@ public sealed class LearningState
         if (double.IsNaN(stabilityDays) || double.IsInfinity(stabilityDays) || stabilityDays <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(stabilityDays), stabilityDays, "Stability must be greater than zero.");
-        }
-
-        if (!isInShortTermRelearning && interveningCardTarget is not null)
-        {
-            throw new ArgumentException("A relearning target requires short-term relearning.", nameof(interveningCardTarget));
-        }
-
-        if (isInShortTermRelearning && interveningCardTarget is not (3 or 10))
-        {
-            throw new ArgumentException("Short-term relearning requires a target of 3 or 10.", nameof(interveningCardTarget));
         }
     }
 }

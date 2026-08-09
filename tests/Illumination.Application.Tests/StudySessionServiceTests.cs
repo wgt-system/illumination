@@ -72,7 +72,7 @@ public class StudySessionServiceTests
         var due = Guid.NewGuid();
         var newItem = Guid.NewGuid();
         store.Decks[deckId] = new StudyDeckSnapshot(deckId, [newItem, due, relearning]);
-        store.Items[relearning] = Item(relearning, isNew: false, dueAt: Now.AddDays(10), relearning: true, target: 3);
+        store.Items[relearning] = Item(relearning, isNew: false, dueAt: Now.AddDays(10), relearning: true);
         store.Items[due] = Item(due, isNew: false, dueAt: Now.AddDays(-1));
         store.Items[newItem] = Item(newItem, isNew: true, dueAt: Now);
 
@@ -170,7 +170,7 @@ public class StudySessionServiceTests
     }
 
     [Fact]
-    public async Task Nochmal_is_reinserted_after_three_intervening_cards()
+    public async Task Nochmal_is_reinserted_after_one_intervening_card()
     {
         var store = CreateStoreWithRelearningAndOthers(4, out var deckId, out var relearningId, out var others);
         var service = CreateService(store);
@@ -178,12 +178,11 @@ public class StudySessionServiceTests
 
         var result = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, relearningId, StudyLearningAssessment.Nochmal));
 
-        Assert.Equal([others[0], others[1], others[2], relearningId, others[3]], result.Session.Queue);
-        Assert.Equal(3, store.LastCommittedItem!.InterveningCardTarget);
+        Assert.Equal([others[0], relearningId, others[1], others[2], others[3]], result.Session.Queue);
     }
 
     [Fact]
-    public async Task Schwer_is_reinserted_after_ten_intervening_cards()
+    public async Task Schwer_is_reinserted_after_five_intervening_cards()
     {
         var store = CreateStoreWithRelearningAndOthers(10, out var deckId, out var relearningId, out var others);
         var service = CreateService(store);
@@ -191,8 +190,7 @@ public class StudySessionServiceTests
 
         var result = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, relearningId, StudyLearningAssessment.Schwer));
 
-        Assert.Equal(others.Append(relearningId), result.Session.Queue);
-        Assert.Equal(10, store.LastCommittedItem!.InterveningCardTarget);
+        Assert.Equal([others[0], others[1], others[2], others[3], others[4], relearningId, others[5], others[6], others[7], others[8], others[9]], result.Session.Queue);
     }
 
     [Fact]
@@ -208,7 +206,113 @@ public class StudySessionServiceTests
         var secondService = CreateService(alone);
         var secondSession = await secondService.StartStudySessionAsync(new StartStudySessionCommand([secondDeck]));
         var noSelfLoop = await secondService.SubmitReviewAsync(new SubmitStudyReviewCommand(secondSession.Id, secondItem, StudyLearningAssessment.Nochmal));
-        Assert.Empty(noSelfLoop.Session.Queue);
+        Assert.Equal([secondItem], noSelfLoop.Session.Queue);
+    }
+
+    [Fact]
+    public async Task Unsicher_returns_to_stack_end_and_gut_or_leicht_graduate()
+    {
+        var store = CreateStoreWithRelearningAndOthers(2, out var deckId, out var itemId, out var others);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+
+        var uncertain = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Unsicher));
+        Assert.Equal([others[0], others[1], itemId], uncertain.Session.Queue);
+
+        var next = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, others[0], StudyLearningAssessment.Gut));
+        Assert.Equal([others[1], itemId], next.Session.Queue);
+        var graduated = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, others[1], StudyLearningAssessment.Gut));
+        Assert.Equal([itemId], graduated.Session.Queue);
+
+        var completed = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Leicht));
+        Assert.Empty(completed.Session.Queue);
+    }
+
+    [Theory]
+    [InlineData(StudyLearningAssessment.Nochmal)]
+    [InlineData(StudyLearningAssessment.Schwer)]
+    [InlineData(StudyLearningAssessment.Unsicher)]
+    public async Task Single_card_reinforcement_assessments_loop_to_the_same_item(StudyLearningAssessment assessment)
+    {
+        var store = CreateStoreWithRelearningAndOthers(0, out var deckId, out var itemId, out _);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+
+        var result = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, assessment));
+
+        Assert.Equal([itemId], result.Session.Queue);
+    }
+
+    [Fact]
+    public async Task Assessment_previews_are_side_effect_free_and_match_actual_submission()
+    {
+        var store = CreateStoreWithRelearningAndOthers(4, out var deckId, out var itemId, out var others);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+        var before = store.Items[itemId];
+
+        var previews = await service.GetAssessmentPreviewsAsync(session.Id);
+        var gut = Assert.Single(previews, preview => preview.Assessment == StudyLearningAssessment.Gut);
+        var nochmal = Assert.Single(previews, preview => preview.Assessment == StudyLearningAssessment.Nochmal);
+
+        Assert.Equal(1, nochmal.ProjectedInterveningEntryCount);
+        Assert.Equal(1, nochmal.ProjectedQueuePosition);
+        Assert.False(gut.RemainsInSession);
+        Assert.True(gut.Graduates);
+        Assert.Equal(before, store.Items[itemId]);
+        Assert.Empty(store.Reviews);
+
+        var result = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Gut));
+        Assert.Equal(gut.ProjectedDueAt, store.LastCommittedItem!.DueAt);
+        Assert.Equal(gut.ProjectedDueAt, result.CompletedAt.AddDays(store.LastCommittedItem.StabilityDays));
+        Assert.Equal([.. others], result.Session.Queue);
+    }
+
+    [Fact]
+    public async Task Transparency_exposes_current_upcoming_reinforcement_and_all_previews()
+    {
+        var store = CreateStoreWithRelearningAndOthers(3, out var deckId, out var itemId, out var others);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+
+        var transparency = await service.GetStudySessionTransparencyAsync(session.Id, maxUpcomingEntries: 2);
+
+        Assert.Equal(session.Id, transparency.Session.Id);
+        Assert.Equal(itemId, transparency.CurrentItem!.Id);
+        Assert.True(transparency.CurrentItem.ReinforcementRequired);
+        Assert.Equal(3, transparency.RemainingQueueEntryCount);
+        Assert.Equal(others.Take(2).ToArray(), transparency.UpcomingItems.Select(item => item.Id));
+        Assert.Equal(5, transparency.AssessmentPreviews.Count);
+    }
+
+    [Fact]
+    public async Task Multiple_same_session_reviews_create_distinct_history_entries()
+    {
+        var store = CreateStoreWithRelearningAndOthers(0, out var deckId, out var itemId, out _);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+
+        var first = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Nochmal));
+        var second = await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Gut));
+
+        Assert.NotEqual(first.ReviewId, second.ReviewId);
+        Assert.Equal([first.ReviewId, second.ReviewId], second.Session.ReviewIds);
+        Assert.Equal(2, store.Reviews.Count);
+    }
+
+    [Fact]
+    public async Task Completing_with_unfinished_reinforcement_keeps_it_durable_and_immediately_due()
+    {
+        var store = CreateStoreWithRelearningAndOthers(0, out var deckId, out var itemId, out _);
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+        await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Nochmal));
+
+        var completed = await service.CompleteStudySessionAsync(session.Id);
+
+        Assert.NotNull(completed.CompletedAt);
+        Assert.True(store.Items[itemId].IsInShortTermRelearning);
+        Assert.Equal(completed.CompletedAt, store.Items[itemId].DueAt);
     }
 
     [Fact]
@@ -295,7 +399,7 @@ public class StudySessionServiceTests
         relearningId = Guid.NewGuid();
         others = Enumerable.Range(0, otherCount).Select(_ => Guid.NewGuid()).ToArray();
         store.Decks[deckId] = new StudyDeckSnapshot(deckId, [relearningId, .. others]);
-        store.Items[relearningId] = Item(relearningId, isNew: false, dueAt: Now, relearning: true, target: 3);
+        store.Items[relearningId] = Item(relearningId, isNew: false, dueAt: Now, relearning: true);
         foreach (var id in others)
         {
             store.Items[id] = Item(id, isNew: false, dueAt: Now.AddDays(-1));
@@ -311,10 +415,9 @@ public class StudySessionServiceTests
         LearningItemLifecycle lifecycle = LearningItemLifecycle.Active,
         double difficulty = 5.0,
         double stabilityDays = 2.0,
-        bool relearning = false,
-        int? target = null) => new(
+        bool relearning = false) => new(
         id, "Prompt " + id, "Solution " + id, LearningItemResponseMode.SelfAssessed,
-        [], [], [], [], false, lifecycle, isNew, dueAt ?? Now, difficulty, stabilityDays, relearning, target, []);
+        [], [], [], [], false, lifecycle, isNew, dueAt ?? Now, difficulty, stabilityDays, relearning, []);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
@@ -336,6 +439,7 @@ public class StudySessionServiceTests
         public Dictionary<Guid, StudyDeckSnapshot> Decks { get; } = [];
         public Dictionary<Guid, StudyLearningItemSnapshot> Items { get; } = [];
         public Dictionary<Guid, StudySessionSnapshot> Sessions { get; } = [];
+        public Dictionary<Guid, StudyReviewSnapshot> Reviews { get; } = [];
         public int StartedSessionCount { get; private set; }
         public int AtomicCommitCount { get; private set; }
         public StudyLearningItemSnapshot? LastCommittedItem { get; private set; }
@@ -369,6 +473,7 @@ public class StudySessionServiceTests
             LastCommittedItem = learningItem;
             LastReview = review;
             LastCommittedSession = session;
+            Reviews[review.Id] = review;
             return Task.CompletedTask;
         }
 

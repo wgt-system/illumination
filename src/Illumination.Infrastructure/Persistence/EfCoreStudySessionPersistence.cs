@@ -110,7 +110,6 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
         record.Difficulty = snapshot.Difficulty;
         record.StabilityDays = snapshot.StabilityDays;
         record.IsInShortTermRelearning = snapshot.IsInShortTermRelearning;
-        record.InterveningCardTarget = snapshot.InterveningCardTarget;
     }
 
     private static StudyLearningItemSnapshot ToSnapshot(LearningItemRecord record) => new(
@@ -120,7 +119,7 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
         record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
         record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value).ToArray(), record.LowInteractionEligible,
         ToApplication(record.LifecycleState), record.IsNew, record.DueAt, record.Difficulty, record.StabilityDays,
-        record.IsInShortTermRelearning, record.InterveningCardTarget, record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
+        record.IsInShortTermRelearning, record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
 
     private static StudyDeckSnapshot ToSnapshot(DeckRecord record) =>
         new(record.DeckId, record.Memberships.Select(x => x.LearningItemId).Distinct().ToArray());
