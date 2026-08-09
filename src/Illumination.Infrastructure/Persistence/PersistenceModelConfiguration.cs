@@ -22,6 +22,10 @@ internal static class PersistenceModelConfiguration
         learningItems.Property(x => x.DueAt).HasColumnName("DueAt").HasConversion(
             value => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)).IsRequired();
+        learningItems.Property(x => x.Difficulty).HasColumnName("Difficulty").IsRequired();
+        learningItems.Property(x => x.StabilityDays).HasColumnName("StabilityDays").IsRequired();
+        learningItems.Property(x => x.IsInShortTermRelearning).HasColumnName("IsInShortTermRelearning").IsRequired();
+        learningItems.Property(x => x.InterveningCardTarget).HasColumnName("InterveningCardTarget");
         learningItems.HasIndex(x => x.DueAt).HasDatabaseName("IX_LearningItems_DueAt");
         learningItems.HasMany(x => x.Hints).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         learningItems.HasMany(x => x.AnswerChoices).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
@@ -33,6 +37,11 @@ internal static class PersistenceModelConfiguration
         ConfigureShortAnswer(modelBuilder.Entity<AcceptedShortAnswerRecord>());
         ConfigureDeck(modelBuilder.Entity<DeckRecord>());
         ConfigureMembership(modelBuilder.Entity<DeckLearningItemRecord>());
+        ConfigureReview(modelBuilder.Entity<ReviewRecord>());
+        ConfigureStudySession(modelBuilder.Entity<StudySessionRecord>());
+        ConfigureStudySessionDeck(modelBuilder.Entity<StudySessionDeckRecord>());
+        ConfigureStudySessionQueue(modelBuilder.Entity<StudySessionQueueRecord>());
+        ConfigureStudySessionReview(modelBuilder.Entity<StudySessionReviewRecord>());
     }
 
     private static void ConfigureHint(EntityTypeBuilder<HintRecord> entity)
@@ -63,5 +72,56 @@ internal static class PersistenceModelConfiguration
     {
         entity.ToTable("DeckLearningItems"); entity.HasKey(x => new { x.DeckId, x.LearningItemId });
         entity.Property(x => x.DeckId).HasColumnName("DeckId"); entity.Property(x => x.LearningItemId).HasColumnName("LearningItemId");
+    }
+
+    private static void ConfigureReview(EntityTypeBuilder<ReviewRecord> entity)
+    {
+        entity.ToTable("Reviews");
+        entity.HasKey(x => x.ReviewId);
+        entity.Property(x => x.ReviewId).HasColumnName("ReviewId").ValueGeneratedNever();
+        entity.Property(x => x.LearningItemId).HasColumnName("LearningItemId").IsRequired();
+        entity.Property(x => x.CompletedAt).HasColumnName("CompletedAt").HasConversion(
+            value => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)).IsRequired();
+        entity.Property(x => x.Assessment).HasColumnName("Assessment").HasConversion<string>().IsRequired();
+        entity.Property(x => x.SubmittedResponse).HasColumnName("SubmittedResponse");
+        entity.HasOne(x => x.LearningItem).WithMany().HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasIndex(x => x.LearningItemId).HasDatabaseName("IX_Reviews_LearningItemId");
+    }
+
+    private static void ConfigureStudySession(EntityTypeBuilder<StudySessionRecord> entity)
+    {
+        entity.ToTable("StudySessions");
+        entity.HasKey(x => x.StudySessionId);
+        entity.Property(x => x.StudySessionId).HasColumnName("StudySessionId").ValueGeneratedNever();
+        entity.Property(x => x.StartedAt).HasColumnName("StartedAt").HasConversion(
+            value => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)).IsRequired();
+        entity.Property(x => x.CompletedAt).HasColumnName("CompletedAt").HasConversion(
+            value => value.HasValue ? value.Value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) : null,
+            value => value == null ? null : DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+        entity.HasMany(x => x.SelectedDecks).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasMany(x => x.Queue).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasMany(x => x.Reviews).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureStudySessionDeck(EntityTypeBuilder<StudySessionDeckRecord> entity)
+    {
+        entity.ToTable("StudySessionDecks");
+        entity.HasKey(x => new { x.StudySessionId, x.DeckId });
+    }
+
+    private static void ConfigureStudySessionQueue(EntityTypeBuilder<StudySessionQueueRecord> entity)
+    {
+        entity.ToTable("StudySessionQueue");
+        entity.HasKey(x => new { x.StudySessionId, x.Position });
+        entity.Property(x => x.LearningItemId).HasColumnName("LearningItemId").IsRequired();
+    }
+
+    private static void ConfigureStudySessionReview(EntityTypeBuilder<StudySessionReviewRecord> entity)
+    {
+        entity.ToTable("StudySessionReviews");
+        entity.HasKey(x => new { x.StudySessionId, x.Position });
+        entity.HasOne(x => x.Review).WithMany(x => x.StudySessionAssociations).HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
     }
 }

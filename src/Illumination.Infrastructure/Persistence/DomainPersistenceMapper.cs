@@ -18,6 +18,10 @@ public static class DomainPersistenceMapper
             LifecycleState = item.LifecycleState,
             IsNew = item.LearningState.IsNew,
             DueAt = item.LearningState.DueAt,
+            Difficulty = item.LearningState.Difficulty,
+            StabilityDays = item.LearningState.StabilityDays,
+            IsInShortTermRelearning = item.LearningState.IsInShortTermRelearning,
+            InterveningCardTarget = item.LearningState.InterveningCardTarget,
         };
 
         record.Hints.AddRange(item.Hints.Select((hint, position) => new HintRecord
@@ -43,7 +47,8 @@ public static class DomainPersistenceMapper
             choices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
             choices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
             record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value),
-            record.LowInteractionEligible, record.LifecycleState);
+            record.LowInteractionEligible, record.LifecycleState, record.Difficulty, record.StabilityDays,
+            record.IsInShortTermRelearning, record.InterveningCardTarget);
     }
 
     public static DeckRecord ToRecord(Deck deck)

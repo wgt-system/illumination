@@ -10,6 +10,11 @@ public class IlluminationDbContext(DbContextOptions<IlluminationDbContext> optio
     public DbSet<AcceptedShortAnswerRecord> AcceptedShortAnswers => Set<AcceptedShortAnswerRecord>();
     public DbSet<DeckRecord> Decks => Set<DeckRecord>();
     public DbSet<DeckLearningItemRecord> DeckLearningItems => Set<DeckLearningItemRecord>();
+    public DbSet<ReviewRecord> Reviews => Set<ReviewRecord>();
+    public DbSet<StudySessionRecord> StudySessions => Set<StudySessionRecord>();
+    public DbSet<StudySessionDeckRecord> StudySessionDecks => Set<StudySessionDeckRecord>();
+    public DbSet<StudySessionQueueRecord> StudySessionQueue => Set<StudySessionQueueRecord>();
+    public DbSet<StudySessionReviewRecord> StudySessionReviews => Set<StudySessionReviewRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => PersistenceModelConfiguration.Configure(modelBuilder);
 }

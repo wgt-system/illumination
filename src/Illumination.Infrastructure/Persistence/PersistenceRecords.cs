@@ -14,6 +14,10 @@ public sealed class LearningItemRecord
     public LearningItemLifecycleState LifecycleState { get; set; }
     public bool IsNew { get; set; }
     public DateTimeOffset DueAt { get; set; }
+    public double Difficulty { get; set; }
+    public double StabilityDays { get; set; }
+    public bool IsInShortTermRelearning { get; set; }
+    public int? InterveningCardTarget { get; set; }
     public List<HintRecord> Hints { get; } = [];
     public List<AnswerChoiceRecord> AnswerChoices { get; } = [];
     public List<AcceptedShortAnswerRecord> AcceptedShortAnswers { get; } = [];
@@ -65,4 +69,49 @@ public sealed class DeckLearningItemRecord
     public Guid LearningItemId { get; set; }
     public DeckRecord Deck { get; set; } = null!;
     public LearningItemRecord LearningItem { get; set; } = null!;
+}
+
+public sealed class ReviewRecord
+{
+    public Guid ReviewId { get; set; }
+    public Guid LearningItemId { get; set; }
+    public DateTimeOffset CompletedAt { get; set; }
+    public LearningAssessment Assessment { get; set; }
+    public string? SubmittedResponse { get; set; }
+    public LearningItemRecord LearningItem { get; set; } = null!;
+    public List<StudySessionReviewRecord> StudySessionAssociations { get; } = [];
+}
+
+public sealed class StudySessionRecord
+{
+    public Guid StudySessionId { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public List<StudySessionDeckRecord> SelectedDecks { get; } = [];
+    public List<StudySessionQueueRecord> Queue { get; } = [];
+    public List<StudySessionReviewRecord> Reviews { get; } = [];
+}
+
+public sealed class StudySessionDeckRecord
+{
+    public Guid StudySessionId { get; set; }
+    public Guid DeckId { get; set; }
+    public StudySessionRecord StudySession { get; set; } = null!;
+}
+
+public sealed class StudySessionQueueRecord
+{
+    public Guid StudySessionId { get; set; }
+    public int Position { get; set; }
+    public Guid LearningItemId { get; set; }
+    public StudySessionRecord StudySession { get; set; } = null!;
+}
+
+public sealed class StudySessionReviewRecord
+{
+    public Guid StudySessionId { get; set; }
+    public int Position { get; set; }
+    public Guid ReviewId { get; set; }
+    public StudySessionRecord StudySession { get; set; } = null!;
+    public ReviewRecord Review { get; set; } = null!;
 }
