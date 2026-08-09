@@ -50,6 +50,20 @@ public class StudySessionServiceTests
     }
 
     [Fact]
+    public async Task Invalid_learning_item_snapshot_is_rejected_without_creating_a_session()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [itemId]);
+        store.Items[itemId] = Item(itemId) with { Lifecycle = (LearningItemLifecycle)999 };
+
+        await Assert.ThrowsAsync<StudyValidationException>(() => CreateService(store).StartStudySessionAsync(new StartStudySessionCommand([deckId])));
+
+        Assert.Equal(0, store.StartedSessionCount);
+    }
+
+    [Fact]
     public async Task Queue_priority_is_relearning_then_due_then_new()
     {
         var store = new FakeStudyPersistence();

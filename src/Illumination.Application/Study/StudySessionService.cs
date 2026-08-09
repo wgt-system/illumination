@@ -37,6 +37,11 @@ public sealed class StudySessionService
             throw new StudyNotFoundException("A Learning Item referenced by the selected Decks was not found.");
         }
 
+        foreach (var item in items)
+        {
+            _ = ToDomain(item);
+        }
+
         var sessionStart = _timeProvider.GetUtcNow();
         var eligible = items.Where(IsActive).ToArray();
         var queue = new List<Guid>();
