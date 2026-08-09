@@ -21,7 +21,11 @@ public sealed class LearningItem
         IEnumerable<string>? acceptedShortAnswers,
         bool lowInteractionEligible,
         LearningItemLifecycleState lifecycleState = LearningItemLifecycleState.Active,
-        bool isNew = true)
+        bool isNew = true,
+        double difficulty = 5.0,
+        double stabilityDays = 0.5,
+        bool isInShortTermRelearning = false,
+        int? interveningCardTarget = null)
     {
         DomainText.RequireNonWhitespace(prompt, nameof(prompt));
 
@@ -37,7 +41,7 @@ public sealed class LearningItem
         ResponseMode = responseMode;
         LowInteractionEligible = lowInteractionEligible;
         LifecycleState = lifecycleState;
-        LearningState = new LearningState(isNew, initialDueAt);
+        LearningState = new LearningState(isNew, initialDueAt, difficulty, stabilityDays, isInShortTermRelearning, interveningCardTarget);
     }
 
     public LearningItemId Id { get; }
@@ -100,10 +104,35 @@ public sealed class LearningItem
         bool lowInteractionEligible,
         LearningItemLifecycleState lifecycleState)
     {
+        return Restore(
+            id, prompt, referenceSolution, dueAt, isNew, responseMode, hints, directAnswerChoices,
+            assistanceAnswerChoices, acceptedShortAnswers, lowInteractionEligible, lifecycleState,
+            difficulty: 5.0, stabilityDays: 0.5, isInShortTermRelearning: false, interveningCardTarget: null);
+    }
+
+    public static LearningItem Restore(
+        LearningItemId id,
+        string prompt,
+        string referenceSolution,
+        DateTimeOffset dueAt,
+        bool isNew,
+        ResponseMode responseMode,
+        IEnumerable<Hint>? hints,
+        IEnumerable<AnswerChoice>? directAnswerChoices,
+        IEnumerable<AnswerChoice>? assistanceAnswerChoices,
+        IEnumerable<string>? acceptedShortAnswers,
+        bool lowInteractionEligible,
+        LearningItemLifecycleState lifecycleState,
+        double difficulty,
+        double stabilityDays,
+        bool isInShortTermRelearning,
+        int? interveningCardTarget)
+    {
         return new LearningItem(
             id, prompt, new ReferenceSolution(referenceSolution), dueAt, responseMode,
             hints, directAnswerChoices, assistanceAnswerChoices, acceptedShortAnswers,
-            lowInteractionEligible, lifecycleState, isNew);
+            lowInteractionEligible, lifecycleState, isNew, difficulty, stabilityDays,
+            isInShortTermRelearning, interveningCardTarget);
     }
 
     public static LearningItem Create(
@@ -202,6 +231,17 @@ public sealed class LearningItem
 
         LifecycleState = LearningItemLifecycleState.Active;
         LearningState.MarkImmediatelyDue(dueAt);
+    }
+
+    public Review CompleteReview(
+        DateTimeOffset completedAt,
+        LearningAssessment assessment,
+        string? submittedResponse = null)
+    {
+        RequireLifecycleState(LearningItemLifecycleState.Active);
+        var review = Review.Create(Id, completedAt, assessment, submittedResponse);
+        LearningState.ApplyReview(completedAt, assessment);
+        return review;
     }
 
     private void RequireLifecycleState(LearningItemLifecycleState expected)
