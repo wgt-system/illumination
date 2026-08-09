@@ -217,15 +217,13 @@ Deliver:
 
 Deliver:
 
-- self-assessed mental/verbal flow,
-- direct selection answers,
-- assistance answer choices,
-- short-text answers,
-- code-response editor without execution,
+- end-to-end workflows for the existing `SelfAssessed`, `Selection`, `ShortText`, and `Code` response forms,
+- assistance and reveal workflows,
+- code-response UX without execution,
 - Assisted/Manual evaluation modes,
 - accepted short-answer comparison,
 - optional hint-influence policy,
-- low-interaction eligibility/filtering.
+- low-interaction filtering by the existing persisted `lowInteractionEligible` property.
 
 v0.2 does not interpret submitted response payloads. Actual response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.3 behavior.
 

@@ -118,12 +118,14 @@ A Deck:
 
 Interaction forms describe how a Learning Item is answered during a Review. They are not separate top-level item entities.
 
-Planned v0.3 interaction workflows include:
+Existing Learning Item response forms include:
 
-- no recorded input: mental or verbal recall followed by self-assessment,
-- selection response,
-- very short text response,
-- small code response.
+- `SelfAssessed`,
+- `Selection`,
+- `ShortText`,
+- `Code`.
+
+The v0.3 scope is the end-to-end workflow for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX.
 
 Answer choices may be either:
 

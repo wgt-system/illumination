@@ -77,16 +77,18 @@ Examples:
 
 The exact first implementation representation remains an application-design concern.
 
-### v0.3 response forms
+### Response forms
 
-A Learning Item may support one of the following v0.3 interaction forms:
+A Learning Item may use one of the following existing response forms:
 
-- no recorded input with mental/verbal recall and self-assessment,
-- selection response,
-- very short text response,
-- small code response.
+- `SelfAssessed`,
+- `Selection`,
+- `ShortText`,
+- `Code`.
 
 These are interaction forms, not separate aggregate types.
+
+The v0.3 scope covers the end-to-end workflows for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX.
 
 ## 3. Value / Entity: Reference Solution
 

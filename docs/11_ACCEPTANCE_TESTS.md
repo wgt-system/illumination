@@ -188,7 +188,7 @@ Given a Mastered item
 When the learner unmarks Mastered
 Then it becomes immediately due while retaining its Review history and retained scheduling state.
 
-## 11. Low-Interaction Session (v0.3)
+## 11. Low-Interaction Session
 
 Given a study scope containing suitable and unsuitable items
 When the learner starts a low-interaction session
@@ -351,13 +351,14 @@ Given the response is correct
 Then Illumination suggests `Gut`
 And the learner may override the suggestion.
 
-## 22. Low-Interaction Eligibility (v0.3)
+## 22. Low-Interaction Eligibility
 
 Given an item is explicitly marked `lowInteractionEligible`
 When a low-interaction session is started
 Then the item may participate if otherwise eligible.
 
 Low-interaction mode does not create separate Learning State or Review history.
+The explicit persisted `lowInteractionEligible` property already exists; v0.3 adds filtering by that property to Study Session selection.
 
 ## 23. Study Queue
 

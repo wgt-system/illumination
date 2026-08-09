@@ -34,7 +34,7 @@ The user can:
 - add/remove/reorder hints,
 - configure direct answer choices where appropriate,
 - configure answer choices that may be revealed as assistance,
-- configure supported response/evaluation behavior (v0.3),
+- configure the existing response form (`SelfAssessed`, `Selection`, `ShortText`, or `Code`); evaluation behavior is v0.3,
 - suspend an item and Reactivate a Suspended item,
 - mark/unmark an item as Mastered.
 
@@ -156,7 +156,7 @@ The learner may override hint influence when starting a Study Session.
 
 When enabled and at least one hint is used, the automatically suggested assessment is lowered by at most one grade. Hint use never forces the learner's final grade.
 
-## 7A. Low-Interaction Eligibility (v0.3)
+## 7A. Low-Interaction Eligibility
 
 Each Learning Item has an explicit `lowInteractionEligible` property.
 
@@ -165,6 +165,7 @@ It may be set manually, through structured import, or from an application-propos
 The persisted property is explicit; it is not permanently inferred from item type.
 
 Low-interaction / bed mode only filters the Study Session pool. It has no separate scheduling state or learning progress.
+The explicit persisted property already exists; v0.3 adds Study Session filtering by that property.
 
 ## 8. Lifecycle Actions
 
