@@ -13,9 +13,11 @@ The technology decision must follow product architecture rather than the user's 
 
 Use:
 
-- C# / .NET for the application and domain,
+- C# / .NET 10 LTS for the application and domain,
 - Avalonia for the installed desktop UI,
-- SQLite for authoritative local persistence.
+- SQLite for authoritative local persistence,
+- EF Core with the SQLite provider for persistence infrastructure,
+- CommunityToolkit.Mvvm for Avalonia presentation state.
 
 ## Consequences
 

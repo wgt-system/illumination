@@ -2,9 +2,9 @@
 
 ## 1. Purpose
 
-This document describes concrete product scenarios without committing to implementation technology or unresolved scheduling details.
+This document describes concrete product scenarios against the accepted V1 domain semantics.
 
-The scenarios are intended to validate the domain vocabulary and expose missing decisions before implementation.
+The scenarios validate the domain vocabulary and implementation behavior.
 
 ## 2. Scenario: Review a Simple Recall Item
 
@@ -33,7 +33,7 @@ Prompt:
 
 - No text input is required.
 - Revealing a hint and revealing the reference solution are distinct actions.
-- The exact rating labels and scheduling calculation are intentionally unspecified.
+- The rating labels and scheduling calculation are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 3. Scenario: Multiple-Choice Review
 
@@ -50,9 +50,9 @@ Review an item through a low-friction explicit response.
 5. A review result is recorded.
 6. The learning state and future repetition are updated.
 
-### Open semantic detail
+### V1 semantic detail
 
-It is not yet decided whether an automatically correct answer directly determines the final review grade or merely informs the learner's manual assessment.
+Automatic correctness may suggest a grade; the learner chooses the final Learning Assessment.
 
 ## 4. Scenario: Very Short Text Answer
 
@@ -142,9 +142,9 @@ Reinforce an item that was not recalled successfully.
 5. The item may reappear again within the same broader learning period if the chosen scheduling model supports that behavior.
 6. After subsequent successful reviews, the interval begins to increase.
 
-### Open semantic detail
+### V1 semantic detail
 
-The exact short-term relearning behavior is not yet specified.
+Short-term relearning semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 8. Scenario: Stable Item Moves Further Into the Future
 

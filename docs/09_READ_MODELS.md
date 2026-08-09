@@ -118,7 +118,7 @@ At minimum it should be possible to derive:
 - Suspended,
 - Mastered.
 
-The exact definitions of unstable/stable depend on the future repetition model.
+The definitions of unstable/stable follow the accepted scheduling semantics in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 8. Review History
 
@@ -147,7 +147,7 @@ Candidate fields:
 - number of new eligible items if new-item introduction is supported,
 - Decks contributing eligible items.
 
-The precise low-interaction suitability representation remains open.
+The precise low-interaction suitability representation remains an application-design concern; it does not change the settled scheduling semantics.
 
 ## 10. Suspended Items
 

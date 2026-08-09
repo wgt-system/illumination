@@ -4,7 +4,7 @@
 
 Behavioral acceptance baseline.
 
-Tests that depend on the exact five-grade scheduling algorithm are expressed abstractly until that algorithm is specified.
+Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 1. Learning Item Creation
 
@@ -94,7 +94,7 @@ Given hint influence is enabled
 When the learner uses hints
 Then the configured evaluation/scheduling policy may use that fact.
 
-The exact interval effect is deferred until scheduling semantics are specified.
+The interval effect follows the configured policy in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 7. Automatic Evaluation
 
@@ -156,7 +156,7 @@ Given an active item repeatedly reviewed successfully
 When the scheduling model processes those Reviews
 Then normal review intervals generally become longer over successful repetitions.
 
-Exact timings remain pending.
+Exact timings follow the initial constants in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 9. Suspension
 
@@ -189,7 +189,7 @@ When the learner starts a low-interaction session
 Then only items designated suitable for that mode are selected
 And the learner can complete suitable reviews with minimal required input.
 
-The exact suitability representation remains open.
+The precise low-interaction suitability representation remains an application-design concern.
 
 ## 12. Import
 
@@ -269,16 +269,9 @@ Given a future Wiiii Got This capability integration
 When a capability is invoked
 Then Illumination remains authoritative for the resulting learning-state change.
 
-## 16. Acceptance Blockers Before Implementation Freeze
+## 16. Acceptance Scope Notes
 
-The following tests cannot be made exact until product decisions are completed:
-
-- final five grade names,
-- exact interval transitions,
-- exact short-term relearning timing for the lowest grades,
-- post-reactivation scheduling,
-- post-unmaster scheduling,
-- exact create/update JSON operation envelope,
+The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Low-interaction representation and some future import details remain outside this baseline.
 
 ## 17. Canonical Deck and Deletion Behavior
 

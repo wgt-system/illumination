@@ -4,7 +4,7 @@
 
 Substantially specified for the first product phase.
 
-The exact five-grade review semantics and repetition algorithm remain deliberately open and are isolated as later domain-design decisions.
+The five-grade review semantics and deterministic repetition algorithm are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 1. Modeling Principle
 
@@ -253,7 +253,7 @@ It contains enough information to answer at least:
 - moving an item between decks does not reset Learning State,
 - analytics do not mutate Learning State independently.
 
-The exact scheduling fields remain open until the repetition model is designed.
+The scheduling fields and transitions follow `docs/08A_SCHEDULING_SEMANTICS.md`; internal field names may vary while preserving those tested semantics.
 
 ### Failure after long-term stability
 
@@ -403,7 +403,7 @@ The import model must support:
 
 Import must not reset existing review history merely because new content is added.
 
-Intentional updates reference explicit stable Illumination Learning Item identifiers. Semantic/fuzzy similarity must not silently authorize mutation. The exact import operation envelope remains a contract-design concern.
+Intentional updates reference explicit stable Illumination Learning Item identifiers. Semantic/fuzzy similarity must not silently authorize mutation. The Content Bundle 1.0 operation envelope is defined by the published schema.
 
 ## 14. External Learning Reference
 
@@ -481,14 +481,4 @@ Historical Review records must not be replaced by mutable counters alone if late
 
 ## 18. Remaining Domain Decisions
 
-The remaining scheduling design work is now narrower:
-
-- final names for the five ordered assessment grades,
-- exact interval progression,
-- exact same-session/short-term relearning behavior for the lowest grades,
-- interaction with automatic correctness,
-- optional configured hint influence,
-- transition behavior after previously difficult items become successful,
-- reactivation behavior after `Suspended` or `Mastered`.
-
-The ordering itself is decided: worse normal assessments return earlier, better normal assessments return later. `Suspended` and `Mastered` remain explicit lifecycle states outside the assessment scale.
+Scheduling names, interval progression, short-term relearning, hint influence, and lifecycle transitions are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. Remaining domain work concerns application-level details such as low-interaction representation and future integration references. `Suspended` and `Mastered` remain explicit lifecycle states outside the assessment scale.

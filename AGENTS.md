@@ -10,7 +10,7 @@ Do not introduce or use another project name or historical alias.
 
 This repository contains Illumination, an independent bounded context for personal learning.
 
-The current phase is specification-first. Do not begin implementation until the domain, application design, public contracts, architecture, and acceptance criteria are sufficiently coherent.
+The accepted V1 specification and implementation gate are coherent; implementation work may proceed only within the documented contracts and architecture.
 
 ## Source of truth
 
@@ -75,18 +75,12 @@ A bounded context does not need multiple network services internally.
 
 ## Working terminology
 
-Some terminology is still provisional.
-
-In particular:
-
-- `Learning Item` is a temporary neutral term for the smallest independently reviewable unit.
-- `Deck` is a temporary neutral term for an Anki-like user-defined deck/group.
-
-Do not silently turn these working terms into irreversible product decisions.
+`Learning Item` is the canonical term for the smallest independently reviewable unit.
+`Deck` is the canonical term for a user-defined grouping of Learning Items.
 
 ## Implementation gate
 
-Implementation must wait until at least the following are coherent:
+The implementation gate is satisfied for the current V1 baseline. Keep the following sources coherent as implementation proceeds:
 
 - Domain Vision
 - Scenarios

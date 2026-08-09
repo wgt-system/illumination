@@ -10,15 +10,11 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current project status
 
-The project is in specification phase.
-
-No implementation stack, persistence technology, UI framework, internal service split, or deployment model has been selected yet.
-
-Implementation must not begin before the first coherent domain and application specification exists.
+The implementation gate for the V1 baseline is satisfied. Illumination is being built as a local-first, single-user installed desktop application.
 
 ## Product direction
 
-Illumination is inspired by the useful parts of Anki:
+Illumination is inspired by useful spaced-review workflows, but its canonical terms are `Learning Item` and `Deck`:
 
 - small independently reviewable learning units,
 - rapid answer reveal,
@@ -80,7 +76,7 @@ A remote server is not required for core use. Future Wiiii Got This integration 
 - `docs/12_IMPLEMENTATION_PLAN.md`
 - `docs/adr/`
 
-The specification is intentionally technology-neutral until the remaining domain and architecture decisions are resolved.
+The accepted V1 baseline is C# / .NET 10 LTS, Avalonia, SQLite, EF Core's SQLite provider, and CommunityToolkit.Mvvm. Core operation requires no remote server; Docker is not part of the core deployment.
 
 ## Release direction
 

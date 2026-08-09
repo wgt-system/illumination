@@ -2,7 +2,7 @@
 
 ## Status
 
-Technology-neutral architecture baseline.
+Accepted V1 architecture baseline for implementation.
 
 Programming language, UI framework, persistence technology, deployment model, and server/local topology remain open.
 
@@ -65,7 +65,7 @@ Published Contract Adapters
 Application Layer
 ```
 
-This is a responsibility model, not a framework prescription.
+This is a responsibility model implemented within the installed desktop application.
 
 ## 4. Domain Layer
 
@@ -112,7 +112,7 @@ The architecture does not require this presentation to exist on every platform.
 
 Wiiii Got This may later present Illumination capabilities on additional platforms.
 
-The Illumination presentation technology is intentionally open.
+The V1 presentation is an Avalonia installed desktop UI using CommunityToolkit.Mvvm.
 
 ## 7. Persistence
 
@@ -135,7 +135,7 @@ The local store persists at least:
 - Study Session history,
 - import history.
 
-An embedded local database is the natural persistence direction. The exact technology is selected by ADR after the application/runtime choice.
+Persistence uses SQLite through EF Core's SQLite provider. EF Core remains an infrastructure concern and is not part of the domain model.
 
 Future multi-device access must not silently move authoritative personal learning data to a remote service.
 
@@ -190,7 +190,7 @@ Its output conceptually includes:
 - updated Learning State,
 - next-review schedule.
 
-The exact algorithm remains a pending domain decision.
+The deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 12. Analytics / Learning Insight
 
@@ -235,7 +235,7 @@ A remote server must not become a hidden requirement for ordinary Illumination u
 
 ## 15. Technology Selection Criteria
 
-When technology is selected, the decision must be based on Illumination requirements rather than the user's existing résumé skillset.
+The selected V1 technology is based on Illumination requirements rather than the user's existing résumé skillset.
 
 Relevant criteria include:
 
@@ -252,20 +252,9 @@ Relevant criteria include:
 
 Existing personal familiarity may only be a tie-breaker between otherwise similarly suitable choices.
 
-## 16. Architecture Decisions Still Required
+## 16. Remaining Architecture Scope
 
-Before implementation:
-
-- five-grade scheduling semantics,
-- import update identity,
-- independent client/presentation model,
-- language/runtime,
-- persistence technology,
-- automatic-evaluation mechanism and configuration scope,
-- low-interaction representation,
-- integration transport only when a concrete contract is required.
-
-Each material architecture choice should receive an ADR.
+The V1 implementation gate is satisfied. Future decisions are limited to details outside the accepted baseline, such as low-interaction representation, automatic-evaluation configuration details, and concrete integration transport when a contract is required.
 
 ## Accepted V1 Architecture Direction
 
@@ -279,9 +268,13 @@ Illumination V1 is:
 
 Selected stack:
 
-- C# / .NET,
+- C# / .NET 10 LTS,
 - Avalonia for the desktop UI,
-- SQLite for authoritative local persistence.
+- SQLite for authoritative local persistence,
+- EF Core with the SQLite provider for persistence infrastructure,
+- CommunityToolkit.Mvvm for Avalonia presentation state.
+
+Tests use xUnit.net v3. Time-dependent domain tests use a controllable `TimeProvider`/clock abstraction.
 
 This selection is based on the accepted product architecture, not on the user's existing skillset.
 

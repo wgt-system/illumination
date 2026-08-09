@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the current domain language and clearly separates accepted concepts from provisional working terms.
+This document defines the accepted domain language.
 
 No implementation name should silently become domain language merely because it appears in code.
 
@@ -42,7 +42,7 @@ The exact state model is not yet defined.
 
 The domain process by which Illumination determines when a learning unit should next be eligible or due for review.
 
-The scheduling algorithm is not yet selected.
+The initial deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ### Due
 
@@ -62,7 +62,7 @@ The evaluation of how well a learner handled a review.
 
 Several degrees are desired so difficult material can return sooner than successfully recalled material.
 
-The final rating scale and terminology are open.
+The V1 rating scale is `Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`.
 
 ### Low-Interaction Learning
 
@@ -104,7 +104,7 @@ There is no separate universal `Exercise` entity. A small coding task is still a
 
 ### Deck
 
-`Deck` is the canonical term for an Anki-like user-defined grouping of Learning Items.
+`Deck` is the canonical term for a user-defined grouping of Learning Items.
 
 A Deck:
 
@@ -152,7 +152,7 @@ An automatically detectable correct answer may inform a learning assessment.
 
 The final assessment may still represent difficulty, recall quality, or required assistance.
 
-The exact rule remains open.
+Automatic correctness may inform a suggested grade, while the learner chooses the final assessment under the V1 policy.
 
 ### Learning Progress != Analytics Dashboard
 
