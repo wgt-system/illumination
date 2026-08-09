@@ -64,31 +64,34 @@ Goal:
 
 This milestone uses the accepted scheduling specification in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-### Milestone C – Interaction Variants
-
-Goal:
-
-- mental/self-assessed flow,
-- direct multiple choice,
-- optional answer-choice assistance,
-- short text response,
-- small coding response,
-- optional automatic checking,
-- low-interaction filtering.
-
-### Milestone D – Structured Content Acquisition
+### Milestone C – Structured Content Acquisition
 
 Goal:
 
 - prompt generation,
-- versioned JSON Schema,
-- validation,
-- import reporting,
+- Content Bundle 1.0 validation and import,
+- mixed-validity preview and atomic accepted-subset commit,
 - new-content import,
-- update/augmentation behavior,
-- provenance required by the chosen workflow.
+- minor/semantic update behavior,
+- provenance and import result reporting,
+- malformed-JSON repair prompt,
+- deterministic duplicate warnings without auto-merge.
 
 Uses the published Content Bundle 1.0 contract and explicit stable Illumination identifiers for intentional updates.
+
+### Milestone D – Interaction Variants
+
+Goal:
+
+- SelfAssessed interaction refinement,
+- direct multiple choice,
+- optional answer-choice assistance,
+- short text response,
+- small coding response,
+- Manual/Assisted evaluation,
+- hints and assistance/reveal workflows,
+- optional hint influence,
+- low-interaction filtering.
 
 ### Milestone E – Learning Insight
 
@@ -225,32 +228,34 @@ Deliver:
   - small-queue and single-card fallback remains explicit,
   - unfinished reinforcement remains durable across sessions while stack position remains session-local.
 - Standalone Study transparency and compact UI integration, including remaining-session information, bounded queue preview, and grade-outcome previews near the five grade controls.
-- end-to-end workflows for the existing `SelfAssessed`, `Selection`, `ShortText`, and `Code` response forms,
-- assistance and reveal workflows,
-- code-response UX without execution,
-- Assisted/Manual evaluation modes,
-- accepted short-answer comparison,
-- optional hint-influence policy,
-- low-interaction filtering by the existing persisted `lowInteractionEligible` property.
+- structured Content Acquisition using the canonical Content Bundle 1.0 schema:
+  - prompt generation for substantial content requests,
+  - parse/envelope, per-operation structural, and semantic/dependency validation,
+  - mixed-validity preview with explicit accepted-subset selection,
+  - atomic accepted-subset commit,
+  - localRef dependency resolution,
+  - minor/semantic update semantics,
+  - deterministic duplicate warnings,
+  - malformed-JSON repair prompt,
+  - import results and lightweight provenance.
 
-v0.2 does not interpret submitted response payloads. Actual response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.3 behavior.
+v0.2 does not interpret submitted response payloads. The remaining response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.4 behavior.
 
-The v0.3 first slice is session learning-stack semantics, grade previews, and standalone Study transparency. Response-form workflows and evaluation remain later slices within v0.3. Import and statistics remain outside v0.3.
+The v0.3 first slice is session learning-stack semantics, grade previews, standalone Study transparency, and Content Acquisition. Content Acquisition is pulled forward so realistic Study/scheduler validation is practical without manually authoring large item sets.
 
-### v0.4.0 – Structured Content Acquisition
+### v0.4.0 – Remaining Interaction Modes and Evaluation
 
 Deliver:
 
-- prompt generator,
-- Content Bundle 1.0 JSON Schema,
-- create/update operations,
-- stable ID updates,
-- minor/semantic update semantics,
-- mixed-validity preview and partial commit,
-- malformed-JSON repair prompt,
-- import provenance,
-- local import history,
-- duplicate warnings without auto-merge.
+- SelfAssessed interaction refinement,
+- Selection,
+- ShortText,
+- Code,
+- Manual/Assisted evaluation,
+- accepted short-answer comparison,
+- hints and assistance/reveal workflows,
+- optional hint influence,
+- low-interaction filtering by the existing persisted `lowInteractionEligible` property.
 
 ### v0.5.0 – Learning Insight
 

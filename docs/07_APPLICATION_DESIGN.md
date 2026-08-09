@@ -73,12 +73,16 @@ The user can inspect derived learning-state summaries without changing authorita
 
 The user can:
 
-- choose a desired content-generation scope,
-- generate an external ChatGPT prompt,
-- receive structured JSON externally,
-- import the JSON,
-- receive validation errors without partial silent corruption,
-- add new learning content without resetting existing progress.
+- describe a learning subject/purpose, desired item count, Deck target, and optional generation guidance,
+- generate a copyable ChatGPT prompt,
+- paste returned JSON or choose a JSON file,
+- parse and validate a Content Bundle 1.0,
+- preview valid and invalid operations, diagnostics, warnings, and dependencies,
+- explicitly select valid operations,
+- atomically commit the selected accepted subset,
+- receive explicit import results and retained local provenance.
+
+The practical first goal is a low-friction request for substantial content, such as 30–100 `SelfAssessed` Learning Items for one topic. No paid or built-in LLM API is required; the learner may copy/send the generated prompt to ChatGPT and paste or load the returned JSON.
 
 ## 4. Study Session Selection
 
@@ -247,49 +251,143 @@ The exact UI presentation remains open; the Content Bundle 1.0 import contract a
 
 ## 11. Prompt Generation
 
-Prompt generation should construct an instruction that tells ChatGPT:
+Prompt generation is an Application-owned capability. It constructs an instruction that tells ChatGPT:
 
 - the requested learning subject/purpose,
-- desired amount of content,
-- desired interaction characteristics,
+- the requested item count,
+- the requested new Deck name or selected existing Deck,
+- optional free-form generation guidance,
 - low-interaction suitability requirements where relevant,
-- the exact supported versioned JSON contract,
-- explicit stable identifiers for existing Learning Items when an update/extension operation is requested,
-- constraints such as one independent question/mini-task per Learning Item,
-- requirement for a Reference Solution,
-- optional hints and answer choices.
+- return JSON only using the exact `illumination.content-bundle` contract and version `1.0`,
+- create one independent question/mini-task per Learning Item,
+- provide a Reference Solution for every item,
+- use `localRef` consistently for bundle-created objects,
+- create and assign the requested Deck when applicable, or use the existing Deck's stable ID,
+- use only the supported operations and response-mode representation,
+- respect the requested count and prefer concise, repeatable items over essay questions.
 
 The prompt generator does not call a paid LLM API as a required initial workflow.
 
+The prompt generator derives its contract guidance from `schemas/illumination-content-bundle-1.0.schema.json`; it must not maintain a contradictory second schema.
+
 For existing-content updates, the prompt generator should emit only the smallest useful existing-item snapshot. It may generate an auxiliary JSON/text file or split work into batches when embedding the selected scope directly would be unnecessarily large.
+
+When generating for an existing Deck, the prompt uses that Deck's stable Illumination ID and does not ask ChatGPT to recreate the Deck. When generating a new Deck, the prompt uses a Deck `localRef` and assignments may target that local reference.
+
+## 11A. Malformed-JSON Repair Prompt
+
+When supplied JSON is malformed, the Application retains the parser diagnostic for display and can generate a repair prompt. The repair prompt includes:
+
+- an instruction to repair rather than redesign the content,
+- the required Content Bundle 1.0 contract and version,
+- parser and validation diagnostics,
+- the supplied invalid JSON,
+- an instruction to return corrected JSON only.
+
+Generating a repair prompt never mutates authoritative content and does not require an LLM API call.
 
 ## 12. Import Workflow
 
 Conceptually:
 
 ```text
-Receive JSON
+Describe learning scope
    ↓
-Parse contract version
+Generate ChatGPT prompt
    ↓
-Structural validation
+Copy/send prompt to ChatGPT
    ↓
-Semantic validation
+Receive Content Bundle 1.0 JSON
    ↓
-Resolve import identity/update policy
+Paste JSON or choose JSON file
    ↓
-Preview valid and invalid entries
+Parse and validate envelope
    ↓
-User explicitly accepts the valid subset
+Validate each operation structurally
    ↓
-Commit accepted changes
+Validate semantics and dependencies
    ↓
-Return import result
+Preview valid/invalid operations and warnings
+   ↓
+User explicitly accepts valid operations
+   ↓
+Atomic commit of accepted subset
+   ↓
+Imported Decks/Learning Items become available
 ```
 
-No invalid item should silently enter authoritative learning content.
+The canonical supported operations are `create_learning_item`, `update_learning_item`, `create_deck`, `update_deck`, and `assign_item_to_decks`. The Content Bundle 1.0 schema remains authoritative for their envelope and payloads. Delete, Suspend, Mastered, fuzzy auto-merge, and arbitrary executable operations are not supported.
 
-Atomicity policy for mixed-validity imports remains to be finalized with the import contract.
+### Validation layers
+
+Validation has three distinct stages:
+
+1. **Parse/envelope validation.** Malformed JSON, a root that is not an object, missing or invalid `contract`, unsupported `version`, or missing/non-array `operations` are bundle-level failures. Nothing can be committed; the Application returns an explicit bundle-level error. Malformed JSON may produce a repair prompt.
+2. **Operation structural validation.** Each operation is validated independently against its Content Bundle 1.0 operation shape. A malformed operation must not make structurally valid sibling operations disappear from the preview.
+3. **Semantic/dependency validation.** The Application validates duplicate `localRef` values, stable-ID syntax, existing targets, localRef references, content/domain invariants, response-mode requirements, and target identity/type. Diagnostics identify the bundle, operation, and field/reference where useful. EF exceptions are not user-facing validation.
+
+No invalid operation silently enters authoritative learning content.
+
+### Mixed validity and atomicity
+
+Mixed validity is partial at preview level and atomic at accepted-subset level:
+
+```text
+mixed bundle
+   ↓
+preview
+   ↓
+invalid operations excluded
+   ↓
+user selects valid operations
+   ↓
+selected subset is one atomic commit
+```
+
+Invalid operations are never committed. Valid operations may be accepted independently. Before commit, dependencies are validated again for the selected subset. If any accepted operation fails during commit, the entire selected subset rolls back.
+
+### LocalRef dependencies
+
+An assignment is valid only when each referenced item or Deck either already exists through its stable Illumination ID or is a valid create operation in the accepted subset. If a referenced create operation is invalid or not selected, the dependent assignment is not committable and reports the dependency explicitly. A valid item create may still be accepted without that assignment; the accepted subset is not silently broadened.
+
+### Create and update semantics
+
+`create_learning_item` creates one authoritative Learning Item with a new Illumination-owned stable ID, normal new Learning State, and no invented Review history. `create_deck` creates one Deck with a new Illumination-owned stable ID. A bundle `localRef` is import-local and never becomes the permanent identity.
+
+`assign_item_to_decks` adds explicit membership without duplicating Learning State or resetting scheduling/history.
+
+For `update_learning_item`, only an explicit stable `itemId` authorizes mutation. A `minor` update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Historical Reviews describe the previous content and are not deleted.
+
+`update_deck` may rename or update supported Deck metadata; it does not change membership unless explicit assignment operations do so.
+
+### Duplicate warnings
+
+Duplicate detection is advisory and deterministic. A normalized exact prompt match against an existing Learning Item, or equivalent duplicate create operations detectable within the bundle, may produce a warning. Warnings do not invalidate an operation, auto-merge, or silently convert create into update. Semantic or embedding/LLM similarity never authorizes mutation.
+
+## 12A. Content Acquisition Presentation Direction
+
+The standalone host should add a compact Content Acquisition surface without becoming a generic JSON IDE or embedded ChatGPT client.
+
+The Generate area conceptually supports:
+
+- topic or learning purpose,
+- requested item count,
+- new Deck name or existing Deck selection,
+- optional instructions,
+- Generate Prompt,
+- copyable prompt text.
+
+The Import area conceptually supports:
+
+- pasted JSON or JSON file selection,
+- Validate,
+- operation preview with errors, warnings, dependencies, and selectable valid operations,
+- Import Selected,
+- explicit result summary.
+
+For malformed JSON, the surface shows the parser error and offers Generate Repair Prompt. It does not add an embedded ChatGPT browser/API integration.
+
+Presentation does not parse business semantics, validate Domain rules, open DbContexts, resolve localRefs, perform import transactions, or calculate semantic-update resets. Those responsibilities remain in the Application and Infrastructure boundaries.
 
 ## 13. Queries / Read Use Cases
 
@@ -305,6 +403,12 @@ Application queries should support at least:
 - show Mastered items,
 - show review history,
 - show content/import provenance where retained.
+
+Import preview/read models also expose operation index/type, localRef or target stable ID, summary, validity, diagnostics, warnings, dependencies, and whether an operation is selectable. Preview is side-effect free: it creates no Learning Items, Decks, memberships, Reviews, scheduling changes, or successful import-history entry.
+
+After an accepted-subset commit, the result identifies created/updated item and Deck IDs, applied memberships, skipped/rejected operation indices, diagnostics where applicable, and an import/batch identity when import history is retained. There is no silent partial commit.
+
+Each successful accepted-subset commit retains lightweight local provenance: an Illumination import/batch ID, import timestamp, contract/version, optional external `bundleId` and `generatedFor`, and accepted-operation counts/results. Imported content does not depend on that record for normal use, and the history does not duplicate all Learning Items.
 
 ## 14. Future Vocation Integration
 

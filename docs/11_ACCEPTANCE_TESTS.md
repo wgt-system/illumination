@@ -6,7 +6,7 @@ Behavioral acceptance baseline.
 
 Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, and Study transparency; later v0.3 slices cover actual response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.
+The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, Study transparency, and structured Content Acquisition; v0.4 covers the remaining response interaction and evaluation work.
 
 ## 1. Learning Item Creation
 
@@ -254,6 +254,103 @@ And invalid entries are not committed
 And the learner may explicitly accept the valid subset
 And rejected/corrected content may be imported later without invalidating the already accepted subset.
 
+### Accepted-subset atomicity
+
+Given a mixed-validity bundle
+When the learner selects valid operations for import
+Then dependencies are validated again for that selected subset
+And all selected operations commit in one transaction.
+
+Given an infrastructure failure while committing the selected subset
+Then every operation in that selected subset is rolled back
+And no partial accepted-subset mutation remains.
+
+### Bundle-level validation
+
+Given malformed JSON, an invalid root, a missing/invalid contract, an unsupported version, or missing/non-array operations
+When the bundle is parsed
+Then an explicit bundle-level diagnostic is returned
+And no content is mutated.
+
+Malformed JSON may produce a repair prompt containing the parser diagnostic, required Content Bundle 1.0 contract/version, supplied invalid JSON, and an instruction to repair rather than redesign and return corrected JSON only.
+
+### Per-operation validation
+
+Given a bundle containing one malformed operation and other structurally valid operations
+When validation runs
+Then valid and invalid operations both remain visible in the preview
+And the malformed operation is not selectable
+And valid operations may be selected independently.
+
+### LocalRef dependencies
+
+Given valid create operations for a Deck `localRef` and Learning Item `localRef` plus an assignment referencing them
+When the selected subset is validated
+Then the assignment resolves deterministically.
+
+Given an assignment whose referenced create operation is invalid or unselected
+Then the assignment is not committable
+And the dependency diagnostic is explicit
+And an independently valid item or Deck create may still be accepted.
+
+### Create identity and operation safety
+
+Given a valid create operation
+When it is committed
+Then a new Illumination-owned stable ID is assigned
+And the bundle `localRef` does not become permanent identity
+And normal new Learning State starts
+And no Review history is invented.
+
+Given a valid assignment operation
+When it is committed
+Then explicit Deck membership is added
+And no duplicate Learning State is created
+And scheduling/history is not reset.
+
+Given an imported new item whose text resembles an existing Learning Item
+And no explicit update operation references the existing stable identifier
+When the bundle is imported
+Then the existing item is not mutated.
+
+Given a normalized exact duplicate prompt
+When a create operation is previewed
+Then a duplicate warning may be shown
+And the operation remains a create operation unless the learner explicitly selects an update.
+
+### Update significance
+
+Given an explicit `minor` update
+When it is accepted
+Then content changes
+And current Learning State, lifecycle, memberships, and Review history remain unchanged.
+
+Given an explicit `semantic` update
+When it is accepted
+Then content changes
+And immutable Review history and lifecycle remain
+And memberships remain unless separately changed by assignment
+And current scheduling resets to `IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required
+And the item is immediately due at the update time.
+
+Given an explicit Deck update
+When its supported metadata is changed
+Then the Deck changes accordingly
+And membership is not silently altered.
+
+### Import preview, result, and provenance
+
+Given a parsed bundle
+When preview is requested
+Then each operation exposes its index/type, localRef or target stable ID, summary, validity, diagnostics, warnings, dependencies, and selectable state
+And the preview creates no content, membership, Review, scheduling, or successful import-history mutation.
+
+Given an accepted subset commits successfully
+Then the result identifies created/updated item and Deck IDs, applied memberships, skipped/rejected operation indices, diagnostics where applicable, and a batch identity where retained.
+
+Given an accepted subset commits successfully
+Then lightweight local provenance retains import/batch ID, timestamp, contract/version, optional bundle metadata, and operation counts/results.
+
 ## 13. Progress Views
 
 Given Reviews and Learning State exist
@@ -286,7 +383,7 @@ Then core Illumination workflows remain available without requiring Wiiii Got Th
 
 ## 16. Acceptance Scope Notes
 
-The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Some future import details remain outside this baseline.
+The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Content Acquisition validation, accepted-subset atomicity, update significance, preview, result, and provenance semantics are also accepted and testable. Later response interaction/evaluation behavior remains outside this baseline.
 
 ## 17. Canonical Deck and Deletion Behavior
 

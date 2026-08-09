@@ -428,6 +428,42 @@ Import must not reset existing review history merely because new content is adde
 
 Intentional updates reference explicit stable Illumination Learning Item identifiers. Semantic/fuzzy similarity must not silently authorize mutation. The Content Bundle 1.0 operation envelope is defined by the published schema.
 
+The supported operations are:
+
+- `create_learning_item`,
+- `update_learning_item`,
+- `create_deck`,
+- `update_deck`,
+- `assign_item_to_decks`.
+
+Delete, Suspend, Mastered, fuzzy auto-merge, and arbitrary executable operations are not Content Bundle 1.0 operations.
+
+### Import validation and accepted subsets
+
+Validation is layered:
+
+1. Parse/envelope validation rejects malformed JSON, an invalid root, missing/invalid contract, unsupported version, or missing/non-array operations as bundle-level failures. Nothing is committed.
+2. Operation structural validation validates each operation independently so valid siblings remain visible in a mixed-validity preview.
+3. Semantic/dependency validation checks stable IDs, duplicate localRefs, existing targets, localRef references, content invariants, response-mode requirements, and target identity/type.
+
+Diagnostics identify the bundle, operation, and field/reference where useful. EF exceptions are infrastructure failures, not user-facing validation.
+
+Mixed validity is partial at preview level and atomic at accepted-subset level. The learner explicitly selects valid operations; dependencies are revalidated for that subset; and one unexpected commit failure rolls back the entire selected subset. Invalid operations are never committed.
+
+An assignment may reference an existing stable ID or a valid create operation selected in the same subset. An invalid or unselected create dependency makes the assignment non-committable without preventing an independently valid item or Deck create from being accepted.
+
+### Import create/update semantics
+
+Creating an item or Deck assigns a new Illumination-owned stable identity. A bundle `localRef` is import-local and never becomes permanent identity. Creating content starts normal new Learning State and invents no Review history. Explicit assignment changes membership only and never duplicates Learning State or resets scheduling/history.
+
+A `minor` item update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` item update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Historical Reviews remain valid records of the previous content.
+
+Deck updates may rename supported Deck metadata but do not change membership unless an explicit assignment operation does so.
+
+Duplicate detection is advisory only. A normalized exact prompt duplicate may produce a warning, as may equivalent duplicate creates detectable within one bundle. Warnings do not invalidate, merge, redirect, or convert operations. Semantic similarity never authorizes mutation.
+
+Successful accepted-subset commits may retain lightweight local import provenance: batch identity, timestamp, contract/version, optional external bundle metadata, and operation counts/results. Provenance does not duplicate authoritative content or become necessary for normal use.
+
 ## 14. External Learning Reference
 
 A future External Learning Reference connects Illumination coverage to a learning need owned elsewhere, initially Vocation.
