@@ -136,13 +136,33 @@ public class LearningItemAndDeckTests
     {
         var item = LearningItem.Create("Question", "Solution", InitialDueAt.AddDays(10));
         var dueAt = new DateTimeOffset(2030, 2, 1, 12, 0, 0, TimeSpan.Zero);
+        var state = item.LearningState;
         item.Suspend();
 
         item.Reactivate(dueAt);
 
         Assert.Equal(LearningItemLifecycleState.Active, item.LifecycleState);
+        Assert.Same(state, item.LearningState);
         Assert.Equal(dueAt, item.LearningState.DueAt);
         Assert.True(item.LearningState.IsDueAt(dueAt));
+    }
+
+    [Fact]
+    public void Active_item_cannot_be_reactivated()
+    {
+        var item = LearningItem.Create("Question", "Solution", InitialDueAt);
+
+        Assert.Throws<InvalidOperationException>(() => item.Reactivate(InitialDueAt));
+    }
+
+    [Fact]
+    public void Mastered_item_cannot_be_reactivated()
+    {
+        var item = LearningItem.Create("Question", "Solution", InitialDueAt);
+        item.MarkMastered();
+
+        Assert.Throws<InvalidOperationException>(() => item.Reactivate(InitialDueAt));
+        Assert.Equal(LearningItemLifecycleState.Mastered, item.LifecycleState);
     }
 
     [Fact]
@@ -150,12 +170,24 @@ public class LearningItemAndDeckTests
     {
         var item = LearningItem.Create("Question", "Solution", InitialDueAt.AddDays(10));
         var dueAt = new DateTimeOffset(2030, 2, 2, 12, 0, 0, TimeSpan.Zero);
+        var state = item.LearningState;
 
         item.MarkMastered();
         item.UnmarkMastered(dueAt);
 
         Assert.Equal(LearningItemLifecycleState.Active, item.LifecycleState);
+        Assert.Same(state, item.LearningState);
         Assert.Equal(dueAt, item.LearningState.DueAt);
+    }
+
+    [Fact]
+    public void Suspended_item_cannot_be_unmarked_as_mastered()
+    {
+        var item = LearningItem.Create("Question", "Solution", InitialDueAt);
+        item.Suspend();
+
+        Assert.Throws<InvalidOperationException>(() => item.UnmarkMastered(InitialDueAt));
+        Assert.Equal(LearningItemLifecycleState.Suspended, item.LifecycleState);
     }
 
     [Fact]

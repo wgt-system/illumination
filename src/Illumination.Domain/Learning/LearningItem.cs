@@ -156,9 +156,9 @@ public sealed class LearningItem
 
     public void Reactivate(DateTimeOffset dueAt)
     {
-        if (LifecycleState is not (LearningItemLifecycleState.Suspended or LearningItemLifecycleState.Mastered))
+        if (LifecycleState != LearningItemLifecycleState.Suspended)
         {
-            throw new InvalidOperationException("Only Suspended or Mastered Learning Items can be reactivated.");
+            throw new InvalidOperationException("Only Suspended Learning Items can be reactivated.");
         }
 
         LifecycleState = LearningItemLifecycleState.Active;
