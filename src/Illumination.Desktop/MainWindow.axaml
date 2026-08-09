@@ -4,16 +4,37 @@
         xmlns:content="using:Illumination.Application.ContentManagement"
         x:Class="Illumination.Desktop.MainWindow"
         x:DataType="desktop:MainWindowViewModel"
-        Title="Illumination — standalone workflow host"
-        Width="1100" Height="720" MinWidth="900" MinHeight="600">
-  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
-    <StackPanel Spacing="4">
-      <TextBlock Text="Illumination" FontSize="28" FontWeight="SemiBold" />
-      <TextBlock Text="Standalone admin/dev host for v0.2 workflows" Opacity="0.7" />
-    </StackPanel>
+        Title="Illumination"
+        Width="1120" Height="740" MinWidth="920" MinHeight="620">
+  <Window.Styles>
+    <Style Selector="TabItem">
+      <Setter Property="MinWidth" Value="156" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Button.grade">
+      <Setter Property="MinWidth" Value="116" />
+      <Setter Property="MinHeight" Value="62" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
+    <Style Selector="TextBlock.secondary">
+      <Setter Property="Opacity" Value="0.68" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+  </Window.Styles>
+  <Grid RowDefinitions="46,*,Auto" Margin="12">
+    <Border BorderBrush="#22000000" BorderThickness="0,0,0,1" Padding="8,0">
+      <TextBlock Text="Illumination" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+    </Border>
 
-    <TabControl Grid.Row="1" Margin="0,18,0,12">
-      <TabItem Header="Decks">
+    <TabControl Grid.Row="1" TabStripPlacement="Left" Margin="0,10,0,8">
+      <TabItem>
+        <TabItem.Header>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Path Data="M3,5 L9,5 11,7 21,7 21,19 3,19 Z" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="1.5" Width="18" Height="18" />
+            <TextBlock Text="Decks" VerticalAlignment="Center" />
+          </StackPanel>
+        </TabItem.Header>
         <Grid ColumnDefinitions="280,*" ColumnSpacing="20" Margin="12">
           <StackPanel Spacing="10">
             <TextBlock Text="Decks" FontSize="20" FontWeight="SemiBold" />
@@ -59,7 +80,13 @@
         </Grid>
       </TabItem>
 
-      <TabItem Header="Learning Items">
+      <TabItem>
+        <TabItem.Header>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Path Data="M5,3 L18,3 21,6 21,21 5,21 Z M18,3 L18,7 21,7 M8,11 L18,11 M8,15 L18,15" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="1.5" Width="18" Height="18" />
+            <TextBlock Text="Learning Items" VerticalAlignment="Center" />
+          </StackPanel>
+        </TabItem.Header>
         <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
           <StackPanel Spacing="8">
             <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
@@ -85,42 +112,86 @@
         </Grid>
       </TabItem>
 
-      <TabItem Header="Study">
-        <Grid RowDefinitions="Auto,*" Margin="12" RowSpacing="18">
+      <TabItem IsSelected="True">
+        <TabItem.Header>
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock Text="Deck" VerticalAlignment="Center" />
-            <ComboBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedStudyDeck}" Width="280">
+            <Path Data="M4,12 L20,4 16,20 12,14 Z" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="1.5" Width="18" Height="18" />
+            <TextBlock Text="Study" VerticalAlignment="Center" />
+          </StackPanel>
+        </TabItem.Header>
+        <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14,4,4,4">
+          <Grid ColumnDefinitions="Auto,280,Auto,Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Text="Deck" VerticalAlignment="Center" Classes="secondary" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedStudyDeck}">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="content:DeckView"><TextBlock Text="{Binding Name}" /></DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <Button Content="Start Session" Command="{Binding StartSessionCommand}" />
-            <Button Content="Complete Session" Command="{Binding CompleteSessionCommand}" />
-          </StackPanel>
-          <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="24">
-            <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="16">
-              <TextBlock Text="Current prompt" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Grid.Row="1" Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Start a session to load a Learning Item.'}"
-                         TextWrapping="Wrap" FontSize="24" VerticalAlignment="Center" />
-              <StackPanel Grid.Row="2" Spacing="10">
-                <Button Content="Reveal Solution" Command="{Binding RevealSolutionCommand}" HorizontalAlignment="Left" />
-                <Border IsVisible="{Binding IsSolutionRevealed}" Background="#18000000" CornerRadius="4" Padding="14">
-                  <StackPanel Spacing="6">
-                    <TextBlock Text="Reference Solution" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding CurrentStudyItem.ReferenceSolution}" TextWrapping="Wrap" />
+            <Button Grid.Column="2" Content="Start" Command="{Binding StartSessionCommand}" />
+            <Button Grid.Column="3" Content="Complete" Command="{Binding CompleteSessionCommand}" />
+            <TextBlock Grid.Column="5" Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" Classes="secondary" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="*,240" ColumnSpacing="12">
+            <Border BorderBrush="#33000000" BorderThickness="1" CornerRadius="7" Padding="20,16">
+              <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="Current card" Classes="secondary" />
+                  <Border Grid.Column="1" IsVisible="{Binding CurrentItemRequiresReinforcement}" Background="#35C87900" CornerRadius="10" Padding="8,3">
+                    <TextBlock Text="Reinforcement" FontSize="11" />
+                  </Border>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="16" Margin="10,8">
+                    <TextBlock Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Select a Deck and start a session.'}"
+                               TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
+                    <Button Content="Show solution" Command="{Binding RevealSolutionCommand}" HorizontalAlignment="Center" />
+                    <Border IsVisible="{Binding IsSolutionRevealed}" Background="#16000000" CornerRadius="5" Padding="16">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="Solution" Classes="secondary" />
+                        <TextBlock Text="{Binding CurrentStudyItem.ReferenceSolution}" TextWrapping="Wrap" FontSize="17" />
+                      </StackPanel>
+                    </Border>
                   </StackPanel>
-                </Border>
-              </StackPanel>
-              <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding HasCurrentStudyItem}">
-                <Button Content="Nochmal" Command="{Binding GradeNochmalCommand}" />
-                <Button Content="Schwer" Command="{Binding GradeSchwerCommand}" />
-                <Button Content="Unsicher" Command="{Binding GradeUnsicherCommand}" />
-                <Button Content="Gut" Command="{Binding GradeGutCommand}" />
-                <Button Content="Leicht" Command="{Binding GradeLeichtCommand}" />
-              </StackPanel>
-              <TextBlock Grid.Row="4" Text="Grades are manual and use the real v0.2 Review and scheduling path." Opacity="0.65" />
-            </Grid>
-          </Border>
+                </ScrollViewer>
+
+                <ItemsControl Grid.Row="2" ItemsSource="{Binding AssessmentPreviews}" HorizontalAlignment="Center">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="7" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:StudyAssessmentPreviewDisplay">
+                      <Button Classes="grade" Command="{Binding Command}">
+                        <StackPanel Spacing="3" HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                          <TextBlock Text="{Binding Projection}" Classes="secondary" HorizontalAlignment="Center" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Grid.Row="3" Text="Complete may be used at any time; reinforcement remains available in a later session." Classes="secondary" HorizontalAlignment="Center" />
+              </Grid>
+            </Border>
+
+            <Border Grid.Column="1" BorderBrush="#22000000" BorderThickness="1" CornerRadius="7" Padding="12">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                <TextBlock Text="Upcoming" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="1" Text="Next five queue entries" Classes="secondary" />
+                <ListBox Grid.Row="2" ItemsSource="{Binding UpcomingStudyItems}" IsHitTestVisible="False">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:StudyQueueEntryDisplay">
+                      <StackPanel Margin="3,5" Spacing="3">
+                        <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" MaxLines="2" />
+                        <TextBlock Text="{Binding StateLabel}" Classes="secondary" FontWeight="SemiBold" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+          </Grid>
         </Grid>
       </TabItem>
     </TabControl>
