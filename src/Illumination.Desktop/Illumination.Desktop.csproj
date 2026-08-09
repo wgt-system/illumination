@@ -11,10 +11,10 @@
     <AvaloniaResource Include="Assets\**" />
     <ProjectReference Include="..\Illumination.Application\Illumination.Application.csproj" />
     <ProjectReference Include="..\Illumination.Infrastructure\Illumination.Infrastructure.csproj" />
-    <PackageReference Include="Avalonia" Version="11.3.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.3" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.3" />
+    <PackageReference Include="Avalonia" Version="11.3.18" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.18" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.18" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.18" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 </Project>
