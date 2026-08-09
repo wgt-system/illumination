@@ -77,9 +77,9 @@ Examples:
 
 The exact first implementation representation remains an application-design concern.
 
-### V1 response forms
+### v0.3 response forms
 
-A Learning Item may support one of the following V1 interaction forms:
+A Learning Item may support one of the following v0.3 interaction forms:
 
 - no recorded input with mental/verbal recall and self-assessment,
 - selection response,
@@ -152,11 +152,11 @@ Potentially relevant interaction facts include:
 
 - hints requested,
 - whether answer choices were revealed as assistance,
-- learner response when stored,
-- automatically detected correctness when available,
+- optional submitted response payload when retained,
+- automatically detected correctness when available in v0.3,
 - whether the reference solution was revealed.
 
-Not all raw learner responses are necessarily required to be retained permanently.
+In v0.2, an optional submitted response payload is opaque historical content; v0.3 defines response interaction workflows and any interpretation or evaluation.
 
 ### Invariants
 
@@ -205,7 +205,7 @@ Immediate, confident recall. The interval grows substantially further than for `
 
 Neither is reached automatically through assessment grades.
 
-## 8. Automatic Evaluation Policy
+## 8. Automatic Evaluation Policy (v0.3)
 
 Automatic answer evaluation is optional.
 
@@ -219,7 +219,7 @@ No automatic correctness judgment is required. The learner always chooses the fi
 
 When the response is machine-checkable, Illumination may determine correctness and suggest a grade.
 
-Default V1 suggestion:
+Default v0.3 suggestion:
 
 - incorrect → `Schwer`,
 - correct → `Gut`.
@@ -251,6 +251,7 @@ It contains enough information to answer at least:
 
 - one authoritative current Learning State exists per Learning Item for the learner,
 - Learning State evolves from Reviews and explicit lifecycle actions,
+- every completed Review changes `IsNew` to `false`,
 - moving an item between decks does not reset Learning State,
 - analytics do not mutate Learning State independently.
 
@@ -292,9 +293,13 @@ Normal scheduling never automatically produces `Mastered`.
 
 Instead, repeated strong reviews can result in increasingly long intervals until an item is practically encountered only very rarely.
 
-### Reactivation
+### Reactivate Suspended
 
-Reactivating a Suspended or Mastered item preserves its Review history and makes it immediately due. The following Review then determines its continued scheduling state.
+Reactivate applies only to a `Suspended` item. It preserves Review history and retained scheduling state, and makes the item immediately due. The following Review then determines its continued scheduling state.
+
+### Unmark Mastered
+
+UnmarkMastered applies only to a `Mastered` item. It preserves Review history and retained scheduling state, and makes the item immediately due. The following Review then determines its continued scheduling state.
 
 ### Distinction
 
@@ -339,11 +344,11 @@ A Learning Item may be explicitly deleted with confirmation. Explicit Learning I
 
 Review history is otherwise retained completely and without a product-level retention limit.
 
-When the learner enters a text or code response, that response is stored as part of the Review. Mental/verbal-only responses naturally have no stored response content.
+In v0.2, a Review may retain an optional submitted response payload without interpreting it. Actual text/code interaction workflows, normalized matching, and code execution are v0.3 concerns.
 
 ## 12. Study Session
 
-A Study Session selects reviewable Learning Items within a chosen scope and records Reviews.
+A Study Session selects reviewable Learning Items within a chosen scope and records Reviews. The initial v0.2 scope supports one or more selected Decks.
 
 ### Scope
 
@@ -351,9 +356,7 @@ A session may select:
 
 - one Deck,
 - several Decks,
-- all due material,
-- low-interaction-suitable material,
-- another explicitly supported filter.
+- active items from the selected Decks.
 
 When several Decks are selected, their Learning Items form a set union: an item belonging to several selected Decks appears only once in the session queue.
 
@@ -385,7 +388,7 @@ A Study Session is retained as lightweight history including:
 - mode,
 - associated Review identities.
 
-The Study Session does not own a separate copy of Learning State.
+The Study Session does not own a separate copy of Learning State. Low-interaction filtering is deferred to v0.3.
 
 ## 13. Content Import
 
@@ -429,7 +432,7 @@ Conceptual commands now include:
 - CreateLearningItem
 - EditLearningItem
 - SuspendLearningItem
-- ReactivateLearningItem
+- ReactivateSuspendedLearningItem
 - MarkLearningItemMastered
 - UnmarkLearningItemMastered
 - RevealHint

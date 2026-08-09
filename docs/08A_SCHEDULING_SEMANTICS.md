@@ -142,6 +142,16 @@ Clamp to:
 1.0 <= difficulty <= 10.0
 ```
 
+For every completed Review, the transition order is deterministic:
+
+1. Apply the grade's difficulty delta.
+2. Clamp difficulty to `1.0`–`10.0`.
+3. For `Unsicher`, `Gut`, or `Leicht`, calculate the positive-grade growth using that resulting clamped difficulty.
+4. Apply the grade's stability rule and minimum to obtain the resulting `stabilityDays`.
+5. For normal scheduling, calculate `dueAt` from the Review completion time plus the resulting stability.
+
+Every completed Review also changes `IsNew` to `false`, including a Review that enters or remains in short-term relearning. `Nochmal` and `Schwer` remain immediately due for queue handling rather than receiving a normal future `dueAt`.
+
 ### Stability update
 
 For an active item not in the immediate short-term queue:
@@ -176,7 +186,7 @@ Gut     : 2 days
 Leicht  : 4 days
 ```
 
-After `Nochmal` or `Schwer`, short-term relearning occurs first. On the first successful post-relearning Review, normal scheduling resumes from the reduced retained stability rather than from a completely new item.
+After `Nochmal` or `Schwer`, short-term relearning occurs first. A subsequent `Unsicher`, `Gut`, or `Leicht` Review is a successful completion of the relearning step: it clears short-term relearning and normal scheduling resumes from the reduced retained stability rather than from a completely new item.
 
 ## 7. Due Time
 
@@ -243,15 +253,25 @@ An item can naturally reach intervals of months or longer.
 - excluded from normal study,
 - `Leicht` never masters automatically.
 
-### Reactivation
+### Reactivate Suspended
 
-Reactivating either state:
+Reactivate applies only to `Suspended`:
 
 - retains all Review history,
+- retains the current difficulty and stability,
 - makes the item immediately due,
 - lets the next Review determine continued scheduling.
 
-## 11. Automatic Evaluation
+### Unmark Mastered
+
+UnmarkMastered applies only to `Mastered`:
+
+- retains all Review history,
+- retains the current difficulty and stability,
+- makes the item immediately due,
+- lets the next Review determine continued scheduling.
+
+## 11. Automatic Evaluation (v0.3)
 
 Two modes exist:
 
@@ -270,7 +290,7 @@ The learner may override the suggestion.
 
 Automatic correctness is distinct from Learning Assessment.
 
-## 12. Hint Influence
+## 12. Hint Influence (v0.3)
 
 Default:
 

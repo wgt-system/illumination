@@ -35,7 +35,7 @@ Prompt:
 - Revealing a hint and revealing the reference solution are distinct actions.
 - The rating labels and scheduling calculation are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-## 3. Scenario: Multiple-Choice Review
+## 3. Scenario: Multiple-Choice Review (v0.3)
 
 ### Goal
 
@@ -54,7 +54,7 @@ Review an item through a low-friction explicit response.
 
 Automatic correctness may suggest a grade; the learner chooses the final Learning Assessment.
 
-## 4. Scenario: Very Short Text Answer
+## 4. Scenario: Very Short Text Answer (v0.3)
 
 ### Goal
 
@@ -79,7 +79,7 @@ Prompt:
 
 Short text input must remain appropriate to the low-friction learning model. Long-form written answers are not assumed.
 
-## 5. Scenario: Small Coding Task
+## 5. Scenario: Small Coding Task (v0.3)
 
 ### Goal
 
@@ -105,7 +105,7 @@ Prompt:
 
 The reference solution is exemplary rather than necessarily the only valid implementation.
 
-## 6. Scenario: Low-Interaction Session
+## 6. Scenario: Low-Interaction Session (v0.3)
 
 ### Goal
 
@@ -125,7 +125,7 @@ Review suitable material with minimal physical interaction.
 
 Illumination needs some way to determine whether a learning item is suitable for this mode.
 
-The exact representation is not yet decided.
+Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is deferred to v0.3; it is not part of the initial v0.2 Study Session scope.
 
 ## 7. Scenario: Difficult Item Reappears Quickly
 
@@ -139,8 +139,9 @@ Reinforce an item that was not recalled successfully.
 2. The learner assesses the result as poor or difficult.
 3. Illumination records the review.
 4. The item is scheduled substantially sooner than an item reviewed successfully.
-5. The item may reappear again within the same broader learning period if the chosen scheduling model supports that behavior.
-6. After subsequent successful reviews, the interval begins to increase.
+5. For `Nochmal`, the item targets 3 intervening cards; for `Schwer`, it targets 10 intervening cards.
+6. If too few other cards remain, the item goes to the end of the current queue; if no other card remains, it stays immediately due.
+7. After a subsequent `Unsicher`, `Gut`, or `Leicht` Review, short-term relearning clears and normal scheduling resumes from the retained reduced stability.
 
 ### V1 semantic detail
 
@@ -178,9 +179,7 @@ Allow the learner to stop normal repetition for material that has become permane
 
 ### Status
 
-This capability is plausible but not yet required for the first version.
-
-Its final semantics and terminology are open.
+This is an explicit lifecycle capability. `Mastered` is entered only through the learner's explicit action. `UnmarkMastered` applies only to `Mastered`, preserves Review history and retained scheduling state, and makes the item immediately due.
 
 ## 10. Scenario: Create a Deck Manually
 
@@ -367,4 +366,4 @@ These scenarios establish the following domain pressures:
 - external references without shared ownership,
 - derived progress views.
 
-The scenarios intentionally do not decide the scheduling algorithm, final rating scale, canonical learning-unit taxonomy, or cross-context contract schema.
+The initial five-grade scale and deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. The v0.2 scope is Study Sessions, Review history, Learning State, scheduling, relearning and queueing, with optional opaque submitted-response retention. v0.3 covers response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.

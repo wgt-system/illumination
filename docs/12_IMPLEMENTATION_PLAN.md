@@ -206,9 +206,11 @@ Deliver:
 - deterministic scheduling state,
 - short-term relearning queue,
 - due/new/relearning prioritization,
+- one or more selected Decks with set-union queue deduplication and Active items only,
+- default 20-new-item limit with explicit override/all-new behavior,
 - Review history,
-- stored short-text/code responses,
-- reactivation behavior,
+- optional opaque submitted response payload retention,
+- Reactivate for Suspended and UnmarkMastered for Mastered,
 - scheduling simulations/acceptance tests.
 
 ### v0.3.0 – Interaction Modes
@@ -224,6 +226,8 @@ Deliver:
 - accepted short-answer comparison,
 - optional hint-influence policy,
 - low-interaction eligibility/filtering.
+
+v0.2 does not interpret submitted response payloads. Actual response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.3 behavior.
 
 ### v0.4.0 – Structured Content Acquisition
 

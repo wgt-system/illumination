@@ -6,6 +6,8 @@ Behavioral acceptance baseline.
 
 Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
+The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic Learning State/scheduling, relearning and queueing, plus optional opaque submitted-response retention. v0.3 covers actual response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.
+
 ## 1. Learning Item Creation
 
 ### Scenario: create a basic item
@@ -63,14 +65,16 @@ And submits one of the five Learning Assessment grades
 Then one Review is recorded
 And Learning State is updated according to the scheduling model.
 
-## 4. Direct Multiple Choice
+Every completed Review changes a new Learning Item to `IsNew = false`.
+
+## 4. Direct Multiple Choice (v0.3)
 
 Given an item authored with direct answer choices
 When the learner selects an answer
 Then Illumination can determine automatic correctness when the item supports it
 And the learner can still complete the configured final assessment flow.
 
-## 5. Answer Choices as Assistance
+## 5. Answer Choices as Assistance (v0.3)
 
 Given a normal question with optional assistance choices
 When the learner first attempts free recall
@@ -79,7 +83,7 @@ Then the item remains the same Learning Item
 And revealing those choices is recorded as assistance if the configured history requires it
 And they are not treated as if the item had originally required direct multiple choice.
 
-## 6. Hint Behavior
+## 6. Hint Behavior (v0.3)
 
 ### Default hint policy
 
@@ -96,7 +100,7 @@ Then the configured evaluation/scheduling policy may use that fact.
 
 When enabled, hint use lowers the automatic suggested assessment by at most one grade, without forcing the learner's final grade.
 
-## 7. Automatic Evaluation
+## 7. Automatic Evaluation (v0.3)
 
 ### Disabled
 
@@ -134,14 +138,16 @@ Then it must be scheduled no later than the better-assessed item.
 Given an active item
 When the learner submits the lowest assessment grade
 Then the item is treated as requiring very rapid relearning
-And it may be eligible to reappear again very soon, including within the same broader study period under the final scheduling algorithm.
+And it enters or remains in short-term relearning with a target of 3 intervening cards when enough other cards exist.
+If too few other cards remain, it goes to the end of the current queue; if no other card remains, it stays immediately due.
 
 ### Second-lowest grade
 
 Given an active item
 When the learner submits the second-lowest assessment grade
 Then the item returns soon
-But less aggressively than an otherwise comparable item receiving the lowest grade.
+But less aggressively than an otherwise comparable item receiving the lowest grade
+And it enters or remains in short-term relearning with a target of 10 intervening cards when enough other cards exist.
 
 ### Highest grade
 
@@ -168,7 +174,7 @@ And it is excluded from normal study selection.
 
 Given a suspended item
 When the learner reactivates it
-Then it becomes immediately due while retaining its Review history.
+Then it becomes immediately due while retaining its Review history and retained scheduling state.
 
 ## 10. Mastered
 
@@ -180,9 +186,9 @@ And it is excluded from normal study selection.
 
 Given a Mastered item
 When the learner unmarks Mastered
-Then it becomes immediately due while retaining its Review history.
+Then it becomes immediately due while retaining its Review history and retained scheduling state.
 
-## 11. Low-Interaction Session
+## 11. Low-Interaction Session (v0.3)
 
 Given a study scope containing suitable and unsuitable items
 When the learner starts a low-interaction session
@@ -289,15 +295,18 @@ Given an existing Learning Item
 When the learner explicitly confirms permanent deletion
 Then the Learning Item and its associated Learning State and Review history are removed.
 
-## 18. Review Response Persistence
+## 18. Review Response Persistence (v0.2 opaque payload)
 
-Given a Review uses text or code input
+Given a v0.2 Review has an optional submitted response payload
 When the Review is completed
-Then the entered response is retained with the Review.
+Then the opaque payload may be retained with the Review
+And it is not interpreted or automatically evaluated.
 
-Given a Review uses mental/verbal-only recall
+Given a v0.2 Review has no submitted response payload
 When the Review is completed
 Then no artificial response text is required.
+
+Actual text/code interaction workflows are deferred to v0.3, including normalized short-text matching and code execution.
 
 ## 19. Five-Grade Behavior
 
@@ -311,21 +320,27 @@ Given an item is rated `Leicht`
 Then its next normal interval is longer than for `Gut`
 And it is not automatically marked Mastered.
 
+Given an item is in short-term relearning
+When it receives `Unsicher`, `Gut`, or `Leicht`
+Then the relearning step is completed
+And short-term relearning is cleared
+And normal scheduling resumes from the retained reduced stability.
+
 A normal Review never automatically Suspends or Masters an item.
 
-## 20. Lifecycle Reactivation
+## 20. Lifecycle Actions
 
 Given a Suspended item
 When the learner Reactivates it
-Then its prior Review history remains
+Then its prior Review history and retained scheduling state remain
 And it becomes immediately due.
 
 Given a Mastered item
 When the learner Unmarks Mastered
-Then its prior Review history remains
+Then its prior Review history and retained scheduling state remain
 And it becomes immediately due.
 
-## 21. Assisted Evaluation
+## 21. Assisted Evaluation (v0.3)
 
 Given automatic evaluation is enabled
 And a machine-checkable response is incorrect
@@ -336,7 +351,7 @@ Given the response is correct
 Then Illumination suggests `Gut`
 And the learner may override the suggestion.
 
-## 22. Low-Interaction Eligibility
+## 22. Low-Interaction Eligibility (v0.3)
 
 Given an item is explicitly marked `lowInteractionEligible`
 When a low-interaction session is started
@@ -349,6 +364,8 @@ Low-interaction mode does not create separate Learning State or Review history.
 Given a normal Study Session contains relearning, due, and new items
 Then relearning items have priority over ordinary due items
 And ordinary due items have priority over new items.
+
+The v0.2 session scope supports one or more selected Decks, uses set-union semantics, includes Active items only, and does not duplicate an item present in several selected Decks.
 
 Given several selected Decks contain the same Learning Item
 Then that item appears only once in the session queue.

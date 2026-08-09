@@ -34,8 +34,8 @@ The user can:
 - add/remove/reorder hints,
 - configure direct answer choices where appropriate,
 - configure answer choices that may be revealed as assistance,
-- configure supported response/evaluation behavior,
-- suspend/reactivate an item,
+- configure supported response/evaluation behavior (v0.3),
+- suspend an item and Reactivate a Suspended item,
 - mark/unmark an item as Mastered.
 
 ### Manage Decks
@@ -55,13 +55,13 @@ The user can:
 
 - begin a study session for an allowed scope,
 - receive one Learning Item at a time,
-- answer mentally/verbal-only where supported,
-- enter a short response where supported,
-- select direct answer choices where supported,
-- request zero or more hints,
-- reveal optional answer-choice assistance,
-- reveal the Reference Solution,
-- receive automatic correctness feedback when enabled and available,
+- answer mentally/verbal-only where supported (v0.3),
+- enter a short response where supported (v0.3),
+- select direct answer choices where supported (v0.3),
+- request zero or more hints (v0.3),
+- reveal optional answer-choice assistance (v0.3),
+- reveal the Reference Solution (v0.3),
+- receive automatic correctness feedback when enabled and available (v0.3),
 - submit one of five final learning assessments,
 - immediately continue to the next selected item.
 
@@ -82,15 +82,17 @@ The user can:
 
 ## 4. Study Session Selection
 
-A session selector must eventually support at least:
+A v0.2 session selector supports:
 
-- one selected Deck,
-- due items within the selected scope,
-- low-interaction filtering where requested,
-- exclusion of Suspended items,
-- exclusion of Mastered items from normal repetition.
+- one or more selected Decks,
+- set-union membership across the selected Decks, without duplicate Learning Items,
+- Active items only,
+- due and new items within the selected scope,
+- the default new-item limit of 20 with explicit override/all-new behavior.
 
 Study Session priority is defined as short-term relearning, then already-due items, then new items.
+
+Low-interaction filtering is deferred to v0.3. Broader future Study Session scopes remain possible.
 
 The ordered assessment direction is already fixed:
 
@@ -103,7 +105,9 @@ The lowest assessment may cause very rapid relearning. The highest assessment ma
 
 ## 5. Review Interaction State
 
-For one presented Learning Item, the application may need transient interaction state such as:
+For v0.2, Review completion records the final five-grade assessment and may retain an optional submitted response payload as opaque historical content. It does not interpret or automatically evaluate that payload.
+
+Actual response interaction workflows are v0.3. They may need transient state such as:
 
 - which hints have been revealed,
 - whether answer choices were revealed as assistance,
@@ -114,7 +118,7 @@ For one presented Learning Item, the application may need transient interaction 
 
 This transient UI/application state must not be mistaken for durable Learning State.
 
-## 6. Manual and Automatic Evaluation
+## 6. Manual and Automatic Evaluation (v0.3)
 
 Illumination supports two broad evaluation policies:
 
@@ -134,7 +138,7 @@ The application provides a global default evaluation mode and a per-session over
 
 Some item forms cannot be reliably checked automatically and therefore always require learner judgment.
 
-## 7. Hint Policy
+## 7. Hint Policy (v0.3)
 
 Default:
 
@@ -152,7 +156,7 @@ The learner may override hint influence when starting a Study Session.
 
 When enabled and at least one hint is used, the automatically suggested assessment is lowered by at most one grade. Hint use never forces the learner's final grade.
 
-## 7A. Low-Interaction Eligibility
+## 7A. Low-Interaction Eligibility (v0.3)
 
 Each Learning Item has an explicit `lowInteractionEligible` property.
 
@@ -174,7 +178,7 @@ Normal study selection excludes suspended items.
 
 A suspended item can be returned to normal review.
 
-Reactivating the item preserves Review history and makes it immediately due.
+Reactivating the Suspended item preserves Review history and retained scheduling state, and makes it immediately due.
 
 ### Mastered
 
@@ -186,7 +190,7 @@ Normal study selection excludes Mastered items.
 
 The user can return a Mastered item to active learning.
 
-Unmarking Mastered preserves Review history and makes the item immediately due.
+Unmarking Mastered preserves Review history and retained scheduling state, and makes the item immediately due.
 
 ## 9. Deck Membership
 
@@ -324,14 +328,14 @@ Application design cannot yet finalize:
 - persistence/synchronization behavior,
 - authentication/user model if server-backed operation is chosen.
 
-## Automatic Evaluation
+## Automatic Evaluation (v0.3)
 
 Illumination supports:
 
 - `Manual`: no automatic correctness is required; final assessment is fully manual.
 - `Assisted`: machine-checkable answers may be evaluated and a grade suggested.
 
-V1 default suggestions:
+v0.3 default suggestions:
 
 - incorrect → `Schwer`,
 - correct → `Gut`.
@@ -343,7 +347,7 @@ Configuration:
 - one global default,
 - one per-Study-Session override.
 
-V1 machine-checkable behavior:
+v0.3 machine-checkable behavior:
 
 - direct selection answers: exact option correctness,
 - short text answers: normalized text comparison against explicitly stored accepted answers,

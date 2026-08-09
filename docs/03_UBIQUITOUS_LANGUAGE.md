@@ -68,6 +68,8 @@ A learning mode in which suitable items can be reviewed with minimal typing and 
 
 This includes mental or verbal recall, simple selection, rapid hint reveal, solution reveal, and quick assessment.
 
+Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is deferred to v0.3.
+
 ### Structured Import
 
 Import of versioned machine-readable learning content, initially expected to use JSON generated externally through ChatGPT.
@@ -116,7 +118,7 @@ A Deck:
 
 Interaction forms describe how a Learning Item is answered during a Review. They are not separate top-level item entities.
 
-V1 supports:
+Planned v0.3 interaction workflows include:
 
 - no recorded input: mental or verbal recall followed by self-assessment,
 - selection response,
@@ -150,7 +152,7 @@ An automatically detectable correct answer may inform a learning assessment.
 
 The final assessment may still represent difficulty, recall quality, or required assistance.
 
-Automatic correctness may inform a suggested grade, while the learner chooses the final assessment under the V1 policy.
+Automatic correctness may inform a suggested grade in v0.3, while the learner chooses the final assessment.
 
 ### Learning Progress != Analytics Dashboard
 
@@ -164,7 +166,7 @@ The reference solution is stored learning content.
 
 A learner response is what happened during a review.
 
-Whether all learner responses are persisted is not yet decided.
+In v0.2, a Review may retain an optional submitted response payload as opaque historical content. Interpretation, automatic evaluation, normalization, and execution belong to v0.3.
 
 ### Independent Application != Every-Platform Native Client
 
