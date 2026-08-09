@@ -204,7 +204,7 @@ Deliver:
 - Study Session,
 - five-grade assessment (`Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`),
 - deterministic scheduling state,
-- short-term relearning queue,
+- durable short-term reinforcement prioritization with session-local stack ordering,
 - due/new/relearning prioritization,
 - one or more selected Decks with set-union queue deduplication and Active items only,
 - default 20-new-item limit with explicit override/all-new behavior,
@@ -217,6 +217,14 @@ Deliver:
 
 Deliver:
 
+- Session learning-stack semantics and deterministic assessment previews:
+  - `Nochmal` returns after 1 intervening card when possible,
+  - `Schwer` returns after 5 intervening cards when possible,
+  - `Unsicher` returns at the end of the current learning stack,
+  - `Gut` and `Leicht` graduate into future normal scheduling,
+  - small-queue and single-card fallback remains explicit,
+  - unfinished reinforcement remains durable across sessions while stack position remains session-local.
+- Standalone Study transparency and compact UI integration, including remaining-session information, bounded queue preview, and grade-outcome previews near the five grade controls.
 - end-to-end workflows for the existing `SelfAssessed`, `Selection`, `ShortText`, and `Code` response forms,
 - assistance and reveal workflows,
 - code-response UX without execution,
@@ -226,6 +234,8 @@ Deliver:
 - low-interaction filtering by the existing persisted `lowInteractionEligible` property.
 
 v0.2 does not interpret submitted response payloads. Actual response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.3 behavior.
+
+The v0.3 first slice is session learning-stack semantics, grade previews, and standalone Study transparency. Response-form workflows and evaluation remain later slices within v0.3. Import and statistics remain outside v0.3.
 
 ### v0.4.0 – Structured Content Acquisition
 

@@ -36,6 +36,10 @@ The current domain state describing how the learning system should treat a learn
 
 This includes the conceptually defined scheduling state needed to determine future review behavior, including difficulty, stabilityDays, dueAt, and short-term relearning state.
 
+Learning State owns durable long-term learning state. It retains difficulty, retained stability, future normal due state, and whether the item still requires short-term reinforcement across sessions.
+
+The temporary `session learning stack` belongs to the Study Session. It owns the current queue, repeated appearances during the session, and relative reinsertion position caused by the current assessment. Queue position is not durable Learning State. A session does not own a second copy of Learning State.
+
 ### Repetition / Review Scheduling
 
 The domain process by which Illumination determines when a learning unit should next be eligible or due for review.
@@ -61,6 +65,14 @@ The evaluation of how well a learner handled a review.
 Several degrees are desired so difficult material can return sooner than successfully recalled material.
 
 The V1 rating scale is `Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`.
+
+Within a Study Session, `Nochmal`, `Schwer`, and `Unsicher` remain in the session learning stack. `Gut` and `Leicht` graduate the item from that stack into normal future scheduling.
+
+The session-local return order is:
+
+```text
+Nochmal <= Schwer <= Unsicher < Gut < Leicht
+```
 
 ### Low-Interaction Learning
 
@@ -175,6 +187,12 @@ In v0.2, a Review may retain an optional submitted response payload as opaque hi
 Illumination must be usable independently of Wiiii Got This.
 
 That does not require Illumination to implement a native client for every platform Wiiii Got This supports.
+
+### Session Learning Stack != Learning State
+
+The session learning stack is temporary Study Session ordering. It can contain the same Learning Item more than once while the learner reinforces it.
+
+Learning State retains the durable requirement for short-term reinforcement so an unfinished item can receive high priority in a later session. The exact position in the current session belongs only to Study Session state. An implementation may later retire or deprecate a persisted intervening-card field without creating a second Learning State.
 
 ## 6. External Terms
 

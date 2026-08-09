@@ -6,7 +6,7 @@ Behavioral acceptance baseline.
 
 Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic Learning State/scheduling, relearning and queueing, plus optional opaque submitted-response retention. v0.3 covers actual response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.
+The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, and Study transparency; later v0.3 slices cover actual response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.
 
 ## 1. Learning Item Creation
 
@@ -133,13 +133,21 @@ Given two otherwise comparable active items
 When one receives a worse normal assessment grade than the other
 Then it must be scheduled no later than the better-assessed item.
 
+For the current Study Session, the stronger invariant is:
+
+```text
+Nochmal <= Schwer <= Unsicher < Gut < Leicht
+```
+
+`Nochmal`, `Schwer`, and `Unsicher` remain in the current session learning stack. `Gut` and `Leicht` graduate into future normal scheduling.
+
 ### Lowest grade
 
 Given an active item
 When the learner submits the lowest assessment grade
 Then the item is treated as requiring very rapid relearning
-And it enters or remains in short-term relearning with a target of 3 intervening cards when enough other cards exist.
-If too few other cards remain, it goes to the end of the current queue; if no other card remains, it stays immediately due.
+And it remains in the current session learning stack with a target of 1 intervening card when enough other cards exist.
+If too few other cards remain, it goes to the end of the current learning stack; if no other card remains, it remains the next/current item.
 
 ### Second-lowest grade
 
@@ -147,7 +155,7 @@ Given an active item
 When the learner submits the second-lowest assessment grade
 Then the item returns soon
 But less aggressively than an otherwise comparable item receiving the lowest grade
-And it enters or remains in short-term relearning with a target of 10 intervening cards when enough other cards exist.
+And it remains in the current session learning stack with a target of 5 intervening cards when enough other cards exist.
 
 ### Highest grade
 
@@ -311,20 +319,76 @@ Actual text/code interaction workflows are deferred to v0.3, including normalize
 ## 19. Five-Grade Behavior
 
 Given an active item is rated `Nochmal`
-Then, where the session has enough intervening material, it should return after roughly three other cards.
+Then, where the session has enough intervening material, it should return after one other card.
 
 Given an active item is rated `Schwer`
-Then, where the session has enough intervening material, it should return after roughly ten other cards.
+Then, where the session has enough intervening material, it should return after five other cards.
+
+Given an active item is rated `Unsicher`
+Then it remains in the current session learning stack
+And it is appended to the end of that stack
+And it does not receive normal positive stability growth or a future normal dueAt
+And reinforcement remains required.
 
 Given an item is rated `Leicht`
 Then its next normal interval is longer than for `Gut`
 And it is not automatically marked Mastered.
 
-Given an item is in short-term relearning
-When it receives `Unsicher`, `Gut`, or `Leicht`
-Then the relearning step is completed
-And short-term relearning is cleared
-And normal scheduling resumes from the retained reduced stability.
+Given an item is in the session learning stack
+When it receives `Gut`
+Then it leaves the current session learning stack
+And reinforcement is cleared
+And a future normal dueAt is calculated from the retained stability.
+
+Given an item is in the session learning stack
+When it receives `Leicht`
+Then it leaves the current session learning stack
+And reinforcement is cleared
+And its future normal dueAt is later than `Gut` for comparable state.
+
+### Session reinsertion and completion
+
+Given enough other cards remain
+When the current item receives `Nochmal`
+Then it returns after exactly one intervening queue entry.
+
+Given enough other cards remain
+When the current item receives `Schwer`
+Then it returns after exactly five intervening queue entries.
+
+Given fewer other queue entries remain than the requested separation
+When the current item receives `Nochmal` or `Schwer`
+Then it is appended to the end of the current learning stack.
+
+Given a single-card session
+When the only remaining item receives `Nochmal`, `Schwer`, or `Unsicher`
+Then it remains the next/current learning item rather than disappearing.
+
+Given reinforcement-required items remain in an active Study Session
+When the learner explicitly completes the Study Session
+Then the session can end
+And those items remain immediately due/reinforcement-required for a future session
+And no successful future interval is invented.
+
+### Assessment preview and transparency
+
+Given unchanged Learning State, Study Session state, and controlled time
+When assessment previews are requested
+Then no Review is created
+And Learning State and the session learning stack remain unchanged.
+
+Given an assessment preview is obtained
+When the learner submits the same grade without state/time changes
+Then the actual scheduling and session-stack result matches the preview.
+
+The Application read model exposes enough information for presentation to show the current item, remaining queue-entry count, a bounded upcoming queue preview where useful, repeated/relearning entries, and the projected effect of each grade.
+
+### Review history within one session
+
+Given the same card receives several grades in one Study Session
+When each grade is submitted
+Then every submitted grade is retained as its own immutable Review
+And each Review uses its actual completion timestamp.
 
 A normal Review never automatically Suspends or Masters an item.
 
@@ -445,10 +509,10 @@ Then the local SQLite-backed core workflows remain usable without requiring a st
 
 Given a Learning Item with a long existing stability
 When it receives `Nochmal`
-Then retained stability is strongly reduced and capped at 3 days before recovery scheduling.
+Then retained stability is strongly reduced and capped at 3 days while reinforcement remains required.
 
 Given a Learning Item with a long existing stability
 When it receives `Schwer`
-Then retained stability is reduced and capped at 7 days before recovery scheduling.
+Then retained stability is reduced and capped at 7 days while reinforcement remains required.
 
-A subsequent successful Review grows from the reduced retained state rather than immediately restoring the previous long interval.
+A subsequent `Gut` or `Leicht` Review grows from the reduced retained state rather than immediately restoring the previous long interval.

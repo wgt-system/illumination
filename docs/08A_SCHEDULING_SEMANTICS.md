@@ -29,8 +29,9 @@ Each active Learning Item has scheduling state containing conceptually:
 - `difficulty` in the range 1.0–10.0,
 - `stabilityDays` as a positive real number,
 - `dueAt`,
-- whether the item is currently in short-term relearning,
-- short-term queue placement when applicable.
+- whether short-term reinforcement remains required across sessions.
+
+The current Study Session owns the temporary `session learning stack`: its queue, repeated appearances, and relative reinsertion positions. Queue position is not durable Learning State. The existing persisted `InterveningCardTarget` concept is superseded conceptually; a later implementation slice may retire or deprecate it without this document prescribing a migration.
 
 The implementation may use different internal names, but these semantics must remain visible in tests.
 
@@ -52,12 +53,12 @@ Meaning: extreme failure.
 
 Effects:
 
-- enter short-term relearning,
-- reappear after roughly 3 intervening cards when enough other cards exist,
+- remain in the current session learning stack,
+- return after 1 intervening card when enough other cards exist,
 - reduce `stabilityDays` strongly,
 - increase `difficulty`.
 
-After the successful completion of the short-term relearning step, the item returns to normal scheduling with a strongly shortened stability, but its historical Reviews remain intact.
+The item remains reinforcement-required until `Gut` or `Leicht` graduates it from the current session. No normal future `dueAt` is established while it remains in the stack.
 
 ### Schwer
 
@@ -65,10 +66,12 @@ Meaning: clear failure / weak recall.
 
 Effects:
 
-- enter short-term relearning,
-- reappear after roughly 10 intervening cards when enough other cards exist,
+- remain in the current session learning stack,
+- return after 5 intervening cards when enough other cards exist,
 - reduce `stabilityDays`,
 - increase `difficulty`, but less than `Nochmal`.
+
+The item remains reinforcement-required until `Gut` or `Leicht` graduates it from the current session. No normal future `dueAt` is established while it remains in the stack.
 
 ### Unsicher
 
@@ -76,10 +79,13 @@ Meaning: partial / uncertain success.
 
 Effects:
 
-- no mandatory same-session repeat,
-- keep the item in relatively active circulation,
-- modestly increase or approximately preserve `stabilityDays`,
+- remain in the current session learning stack,
+- return at the end of the current learning stack,
+- do not perform normal positive long-term stability growth,
+- do not establish a future normal `dueAt`,
 - slightly increase `difficulty`.
+
+Retained stability is preserved until the item later graduates with `Gut` or `Leicht`.
 
 ### Gut
 
@@ -87,8 +93,11 @@ Meaning: solid recall.
 
 Effects:
 
+- leave the current session learning stack,
 - meaningfully increase `stabilityDays`,
 - slightly reduce `difficulty`.
+
+`Gut` clears short-term reinforcement and establishes the normal future `dueAt`.
 
 ### Leicht
 
@@ -96,27 +105,33 @@ Meaning: immediate, confident recall.
 
 Effects:
 
+- leave the current session learning stack,
 - substantially increase `stabilityDays`,
 - reduce `difficulty` more strongly than `Gut`,
 - never automatically mark the item `Mastered`.
 
-## 5. Short-Term Relearning Queue
+`Leicht` clears short-term reinforcement and establishes a later normal future `dueAt` than `Gut` for comparable state.
+
+## 5. Session Learning Stack
 
 ### Nochmal
 
-Target placement: after approximately 3 other cards.
+Target placement: after 1 other card.
 
 ### Schwer
 
-Target placement: after approximately 10 other cards.
+Target placement: after 5 other cards.
+
+`Unsicher` is appended to the end of the current learning stack.
 
 If the session contains too few other cards:
 
 - place the relearning item at the end of the current queue,
-- do not create a tight immediate loop,
-- if no other card remains, keep the item immediately due for continued study or the next session.
+- if no other card remains, make the item the next/current learning item again.
 
-Target queue placement is more important than wall-clock minutes for these short-term retries.
+This single-card behavior is intentional. The learner can explicitly complete/end the Study Session instead of being forced to continue indefinitely.
+
+If the learner completes a session while an item remains reinforcement-required, it remains immediately due/high priority for a later session; ending the session does not invent a successful future interval.
 
 ## 6. Long-Term Interval Model
 
@@ -150,16 +165,16 @@ For every completed Review, the transition order is deterministic:
 4. Apply the grade's stability rule and minimum to obtain the resulting `stabilityDays`.
 5. For normal scheduling, calculate `dueAt` from the Review completion time plus the resulting stability.
 
-Every completed Review also changes `IsNew` to `false`, including a Review that enters or remains in short-term relearning. `Nochmal` and `Schwer` remain immediately due for queue handling rather than receiving a normal future `dueAt`.
+Every completed Review also changes `IsNew` to `false`, including a Review that leaves the item reinforcement-required in the session learning stack. `Nochmal`, `Schwer`, and `Unsicher` do not receive a normal future `dueAt` while they remain in that stack.
 
 ### Stability update
 
-For an active item not in the immediate short-term queue:
+For every active item, apply the retained-state rule for its assessment. Positive growth applies only when the item graduates from the session learning stack:
 
 ```text
 Nochmal : stability = min(stability * 0.25, 3 days)
 Schwer  : stability = min(stability * 0.55, 7 days)
-Unsicher: stability *= growth(1.20)
+Unsicher: retained stability is preserved; no normal positive growth
 Gut     : stability *= growth(2.20)
 Leicht  : stability *= growth(3.60)
 ```
@@ -181,12 +196,11 @@ newStability = max(minimumStabilityForGrade, oldStability * effectiveGrowth)
 Initial minimums:
 
 ```text
-Unsicher: 1 day
 Gut     : 2 days
 Leicht  : 4 days
 ```
 
-After `Nochmal` or `Schwer`, short-term relearning occurs first. A subsequent `Unsicher`, `Gut`, or `Leicht` Review is a successful completion of the relearning step: it clears short-term relearning and normal scheduling resumes from the reduced retained stability rather than from a completely new item.
+After `Nochmal` or `Schwer`, the item remains in the session learning stack. `Unsicher` also remains in that stack and preserves retained stability. A subsequent `Gut` or `Leicht` Review clears short-term reinforcement and normal scheduling resumes from the reduced retained stability rather than from a completely new item.
 
 ## 7. Due Time
 
@@ -219,9 +233,9 @@ Nochmal
 → retained stability is capped at 3 days before relearning handling
 ```
 
-The item enters short-term relearning immediately.
+The item enters the session learning stack immediately and remains reinforcement-required.
 
-A subsequent successful Review then grows again from this reduced retained state rather than from zero.
+A subsequent `Gut` or `Leicht` Review then grows again from this reduced retained state rather than from zero. `Unsicher` does not establish a future normal dueAt.
 
 `Schwer` uses a less aggressive retained-stability cap of 7 days.
 
@@ -314,7 +328,7 @@ Normal Study Session priority:
 
 Within the same priority class, items are shuffled rather than always presented in creation or Deck order.
 
-Explicit `Nochmal` / `Schwer` queue placements remain respected.
+Explicit `Nochmal`, `Schwer`, and `Unsicher` session-stack placements remain respected.
 
 ## 14. New Items
 

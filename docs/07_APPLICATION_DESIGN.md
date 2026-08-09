@@ -92,6 +92,10 @@ A v0.2 session selector supports:
 
 Study Session priority is defined as short-term relearning, then already-due items, then new items.
 
+The Study Session owns a temporary session learning stack rather than a second Learning State. A submitted grade may record a Review while leaving the item in that stack. `Nochmal` returns after one intervening card when possible, `Schwer` after five, and `Unsicher` at the end of the current learning stack. `Gut` and `Leicht` graduate the item from the stack into normal future scheduling. If the stack has no other item, `Nochmal`, `Schwer`, or `Unsicher` leaves the item as the next/current item until the learner completes the session.
+
+The durable Learning State retains difficulty, retained stability, future normal due state, and whether reinforcement remains required across sessions. The exact position in the current stack is Study Session state; the Study Session does not create a second Learning State.
+
 Low-interaction filtering is deferred to v0.3. Broader future Study Session scopes remain possible.
 
 The ordered assessment direction is already fixed:
@@ -102,6 +106,16 @@ better assessment → later return
 ```
 
 The lowest assessment may cause very rapid relearning. The highest assessment may create a much longer interval. Neither automatically changes lifecycle state.
+
+The canonical session invariant is `Nochmal <= Schwer <= Unsicher < Gut < Leicht`: the first three remain in the current session learning stack, while `Gut` and `Leicht` graduate into future scheduling. A worse assessment never produces a later return than a better assessment for comparable state.
+
+## 4A. Assessment Preview and Session Transparency (v0.3)
+
+The Application layer must expose a deterministic, side-effect-free assessment preview capability. For each of the five grades, the preview can show whether the item remains in the current session learning stack, its projected reinsertion behavior, and— for `Gut` or `Leicht`—the projected future dueAt or human-readable interval.
+
+The preview uses the real scheduler semantics for controlled time. It does not mutate Learning State, create a Review, generate a Review identity, or duplicate scheduling formulas in the presentation. With unchanged state and time, submitting the previewed grade produces the corresponding actual scheduling and stack result.
+
+The Application layer must also expose enough session transparency for a presentation to show the current item, remaining queue-entry count, a bounded upcoming queue preview where useful, repeated/relearning entries, and projected grade effects. This is an Application-owned read model and exposes neither Domain nor EF types. Debug-oriented queue detail is desirable for the standalone/admin/dev host, not a requirement for the future Wiiii Got This presentation.
 
 ## 5. Review Interaction State
 
@@ -192,6 +206,12 @@ Normal study selection excludes Mastered items.
 The user can return a Mastered item to active learning.
 
 Unmarking Mastered preserves Review history and retained scheduling state, and makes the item immediately due.
+
+## 8A. Standalone Host Direction
+
+The broad standalone structure remains Decks, Learning Items, and Study. Future refinement should remove implementation/developer wording such as “Standalone admin/dev host for v0.2 workflows”, use denser desktop-application-like navigation with suitable icons, reduce dashboard-like whitespace, make the Study card the visual focus, show grade outcome previews near the five grade controls, and show useful remaining-session information with an optional compact queue preview.
+
+This is product/presentation direction only, not a polished independent end-user UI requirement. Wiiii Got This remains the intended primary future end-user presentation.
 
 ## 9. Deck Membership
 

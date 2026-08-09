@@ -183,23 +183,23 @@ The order is monotonic:
 
 ### Nochmal
 
-Extreme failure. The item should return extremely quickly and, where possible, after roughly three intervening cards in the same Study Session.
+Extreme failure. The item remains in the current session learning stack and should return after one intervening card when possible. It strongly reduces retained stability and keeps reinforcement required.
 
 ### Schwer
 
-Clear failure or very weak recall. The item should return soon and, where possible, after roughly ten intervening cards in the same Study Session.
+Clear failure or very weak recall. The item remains in the current session learning stack and should return after five intervening cards when possible. It reduces retained stability and keeps reinforcement required.
 
 ### Unsicher
 
-Partial or uncertain success. No mandatory same-session repeat is required; the next interval remains comparatively short.
+Partial or uncertain success. The item remains in the current session learning stack and returns at the end of the current learning stack. It may increase difficulty modestly, but does not perform normal positive stability growth or establish a future normal dueAt.
 
 ### Gut
 
-Solid recall. The interval grows meaningfully.
+Solid recall. The item graduates from the current session learning stack, clears short-term reinforcement, and receives a normal future dueAt from the resulting stability.
 
 ### Leicht
 
-Immediate, confident recall. The interval grows substantially further than for `Gut`.
+Immediate, confident recall. The item graduates from the current session learning stack and receives a longer normal future dueAt than `Gut` for comparable state.
 
 ### Separation from lifecycle
 
@@ -259,6 +259,12 @@ It contains enough information to answer at least:
 
 The scheduling fields and transitions follow `docs/08A_SCHEDULING_SEMANTICS.md`; internal field names may vary while preserving those tested semantics.
 
+### Durable/session distinction
+
+Learning State contains durable difficulty, retained stability, future normal due state, and whether short-term reinforcement remains required across sessions. It does not contain the position of an item in a particular Study Session.
+
+The Study Session owns the temporary session learning stack, including the current queue, repeated appearances, and assessment-driven reinsertion position. The Study Session does not own a second copy of Learning State. The existing persisted `InterveningCardTarget` concept is superseded conceptually by this distinction; a later implementation slice may retire or deprecate that field without a migration decision in this specification.
+
 ### Failure after long-term stability
 
 When a previously long-stable Learning Item is forgotten, its prior history is retained.
@@ -314,7 +320,7 @@ Suspended and Mastered are explicit lifecycle decisions, not ordinary review gra
 
 ## 11. Aggregate Root: Deck
 
-`Deck` is the canonical domain term for an Anki-like user-defined grouping.
+`Deck` is the canonical domain term for a user-defined grouping of Learning Items.
 
 ### Known data
 
@@ -362,13 +368,24 @@ A session may select:
 
 When several Decks are selected, their Learning Items form a set union: an item belonging to several selected Decks appears only once in the session queue.
 
-### Queue priority
+### Session learning stack and queue priority
 
-Normal priority is:
+The session learning stack is temporary Study Session state. It may contain repeated appearances of an item before that item graduates. Normal initial priority is:
 
 1. short-term relearning items,
 2. already-due items,
 3. new items.
+
+During the session, the assessment determines the stack behavior:
+
+- `Nochmal` returns after one intervening card when possible.
+- `Schwer` returns after five intervening cards when possible.
+- `Unsicher` is appended to the end of the current learning stack.
+- `Gut` and `Leicht` leave the current learning stack and enter future normal scheduling.
+
+If fewer other entries remain than requested, `Nochmal` and `Schwer` are appended to the end. If no other entry remains, the item is the next/current learning item again. This intentional single-card behavior may be ended explicitly by completing the Study Session.
+
+If the session ends while an item still requires reinforcement, durable Learning State keeps that requirement and the item remains immediately due/high priority in a later session. No successful future interval is invented merely by ending the session.
 
 ### New-item limit
 
