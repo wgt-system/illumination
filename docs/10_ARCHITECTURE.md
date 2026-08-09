@@ -2,9 +2,7 @@
 
 ## Status
 
-Technology-neutral architecture baseline.
-
-Programming language, UI framework, persistence technology, deployment model, and server/local topology remain open.
+Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary end-user presentation on Windows and iPhone. An Avalonia host may remain optional for standalone administration and development. Core local operation requires no server; optional server, Docker, or relay infrastructure may support connectivity or synchronization.
 
 ## 1. Architectural Goal
 
@@ -65,7 +63,7 @@ Published Contract Adapters
 Application Layer
 ```
 
-This is a responsibility model, not a framework prescription.
+This is a responsibility model implemented within the Illumination executable capability runtime.
 
 ## 4. Domain Layer
 
@@ -106,13 +104,11 @@ It may define application ports/interfaces required by adapters.
 
 ## 6. Presentation
 
-Illumination must provide at least one independently usable presentation/client for its own core workflows.
+Wiiii Got This is the primary end-user presentation for Illumination on Windows and iPhone.
 
-The architecture does not require this presentation to exist on every platform.
+It may host Illumination locally in-process, but only through explicit Illumination-owned application or published-contract boundaries. Wiiii Got This must not use Illumination domain objects directly.
 
-Wiiii Got This may later present Illumination capabilities on additional platforms.
-
-The Illumination presentation technology is intentionally open.
+The existing Avalonia project may remain as an optional standalone/admin/dev host using CommunityToolkit.Mvvm. It is not the mandatory primary product UI.
 
 ## 7. Persistence
 
@@ -135,7 +131,7 @@ The local store persists at least:
 - Study Session history,
 - import history.
 
-An embedded local database is the natural persistence direction. The exact technology is selected by ADR after the application/runtime choice.
+Persistence uses SQLite through EF Core's SQLite provider. EF Core remains an infrastructure concern and is not part of the domain model.
 
 Future multi-device access must not silently move authoritative personal learning data to a remote service.
 
@@ -190,7 +186,7 @@ Its output conceptually includes:
 - updated Learning State,
 - next-review schedule.
 
-The exact algorithm remains a pending domain decision.
+The deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 12. Analytics / Learning Insight
 
@@ -209,7 +205,7 @@ Some domain/application behavior is configurable, including at least directional
 - whether automatic evaluation is used when available,
 - whether hint use influences assessment/scheduling.
 
-Configuration scope and persistence are not yet finalized.
+Automatic evaluation uses a global default with a per-Study-Session override. Hint influence is likewise controlled by the accepted default and per-session policy described in the scheduling semantics.
 
 Do not turn configuration into global mutable flags embedded throughout the domain.
 
@@ -235,7 +231,7 @@ A remote server must not become a hidden requirement for ordinary Illumination u
 
 ## 15. Technology Selection Criteria
 
-When technology is selected, the decision must be based on Illumination requirements rather than the user's existing résumé skillset.
+The selected V1 technology is based on Illumination requirements rather than the user's existing résumé skillset.
 
 Relevant criteria include:
 
@@ -252,42 +248,34 @@ Relevant criteria include:
 
 Existing personal familiarity may only be a tie-breaker between otherwise similarly suitable choices.
 
-## 16. Architecture Decisions Still Required
+## 16. Remaining Architecture Scope
 
-Before implementation:
-
-- five-grade scheduling semantics,
-- import update identity,
-- independent client/presentation model,
-- language/runtime,
-- persistence technology,
-- automatic-evaluation mechanism and configuration scope,
-- low-interaction representation,
-- integration transport only when a concrete contract is required.
-
-Each material architecture choice should receive an ADR.
+The V1 implementation gate is satisfied. Future decisions are limited to details outside the accepted baseline, such as concrete integration transport when a contract is required.
 
 ## Accepted V1 Architecture Direction
 
-Illumination V1 is:
+Illumination V1 runtime is:
 
 - a local-first,
 - single-user,
-- installed desktop application,
+- executable capability runtime,
 - with an embedded local database,
 - requiring no remote server for core operation.
 
 Selected stack:
 
-- C# / .NET,
-- Avalonia for the desktop UI,
-- SQLite for authoritative local persistence.
+- C# / .NET 10 LTS,
+- SQLite for authoritative local persistence,
+- EF Core with the SQLite provider for persistence infrastructure,
+- optional Avalonia/CommunityToolkit.Mvvm host for standalone administration and development.
+
+Tests use xUnit.net v3. Time-dependent domain tests use a controllable `TimeProvider`/clock abstraction.
 
 This selection is based on the accepted product architecture, not on the user's existing skillset.
 
-A later Wiiii Got This adapter may expose explicit versioned contracts without making the Illumination UI itself web-based.
+A Wiiii Got This adapter/host may expose explicit versioned contracts without making Illumination's runtime a web application.
 
-Docker is not required for the Illumination V1 application.
+Docker, server, or relay infrastructure is optional and must not become mandatory for core local operation.
 
 Optional future remote relay/synchronization infrastructure is a separate concern.
 
@@ -319,4 +307,5 @@ Requirements for that later design:
 - Illumination remains owner of learning semantics,
 - remote readable storage is not assumed,
 - device-local operation after synchronization is a goal,
-- transport/relay/encryption are Wiiii Got This / integration architecture concerns.
+- Illumination owns future domain-specific synchronization and merge semantics,
+- generic Wiiii Got This infrastructure may own transport, relay, retry, and encryption concerns.

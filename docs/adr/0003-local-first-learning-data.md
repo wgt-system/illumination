@@ -22,7 +22,7 @@ Remote infrastructure may later support explicit connectivity, end-to-end encryp
 ## Consequences
 
 - Remote PostgreSQL is not the default persistence model.
-- An embedded local database is the natural direction; exact technology remains a later ADR.
+- SQLite is the selected local database; EF Core's SQLite provider is the infrastructure adapter (ADR-0007).
 - A browser-based UI remains possible if served locally; a web UI does not imply online storage.
 - Docker is not required for the core local application merely because a server exists.
 - Wiiii Got This multi-device use needs a separate access/synchronization design.

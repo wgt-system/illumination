@@ -26,7 +26,7 @@ Illumination addresses this through small independent learning units, immediate 
 
 The intended interaction should often be fast enough to replace low-attention activities such as scrolling short-form content during otherwise idle moments.
 
-This low-friction usage is important, but it does not imply any particular platform or implementation technology.
+This low-friction usage is important, but it does not require Illumination to provide a complete end-user UI. Wiiii Got This is the primary presentation on Windows and iPhone.
 
 ## 3. Fundamental Learning Loop
 
@@ -65,9 +65,7 @@ A learning unit may represent different kinds of activity, for example:
 - solving a small programming task,
 - inspecting a code fragment and determining its behavior.
 
-The exact terminology and type system are not yet fixed.
-
-`Learning Item` is used in the specification as a provisional neutral term.
+`Learning Item` is the canonical term for the smallest independently reviewable unit.
 
 ## 5. Reference Solutions
 
@@ -94,7 +92,7 @@ Possible assistance includes:
 
 Requesting assistance and revealing the full reference solution are distinct learner actions.
 
-Whether and how use of assistance influences learning assessment or scheduling remains open.
+The V1 policy is defined by the scheduling semantics: hints have no penalty by default, with optional configured hint influence.
 
 ## 7. Response and Evaluation Modes
 
@@ -113,7 +111,7 @@ Manual self-assessment is a first-class interaction mode rather than merely a fa
 
 Several degrees of learning performance are desirable so difficult material can return more quickly and successful material can move further into the future.
 
-The final terminology, scale, and degree of automation are not yet defined.
+The V1 scale is `Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`; automatic evaluation may suggest a grade while the learner chooses the final assessment.
 
 ## 8. Repetition and Learning State
 
@@ -129,7 +127,7 @@ There is no requirement for a normal terminal state in which successfully learne
 
 A separate explicit user action may later allow a learning unit to be removed from normal repetition when the learner considers it permanently trivial or no longer useful.
 
-The scheduling algorithm itself is not yet selected.
+The initial deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 9. Learning Progress
 
@@ -174,7 +172,7 @@ It may:
 
 Illumination must not impose a semantic rule that every deck corresponds to exactly one topic, learning cluster, source, or external system.
 
-`Deck` is currently a provisional specification term.
+`Deck` is the canonical term for a user-defined grouping of Learning Items.
 
 ## 11. Low-Friction Learning
 
@@ -253,13 +251,9 @@ The exact semantics, identity model, direction of references, and published cont
 
 ## 15. Relationship to Wiiii Got This
 
-Illumination must remain usable independently of Wiiii Got This.
+Illumination remains an independent bounded context and executable capability runtime. Wiiii Got This is the primary end-user presentation on Windows and iPhone and may host Illumination locally in-process through explicit Illumination-owned application or published-contract boundaries.
 
-Independent usability does not require Illumination itself to implement a native client for every platform supported by Wiiii Got This.
-
-Illumination may later publish explicit, versioned capabilities, commands, queries, or read contracts that Wiiii Got This can consume.
-
-Wiiii Got This may then expose appropriate Illumination functionality on supported devices and platforms.
+Illumination must not expose internal domain objects to Wiiii Got This. A complete separate Illumination end-user UI is not required; the existing Avalonia project may remain an optional standalone/admin/dev host.
 
 The internal implementation technology of Illumination must not become part of its integration contract.
 
@@ -279,9 +273,7 @@ Illumination owns all authoritative data required for its learning domain, inclu
 
 Authoritative learning data is local-first and is not intended to be stored remotely merely for convenience.
 
-The exact local persistence technology is not yet defined.
-
-Optional infrastructure may later support explicit device connectivity, encrypted synchronization, or opt-in backup without changing Illumination's domain ownership.
+SQLite with EF Core is the accepted local persistence baseline. Optional server, Docker, or relay infrastructure may later support connectivity or synchronization without changing Illumination's domain ownership. Illumination owns future domain-specific synchronization and merge semantics; generic WGT infrastructure may own transport, relay, retry, and encryption concerns.
 
 ## 17. Explicitly Outside the Domain
 

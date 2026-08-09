@@ -22,7 +22,7 @@ Its authoritative concepts include:
 - Illumination-side import provenance,
 - future Illumination-side external learning references.
 
-Illumination must remain independently usable without any surrounding bounded context.
+Illumination remains independently executable and authoritative without sharing domain ownership with any surrounding bounded context. Its primary end-user presentation is provided by Wiiii Got This.
 
 ## 3. Vocation Bounded Context
 
@@ -160,7 +160,7 @@ It does not own Illumination learning semantics.
 
 ## 9. Illumination → Wiiii Got This Relationship
 
-Illumination may later act as a provider of explicit capabilities and read/command contracts.
+Illumination acts as the provider of explicit capabilities and read/command contracts consumed by Wiiii Got This.
 
 Conceptually:
 
@@ -180,15 +180,15 @@ The internal implementation technology of Illumination must not leak into this c
 
 ## 10. Independent Usability
 
-Illumination's independent usability means:
+Illumination's independent capability-runtime boundary means:
 
-- it can provide its own core learning workflows without Wiiii Got This,
-- its domain state remains authoritative within Illumination,
-- Wiiii Got This is not required for the existence of learning items, reviews, scheduling, or decks.
+- its domain/application/persistence semantics remain authoritative within Illumination,
+- it can execute core learning operations locally without a mandatory remote server,
+- Wiiii Got This may provide the primary end-user presentation without owning Illumination state.
 
-Independent usability does **not** mean:
+This does **not** mean:
 
-- Illumination must implement a native client for every platform,
+- Illumination must provide a complete separate end-user UI,
 - Illumination must duplicate Wiiii Got This platform abstractions,
 - Illumination must own device discovery or platform presentation.
 
@@ -198,18 +198,9 @@ Illumination owns the semantics of learning interactions.
 
 Wiiii Got This may own platform-specific presentation of published capabilities.
 
-The exact UI integration model is not decided.
+Wiiii Got This is the primary end-user presentation on Windows and iPhone. The exact published capability contract and hosting details remain implementation work, not a change in domain ownership.
 
-Possible future mechanisms must not be selected in this document.
-
-In particular, the context map does not decide between:
-
-- data-driven presentation by Wiiii Got This,
-- declarative service-provided UI descriptions,
-- embedded portable UI surfaces,
-- other capability presentation mechanisms.
-
-That decision belongs to Wiiii Got This architecture and published-capability design.
+Illumination may be hosted locally in-process by Wiiii Got This, but only through explicit Illumination-owned application or published-contract boundaries. No speculative synchronization API is selected here.
 
 ## 12. Physical Infrastructure
 
@@ -290,7 +281,7 @@ The external generator does not become the source of truth for imported learning
 Current state:
 
 - Vocation ↔ Illumination: Separate Ways.
-- Illumination ↔ Wiiii Got This: no concrete contract yet.
+- Illumination → Wiiii Got This: WGT is the primary end-user presentation; no speculative concrete contract or synchronization API is authored yet.
 - ChatGPT content generation: external, user-mediated import workflow.
 
 ## 15. Contract Gate

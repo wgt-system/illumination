@@ -1,7 +1,9 @@
 # ADR-0001: Illumination Is an Independent Bounded Context
 
-- Status: Accepted
+- Status: Partially superseded by ADR-0009
 - Date: 2026-08-08
+
+Supersession note: ADR-0009 replaces only the assumption that Illumination must provide a complete independently usable end-user application; the independent bounded-context and ownership decision remains valid.
 
 ## Context
 

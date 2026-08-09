@@ -4,7 +4,7 @@
 
 Behavioral acceptance baseline.
 
-Tests that depend on the exact five-grade scheduling algorithm are expressed abstractly until that algorithm is specified.
+Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 1. Learning Item Creation
 
@@ -94,7 +94,7 @@ Given hint influence is enabled
 When the learner uses hints
 Then the configured evaluation/scheduling policy may use that fact.
 
-The exact interval effect is deferred until scheduling semantics are specified.
+When enabled, hint use lowers the automatic suggested assessment by at most one grade, without forcing the learner's final grade.
 
 ## 7. Automatic Evaluation
 
@@ -156,7 +156,7 @@ Given an active item repeatedly reviewed successfully
 When the scheduling model processes those Reviews
 Then normal review intervals generally become longer over successful repetitions.
 
-Exact timings remain pending.
+Exact timings follow the initial constants in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ## 9. Suspension
 
@@ -168,7 +168,7 @@ And it is excluded from normal study selection.
 
 Given a suspended item
 When the learner reactivates it
-Then it may return to normal study according to the later-defined scheduling rule.
+Then it becomes immediately due while retaining its Review history.
 
 ## 10. Mastered
 
@@ -180,7 +180,7 @@ And it is excluded from normal study selection.
 
 Given a Mastered item
 When the learner unmarks Mastered
-Then it may return to normal study according to the later-defined scheduling rule.
+Then it becomes immediately due while retaining its Review history.
 
 ## 11. Low-Interaction Session
 
@@ -189,7 +189,7 @@ When the learner starts a low-interaction session
 Then only items designated suitable for that mode are selected
 And the learner can complete suitable reviews with minimal required input.
 
-The exact suitability representation remains open.
+Suitability is determined by the item's explicit `lowInteractionEligible` property.
 
 ## 12. Import
 
@@ -261,24 +261,18 @@ And does not expose internal persistence or mutable domain objects.
 
 ## 15. Wiiii Got This Boundary
 
+Given Wiiii Got This presents Illumination on Windows or iPhone
+When the learner invokes an Illumination capability
+Then the capability executes through an Illumination-owned application boundary
+And Illumination remains authoritative for the resulting learning-state change.
+
 Given Wiiii Got This is unavailable
-When the learner launches Illumination through its independent presentation
-Then core Illumination workflows remain usable.
+When Illumination runtime/application capabilities are invoked locally
+Then core Illumination workflows remain available without requiring Wiiii Got This.
 
-Given a future Wiiii Got This capability integration
-When a capability is invoked
-Then Illumination remains authoritative for the resulting learning-state change.
+## 16. Acceptance Scope Notes
 
-## 16. Acceptance Blockers Before Implementation Freeze
-
-The following tests cannot be made exact until product decisions are completed:
-
-- final five grade names,
-- exact interval transitions,
-- exact short-term relearning timing for the lowest grades,
-- post-reactivation scheduling,
-- post-unmaster scheduling,
-- exact create/update JSON operation envelope,
+The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Some future import details remain outside this baseline.
 
 ## 17. Canonical Deck and Deletion Behavior
 
@@ -319,10 +313,15 @@ And it is not automatically marked Mastered.
 
 A normal Review never automatically Suspends or Masters an item.
 
-## 20. Reactivation
+## 20. Lifecycle Reactivation
 
-Given a Suspended or Mastered item
-When the learner reactivates it
+Given a Suspended item
+When the learner Reactivates it
+Then its prior Review history remains
+And it becomes immediately due.
+
+Given a Mastered item
+When the learner Unmarks Mastered
 Then its prior Review history remains
 And it becomes immediately due.
 
@@ -374,8 +373,8 @@ And current scheduling state resets to new.
 
 ## 26. Local-First Operation
 
-Given remote infrastructure is unavailable
-When Illumination is used through its independent local presentation
+Given no remote server is available
+When Illumination runtime/application capabilities are invoked locally
 Then core content, study, Review, scheduling, Deck, progress, and import workflows remain usable from local authoritative data.
 
 
@@ -418,11 +417,11 @@ Then Illumination creates a local backup before mutating the database.
 Given normal operation
 Then rolling local backups can be produced without remote infrastructure.
 
-## 31. Installed Local Operation
+## 31. Local Capability-Runtime Operation
 
 Given the remote network is unavailable
-When the learner starts the installed Illumination desktop application
-Then the local SQLite-backed core workflows remain usable.
+When Illumination runtime/application capabilities are invoked locally
+Then the local SQLite-backed core workflows remain usable without requiring a standalone Illumination UI.
 
 ## 32. Lapse After Long Stability
 

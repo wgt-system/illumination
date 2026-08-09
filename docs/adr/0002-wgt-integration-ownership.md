@@ -1,7 +1,9 @@
 # ADR-0002: Wiiii Got This Does Not Own Illumination Learning Semantics
 
-- Status: Accepted
+- Status: Partially superseded by ADR-0009
 - Date: 2026-08-08
+
+Supersession note: ADR-0009 replaces the assumption that Wiiii Got This is only a possible later presentation consumer; the decision that WGT does not own Illumination learning semantics remains valid.
 
 ## Context
 

@@ -10,15 +10,11 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current project status
 
-The project is in specification phase.
-
-No implementation stack, persistence technology, UI framework, internal service split, or deployment model has been selected yet.
-
-Implementation must not begin before the first coherent domain and application specification exists.
+The implementation gate for the V1 baseline is satisfied. Illumination is being built as a local-first, single-user executable capability runtime. Wiiii Got This is the primary end-user presentation on Windows and iPhone; an Avalonia host may remain for standalone administration and development.
 
 ## Product direction
 
-Illumination is inspired by the useful parts of Anki:
+Illumination is inspired by useful spaced-review workflows, but its canonical terms are `Learning Item` and `Deck`:
 
 - small independently reviewable learning units,
 - rapid answer reveal,
@@ -50,11 +46,11 @@ A later published contract may allow Vocation to reference a learning need and c
 
 ## Relationship to Wiiii Got This
 
-Illumination must remain independently usable without Wiiii Got This.
+Wiiii Got This is the primary end-user presentation for Illumination on Windows and iPhone.
 
-Wiiii Got This may later consume explicit, versioned Illumination capabilities and present them on supported devices and platforms.
+Illumination remains an independent bounded context and executable capability runtime. Wiiii Got This may host it locally in-process, but only through explicit Illumination-owned application or published-contract boundaries; it must not use Illumination domain objects directly.
 
-Illumination does not need to implement its own client for every platform supported by Wiiii Got This.
+The existing Avalonia project may remain as an optional standalone/admin/dev host. A complete separate Illumination end-user UI is not required.
 
 ## Data locality
 
@@ -62,7 +58,7 @@ Illumination is local-first.
 
 Authoritative learning content, Review history, scheduling state, Decks, Study Sessions, and import history remain local to the user's device.
 
-A remote server is not required for core use. Future Wiiii Got This integration may introduce explicit multi-device access or encrypted synchronization, but remote readable persistence is not assumed.
+A remote server is not required for core local operation. Optional server, Docker, or relay infrastructure may support connectivity and synchronization, but remote readable persistence is not assumed. Illumination owns future domain-specific synchronization and merge semantics; generic WGT infrastructure may own transport, relay, retry, and encryption concerns.
 
 ## Specification documents
 
@@ -80,7 +76,7 @@ A remote server is not required for core use. Future Wiiii Got This integration 
 - `docs/12_IMPLEMENTATION_PLAN.md`
 - `docs/adr/`
 
-The specification is intentionally technology-neutral until the remaining domain and architecture decisions are resolved.
+The accepted V1 runtime baseline is C# / .NET 10 LTS, SQLite, and EF Core's SQLite provider. Avalonia and CommunityToolkit.Mvvm remain accepted for the optional standalone/admin/dev host. Core local operation requires no remote server; Docker is optional infrastructure and not mandatory.
 
 ## Release direction
 
@@ -89,15 +85,14 @@ Feature milestones are expected to use `vMAJOR.MINOR.PATCH`, progressing through
 
 ## V1 technology baseline
 
-Illumination V1 is planned as an installed local desktop application using:
+Illumination V1 is planned as a local-first executable capability runtime using:
 
 - C# / .NET
-- Avalonia
 - SQLite
 
 Core operation does not require a remote server.
 
-The stack is selected from the current product architecture rather than from prior user skill familiarity.
+The stack is selected from the current product architecture rather than from prior user skill familiarity. Wiiii Got This provides the primary end-user presentation.
 
 ## Structured content contract
 

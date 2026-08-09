@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:desktop="using:Illumination.Desktop"
+        x:Class="Illumination.Desktop.MainWindow"
+        x:DataType="desktop:MainWindowViewModel"
+        Title="Illumination"
+        Width="640"
+        Height="360">
+  <Grid RowDefinitions="Auto,*" Margin="32">
+    <TextBlock Text="{Binding Title}" FontSize="28" />
+    <TextBlock Grid.Row="1"
+               Text="The Illumination shell is ready."
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center" />
+  </Grid>
+</Window>

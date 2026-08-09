@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Illumination.Domain/Illumination.Domain.csproj" />
+    <Project Path="src/Illumination.Application/Illumination.Application.csproj" />
+    <Project Path="src/Illumination.Infrastructure/Illumination.Infrastructure.csproj" />
+    <Project Path="src/Illumination.Desktop/Illumination.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Illumination.Domain.Tests/Illumination.Domain.Tests.csproj" />
+    <Project Path="tests/Illumination.Application.Tests/Illumination.Application.Tests.csproj" />
+    <Project Path="tests/Illumination.Infrastructure.Tests/Illumination.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -2,7 +2,7 @@
 
 ## Status
 
-Planning baseline only. No implementation should start until the remaining domain and architecture blockers are resolved.
+Implementation baseline. The accepted V1 decisions satisfy the implementation gate.
 
 ## 1. Release Model
 
@@ -30,20 +30,11 @@ Patch releases may later use the third component where needed.
 
 ## 2. Specification Gate
 
-Before implementation starts, finalize:
-
-- final five-grade terminology,
-- exact repetition/scheduling behavior,
-- exact create/update contract envelope,
-- low-interaction suitability representation,
-- automatic-evaluation configuration scope,
-- hint-policy configuration scope,
-- language/runtime and persistence technology,
-- architecture ADRs.
+The implementation gate is satisfied for the accepted V1 baseline. Scheduling semantics, canonical terminology, Content Bundle 1.0, and the technology baseline are decided and documented. Remaining application-detail decisions must not block the listed vertical slices.
 
 ## 3. Proposed Milestone Shape
 
-The exact version numbers may change after architecture decisions.
+The following milestone sequence is the current implementation baseline.
 
 ### Milestone A – Learning Core
 
@@ -71,7 +62,7 @@ Goal:
 - difficult/relearning behavior,
 - Suspend/Mastered scheduling interactions.
 
-This milestone depends on the unresolved scheduling specification.
+This milestone uses the accepted scheduling specification in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
 ### Milestone C – Interaction Variants
 
@@ -97,7 +88,7 @@ Goal:
 - update/augmentation behavior,
 - provenance required by the chosen workflow.
 
-Uses explicit stable Illumination identifiers for intentional updates and a user-confirmed partial-import workflow; the exact bundle operation structure remains to be finalized.
+Uses the published Content Bundle 1.0 contract and explicit stable Illumination identifiers for intentional updates.
 
 ### Milestone E – Learning Insight
 
@@ -148,7 +139,7 @@ Priority order:
 2. application-use-case tests,
 3. import-contract tests,
 4. persistence integration tests,
-5. presentation interaction tests,
+5. application-capability interaction tests,
 6. published-contract tests when integrations exist.
 
 Scheduling must be deterministic under controlled time.
@@ -179,44 +170,32 @@ to separate network services without an actual architectural reason.
 
 ## 8. Next Planning Step
 
-After the remaining product decisions are completed:
-
-1. finalize `05_DOMAIN_MODEL.md`,
-2. freeze the initial scheduling specification,
-3. freeze import contract 1.0,
-4. select architecture/technology through explicit ADRs,
-5. assign concrete release milestone numbers,
-6. create implementation issues,
-7. only then begin Codex implementation.
+Proceed with the v0.1.0 vertical slices in order, keeping the accepted contracts and ADRs under test. Create narrower implementation tasks only where the listed milestone behavior requires them.
 
 
 ## Accepted V1 Technology Baseline
 
-- C# / .NET
-- Avalonia
+- C# / .NET 10 LTS
 - SQLite
-- installed local desktop application
+- executable capability runtime with Wiiii Got This as the primary end-user presentation
 - no mandatory remote server
-- no Docker requirement for the core V1 application
+- optional server/Docker/relay infrastructure for connectivity or synchronization only
 
 Implementation planning should use this baseline unless a later ADR explicitly supersedes it.
 
 ## Concrete Pre-1.0 Milestones
 
-### v0.1.0 – Local Content Foundation
+### v0.1.0
 
-Deliver:
+Scope: Local Content Foundation.
 
-- C#/.NET + Avalonia application shell,
-- SQLite schema/migrations,
-- Learning Item create/edit/delete,
-- Reference Solution,
-- `0..*` hints,
-- Deck create/edit/delete,
-- many-to-many item/Deck membership,
-- Active/Suspended/Mastered lifecycle,
-- local rolling backup baseline,
-- core domain tests.
+Deliver in order:
+
+1. Bootstrap solution architecture (C#/.NET 10 LTS capability runtime, EF Core infrastructure, and test baseline; optional Avalonia host may remain available for administration/development).
+2. Learning Item and Deck domain.
+3. SQLite persistence and migrations.
+4. Content-management application capabilities and their optional/admin/dev host integration.
+5. Backup, hardening, and v0.1.0 acceptance.
 
 ### v0.2.0 – Study and Scheduling
 
@@ -288,7 +267,7 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 
 ### v1.0.0 – Coherent Independent Illumination
 
-`v1.0.0` requires a stable independent Illumination workflow covering:
+`v1.0.0` requires a stable independent Illumination capability runtime covering:
 
 - content acquisition,
 - Deck organization,
@@ -298,5 +277,7 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 - local authoritative persistence,
 - backup/migration safety,
 - acceptance-tested core invariants.
+
+Wiiii Got This may provide the primary end-user presentation; a complete separate Illumination end-user UI is not required.
 
 Vocation and Wiiii Got This integrations are not prerequisites for `v1.0.0`; they evolve through separate published-contract milestones when their semantics are needed.
