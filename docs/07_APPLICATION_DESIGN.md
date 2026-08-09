@@ -216,7 +216,7 @@ A practical authoring flow may expose:
 - low-interaction suitability,
 - deck placement.
 
-The exact UI and stored schema remain open.
+The exact UI presentation remains open; the Content Bundle 1.0 import contract and stored operation schema are defined by `schemas/illumination-content-bundle-1.0.schema.json`.
 
 ## 11. Prompt Generation
 
@@ -319,8 +319,6 @@ Domain-invalid operations must not be converted into partially valid state.
 
 Application design cannot yet finalize:
 
-- exact import create/update envelope (stable update identity itself is decided),
-- contract schema version 1.0 details,
 - persistence/synchronization behavior,
 - authentication/user model if server-backed operation is chosen.
 

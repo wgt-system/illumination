@@ -186,7 +186,9 @@ Implementation planning should use this baseline unless a later ADR explicitly s
 
 ## Concrete Pre-1.0 Milestones
 
-### v0.1.0 – Local Content Foundation
+### v0.1.0
+
+Scope: Local Content Foundation.
 
 Deliver in order:
 
