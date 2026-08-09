@@ -35,6 +35,7 @@ public class ContentManagementServiceTests
         Assert.Equal("Changed prompt", updated.Prompt);
         Assert.Equal("Changed solution", updated.ReferenceSolution);
         Assert.Equal(["First", "Second"], updated.Hints.Select(x => x.Text));
+        Assert.Equal(LearningItemResponseMode.ShortText, created.ResponseMode);
         Assert.False(updated.LowInteractionEligible);
         Assert.DoesNotContain(
             PublicContractTypes(typeof(LearningItemView)),
@@ -94,6 +95,10 @@ public class ContentManagementServiceTests
 
         await Assert.ThrowsAsync<ContentNotFoundException>(() => service.GetLearningItemAsync(Guid.NewGuid()));
         await Assert.ThrowsAsync<ContentValidationException>(() => service.CreateLearningItemAsync(new CreateLearningItemCommand(" ", "Solution")));
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.CreateLearningItemAsync(new CreateLearningItemCommand(
+            "Prompt",
+            "Solution",
+            (LearningItemResponseMode)999)));
         Assert.Equal(0, store.SaveLearningItemCount);
     }
 

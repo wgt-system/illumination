@@ -261,13 +261,39 @@ public sealed class ContentManagementService
 
     private static DeckView ToView(Deck deck) => new(deck.Id.Value, deck.Name, deck.LearningItemIds.Select(x => x.Value).ToArray());
 
-    private static ResponseMode ToDomain(LearningItemResponseMode mode) => (ResponseMode)mode;
+    private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
+    {
+        LearningItemResponseMode.SelfAssessed => ResponseMode.SelfAssessed,
+        LearningItemResponseMode.Selection => ResponseMode.Selection,
+        LearningItemResponseMode.ShortText => ResponseMode.ShortText,
+        LearningItemResponseMode.Code => ResponseMode.Code,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported Learning Item response mode."),
+    };
 
-    private static LearningItemLifecycleState ToDomain(LearningItemLifecycle lifecycle) => (LearningItemLifecycleState)lifecycle;
+    private static LearningItemLifecycleState ToDomain(LearningItemLifecycle lifecycle) => lifecycle switch
+    {
+        LearningItemLifecycle.Active => LearningItemLifecycleState.Active,
+        LearningItemLifecycle.Suspended => LearningItemLifecycleState.Suspended,
+        LearningItemLifecycle.Mastered => LearningItemLifecycleState.Mastered,
+        _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Learning Item lifecycle."),
+    };
 
-    private static LearningItemResponseMode ToApplication(ResponseMode mode) => (LearningItemResponseMode)mode;
+    private static LearningItemResponseMode ToApplication(ResponseMode mode) => mode switch
+    {
+        ResponseMode.SelfAssessed => LearningItemResponseMode.SelfAssessed,
+        ResponseMode.Selection => LearningItemResponseMode.Selection,
+        ResponseMode.ShortText => LearningItemResponseMode.ShortText,
+        ResponseMode.Code => LearningItemResponseMode.Code,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported Domain response mode."),
+    };
 
-    private static LearningItemLifecycle ToApplication(LearningItemLifecycleState lifecycle) => (LearningItemLifecycle)lifecycle;
+    private static LearningItemLifecycle ToApplication(LearningItemLifecycleState lifecycle) => lifecycle switch
+    {
+        LearningItemLifecycleState.Active => LearningItemLifecycle.Active,
+        LearningItemLifecycleState.Suspended => LearningItemLifecycle.Suspended,
+        LearningItemLifecycleState.Mastered => LearningItemLifecycle.Mastered,
+        _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Domain lifecycle."),
+    };
 
     private static IEnumerable<Hint>? ToDomainHints(IReadOnlyList<HintInput>? hints) => hints?.Select(x => new Hint(x.Text));
 

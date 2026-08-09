@@ -41,6 +41,7 @@ public class ContentManagementPersistenceTests
         var deckView = await service.GetDeckAsync(deck.Id);
 
         Assert.Equal("Changed", reloaded.Prompt);
+        Assert.Equal(LearningItemResponseMode.SelfAssessed, reloaded.ResponseMode);
         Assert.True(reloaded.LowInteractionEligible);
         Assert.Equal([deck.Id], reloaded.DeckIds);
         Assert.Equal([item.Id], deckView.LearningItemIds);
@@ -49,6 +50,39 @@ public class ContentManagementPersistenceTests
 
         Assert.Equal(item.Id, (await service.GetLearningItemAsync(item.Id)).Id);
         await Assert.ThrowsAsync<ContentNotFoundException>(() => service.GetDeckAsync(deck.Id));
+    }
+
+    [Fact]
+    public async Task Invalid_application_enum_is_rejected_before_persistence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync())
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        var persistence = new EfCoreContentPersistence(factory);
+        var invalid = new LearningItemSnapshot(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "Prompt",
+            "Solution",
+            (LearningItemResponseMode)999,
+            [],
+            [],
+            [],
+            [],
+            false,
+            LearningItemLifecycle.Active,
+            true,
+            new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero),
+            []);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => persistence.SaveLearningItemAsync(invalid));
+
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.LearningItems.ToListAsync());
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

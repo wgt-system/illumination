@@ -118,13 +118,13 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         record.LearningItemId,
         record.Prompt,
         record.ReferenceSolutionContent,
-        (LearningItemResponseMode)record.ResponseMode,
+        ToApplication(record.ResponseMode),
         record.Hints.OrderBy(x => x.Position).Select(x => new HintSnapshot(x.Text)).ToArray(),
         record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
         record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
         record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value).ToArray(),
         record.LowInteractionEligible,
-        (LearningItemLifecycle)record.LifecycleState,
+        ToApplication(record.LifecycleState),
         record.IsNew,
         record.DueAt,
         record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
@@ -140,13 +140,13 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         snapshot.ReferenceSolution,
         snapshot.DueAt,
         snapshot.IsNew,
-        (ResponseMode)snapshot.ResponseMode,
+        ToDomain(snapshot.ResponseMode),
         snapshot.Hints.Select(x => new Hint(x.Text)),
         snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
-        (LearningItemLifecycleState)snapshot.Lifecycle);
+        ToDomain(snapshot.Lifecycle));
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
@@ -158,4 +158,38 @@ public sealed class EfCoreContentPersistence : IContentPersistence
 
         return deck;
     }
+
+    private static LearningItemResponseMode ToApplication(ResponseMode mode) => mode switch
+    {
+        ResponseMode.SelfAssessed => LearningItemResponseMode.SelfAssessed,
+        ResponseMode.Selection => LearningItemResponseMode.Selection,
+        ResponseMode.ShortText => LearningItemResponseMode.ShortText,
+        ResponseMode.Code => LearningItemResponseMode.Code,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported Domain response mode."),
+    };
+
+    private static LearningItemLifecycle ToApplication(LearningItemLifecycleState lifecycle) => lifecycle switch
+    {
+        LearningItemLifecycleState.Active => LearningItemLifecycle.Active,
+        LearningItemLifecycleState.Suspended => LearningItemLifecycle.Suspended,
+        LearningItemLifecycleState.Mastered => LearningItemLifecycle.Mastered,
+        _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Domain lifecycle."),
+    };
+
+    private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
+    {
+        LearningItemResponseMode.SelfAssessed => ResponseMode.SelfAssessed,
+        LearningItemResponseMode.Selection => ResponseMode.Selection,
+        LearningItemResponseMode.ShortText => ResponseMode.ShortText,
+        LearningItemResponseMode.Code => ResponseMode.Code,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported Application response mode."),
+    };
+
+    private static LearningItemLifecycleState ToDomain(LearningItemLifecycle lifecycle) => lifecycle switch
+    {
+        LearningItemLifecycle.Active => LearningItemLifecycleState.Active,
+        LearningItemLifecycle.Suspended => LearningItemLifecycleState.Suspended,
+        LearningItemLifecycle.Mastered => LearningItemLifecycleState.Mastered,
+        _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Application lifecycle."),
+    };
 }
