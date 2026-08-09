@@ -7,13 +7,13 @@
 
 Wiiii Got This is intended to integrate services across devices and platforms.
 
-Illumination must remain independently usable while still being exposable through Wiiii Got This on platforms Illumination may not directly target.
+Illumination must remain an independent executable capability runtime while Wiiii Got This provides the primary end-user presentation on Windows and iPhone.
 
 ## Decision
 
 Illumination remains authoritative for learning semantics and state.
 
-Wiiii Got This may later consume versioned Illumination capabilities/read/command contracts and present them appropriately per device/platform.
+Wiiii Got This consumes explicit versioned Illumination capabilities/read/command contracts and presents them appropriately per device/platform.
 
 Illumination's internal implementation language and UI technology are not part of those contracts.
 

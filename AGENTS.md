@@ -98,6 +98,8 @@ The implementation gate is satisfied for the current V1 baseline. Keep the follo
 
 ## Agent behavior
 
+Agents must not spawn subagents, delegates, or explorers unless the control-plane prompt explicitly authorizes it.
+
 When a product decision is genuinely missing:
 
 - do not guess,

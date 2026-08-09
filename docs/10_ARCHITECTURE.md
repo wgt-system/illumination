@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted V1 architecture baseline: local-first single-user installed desktop application using .NET 10 LTS, Avalonia, and SQLite with EF Core. Core operation requires no server and does not use Docker. Future integration/synchronization transport remains open.
+Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary end-user presentation on Windows and iPhone. An Avalonia host may remain optional for standalone administration and development. Core local operation requires no server; optional server, Docker, or relay infrastructure may support connectivity or synchronization.
 
 ## 1. Architectural Goal
 
@@ -63,7 +63,7 @@ Published Contract Adapters
 Application Layer
 ```
 
-This is a responsibility model implemented within the installed desktop application.
+This is a responsibility model implemented within the Illumination executable capability runtime.
 
 ## 4. Domain Layer
 
@@ -104,13 +104,11 @@ It may define application ports/interfaces required by adapters.
 
 ## 6. Presentation
 
-Illumination must provide at least one independently usable presentation/client for its own core workflows.
+Wiiii Got This is the primary end-user presentation for Illumination on Windows and iPhone.
 
-The architecture does not require this presentation to exist on every platform.
+It may host Illumination locally in-process, but only through explicit Illumination-owned application or published-contract boundaries. Wiiii Got This must not use Illumination domain objects directly.
 
-Wiiii Got This may later present Illumination capabilities on additional platforms.
-
-The V1 presentation is an Avalonia installed desktop UI using CommunityToolkit.Mvvm.
+The existing Avalonia project may remain as an optional standalone/admin/dev host using CommunityToolkit.Mvvm. It is not the mandatory primary product UI.
 
 ## 7. Persistence
 
@@ -256,29 +254,28 @@ The V1 implementation gate is satisfied. Future decisions are limited to details
 
 ## Accepted V1 Architecture Direction
 
-Illumination V1 is:
+Illumination V1 runtime is:
 
 - a local-first,
 - single-user,
-- installed desktop application,
+- executable capability runtime,
 - with an embedded local database,
 - requiring no remote server for core operation.
 
 Selected stack:
 
 - C# / .NET 10 LTS,
-- Avalonia for the desktop UI,
 - SQLite for authoritative local persistence,
 - EF Core with the SQLite provider for persistence infrastructure,
-- CommunityToolkit.Mvvm for Avalonia presentation state.
+- optional Avalonia/CommunityToolkit.Mvvm host for standalone administration and development.
 
 Tests use xUnit.net v3. Time-dependent domain tests use a controllable `TimeProvider`/clock abstraction.
 
 This selection is based on the accepted product architecture, not on the user's existing skillset.
 
-A later Wiiii Got This adapter may expose explicit versioned contracts without making the Illumination UI itself web-based.
+A Wiiii Got This adapter/host may expose explicit versioned contracts without making Illumination's runtime a web application.
 
-Docker is not required for the Illumination V1 application.
+Docker, server, or relay infrastructure is optional and must not become mandatory for core local operation.
 
 Optional future remote relay/synchronization infrastructure is a separate concern.
 
@@ -310,4 +307,5 @@ Requirements for that later design:
 - Illumination remains owner of learning semantics,
 - remote readable storage is not assumed,
 - device-local operation after synchronization is a goal,
-- transport/relay/encryption are Wiiii Got This / integration architecture concerns.
+- Illumination owns future domain-specific synchronization and merge semantics,
+- generic Wiiii Got This infrastructure may own transport, relay, retry, and encryption concerns.

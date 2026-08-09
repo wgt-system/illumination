@@ -26,7 +26,7 @@ Illumination addresses this through small independent learning units, immediate 
 
 The intended interaction should often be fast enough to replace low-attention activities such as scrolling short-form content during otherwise idle moments.
 
-This low-friction usage is important, but it does not imply any particular platform or implementation technology.
+This low-friction usage is important, but it does not require Illumination to provide a complete end-user UI. Wiiii Got This is the primary presentation on Windows and iPhone.
 
 ## 3. Fundamental Learning Loop
 
@@ -251,13 +251,9 @@ The exact semantics, identity model, direction of references, and published cont
 
 ## 15. Relationship to Wiiii Got This
 
-Illumination must remain usable independently of Wiiii Got This.
+Illumination remains an independent bounded context and executable capability runtime. Wiiii Got This is the primary end-user presentation on Windows and iPhone and may host Illumination locally in-process through explicit Illumination-owned application or published-contract boundaries.
 
-Independent usability does not require Illumination itself to implement a native client for every platform supported by Wiiii Got This.
-
-Illumination may later publish explicit, versioned capabilities, commands, queries, or read contracts that Wiiii Got This can consume.
-
-Wiiii Got This may then expose appropriate Illumination functionality on supported devices and platforms.
+Illumination must not expose internal domain objects to Wiiii Got This. A complete separate Illumination end-user UI is not required; the existing Avalonia project may remain an optional standalone/admin/dev host.
 
 The internal implementation technology of Illumination must not become part of its integration contract.
 
@@ -277,9 +273,7 @@ Illumination owns all authoritative data required for its learning domain, inclu
 
 Authoritative learning data is local-first and is not intended to be stored remotely merely for convenience.
 
-The exact local persistence technology is not yet defined.
-
-Optional infrastructure may later support explicit device connectivity, encrypted synchronization, or opt-in backup without changing Illumination's domain ownership.
+SQLite with EF Core is the accepted local persistence baseline. Optional server, Docker, or relay infrastructure may later support connectivity or synchronization without changing Illumination's domain ownership. Illumination owns future domain-specific synchronization and merge semantics; generic WGT infrastructure may own transport, relay, retry, and encryption concerns.
 
 ## 17. Explicitly Outside the Domain
 

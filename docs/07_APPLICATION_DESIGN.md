@@ -18,6 +18,8 @@ The Illumination application layer coordinates:
 - progress/read-model queries,
 - future published integration contracts.
 
+The application layer is the boundary through which Wiiii Got This may host Illumination locally or consume published capabilities. Wiiii Got This must not use Illumination domain objects directly. The existing Avalonia presentation may remain an optional standalone/admin/dev host; a complete separate end-user UI is not required.
+
 It does not own the scheduling rules themselves; those belong to the domain model.
 
 ## 3. Primary Application Capabilities

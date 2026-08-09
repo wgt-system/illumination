@@ -139,7 +139,7 @@ Priority order:
 2. application-use-case tests,
 3. import-contract tests,
 4. persistence integration tests,
-5. presentation interaction tests,
+5. application-capability interaction tests,
 6. published-contract tests when integrations exist.
 
 Scheduling must be deterministic under controlled time.
@@ -176,11 +176,10 @@ Proceed with the v0.1.0 vertical slices in order, keeping the accepted contracts
 ## Accepted V1 Technology Baseline
 
 - C# / .NET 10 LTS
-- Avalonia
 - SQLite
-- installed local desktop application
+- executable capability runtime with Wiiii Got This as the primary end-user presentation
 - no mandatory remote server
-- no Docker requirement for the core V1 application
+- optional server/Docker/relay infrastructure for connectivity or synchronization only
 
 Implementation planning should use this baseline unless a later ADR explicitly supersedes it.
 
@@ -192,10 +191,10 @@ Scope: Local Content Foundation.
 
 Deliver in order:
 
-1. Bootstrap solution architecture (C#/.NET 10 LTS, Avalonia, EF Core infrastructure, and test baseline).
+1. Bootstrap solution architecture (C#/.NET 10 LTS capability runtime, EF Core infrastructure, and test baseline; optional Avalonia host may remain available for administration/development).
 2. Learning Item and Deck domain.
 3. SQLite persistence and migrations.
-4. Content-management application/UI.
+4. Content-management application capabilities and their optional/admin/dev host integration.
 5. Backup, hardening, and v0.1.0 acceptance.
 
 ### v0.2.0 – Study and Scheduling
@@ -268,7 +267,7 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 
 ### v1.0.0 – Coherent Independent Illumination
 
-`v1.0.0` requires a stable independent Illumination workflow covering:
+`v1.0.0` requires a stable independent Illumination capability runtime covering:
 
 - content acquisition,
 - Deck organization,
@@ -278,5 +277,7 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 - local authoritative persistence,
 - backup/migration safety,
 - acceptance-tested core invariants.
+
+Wiiii Got This may provide the primary end-user presentation; a complete separate Illumination end-user UI is not required.
 
 Vocation and Wiiii Got This integrations are not prerequisites for `v1.0.0`; they evolve through separate published-contract milestones when their semantics are needed.

@@ -9,7 +9,7 @@ Illumination, Vocation, and Wiiii Got This have different domain ownership and i
 
 ## Decision
 
-Illumination is an independent bounded context and independently usable application.
+Illumination is an independent bounded context and independently executable capability runtime.
 
 It owns learning content, reviews, repetition state, and learning progress.
 
@@ -26,4 +26,4 @@ Forbidden:
 
 Shared physical infrastructure remains possible when logical/domain ownership stays separate.
 
-Independent usability does not require Illumination to provide a native client for every platform Wiiii Got This supports.
+Wiiii Got This may provide the primary end-user presentation without changing Illumination's bounded-context ownership. A complete separate Illumination end-user UI is not required.
