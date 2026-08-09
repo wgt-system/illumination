@@ -88,7 +88,7 @@ A session selector must eventually support at least:
 - exclusion of Suspended items,
 - exclusion of Mastered items from normal repetition.
 
-The exact prioritization among due/new/relearning material belongs to the scheduling design.
+Study Session priority is defined as short-term relearning, then already-due items, then new items.
 
 The ordered assessment direction is already fixed:
 
@@ -148,7 +148,7 @@ Default hint influence is off globally.
 
 The learner may override hint influence when starting a Study Session.
 
-The exact mathematical scheduling effect, when enabled, remains part of the scheduling algorithm design.
+When enabled and at least one hint is used, the automatically suggested assessment is lowered by at most one grade. Hint use never forces the learner's final grade.
 
 ## 7A. Low-Interaction Eligibility
 
@@ -172,7 +172,7 @@ Normal study selection excludes suspended items.
 
 A suspended item can be returned to normal review.
 
-The exact next-due treatment after reactivation belongs to scheduling design.
+Reactivating the item preserves Review history and makes it immediately due.
 
 ### Mastered
 
@@ -184,7 +184,7 @@ Normal study selection excludes Mastered items.
 
 The user can return a Mastered item to active learning.
 
-The exact scheduling state after reactivation is not yet defined.
+Unmarking Mastered preserves Review history and makes the item immediately due.
 
 ## 9. Deck Membership
 
@@ -319,11 +319,6 @@ Domain-invalid operations must not be converted into partially valid state.
 
 Application design cannot yet finalize:
 
-- exact five-grade labels and scheduling effects,
-- study queue prioritization,
-- exact automatic-evaluation configuration scope,
-- exact hint-policy configuration scope,
-- low-interaction suitability representation,
 - exact import create/update envelope (stable update identity itself is decided),
 - contract schema version 1.0 details,
 - persistence/synchronization behavior,

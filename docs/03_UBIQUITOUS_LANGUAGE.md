@@ -28,15 +28,13 @@ Optional assistance that can be revealed before the full reference solution.
 
 A learning unit may have no hints.
 
-The exact structure and ordering of multiple hints remains open.
+Hints are ordered `0..*` and may be revealed progressively.
 
 ### Learning State
 
 The current domain state describing how the learning system should treat a learning unit based on prior reviews.
 
-This includes at least enough information to determine future review behavior.
-
-The exact state model is not yet defined.
+This includes the conceptually defined scheduling state needed to determine future review behavior, including difficulty, stabilityDays, dueAt, and short-term relearning state.
 
 ### Repetition / Review Scheduling
 

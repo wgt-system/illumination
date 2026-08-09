@@ -2,9 +2,7 @@
 
 ## Status
 
-Accepted V1 architecture baseline for implementation.
-
-Programming language, UI framework, persistence technology, deployment model, and server/local topology remain open.
+Accepted V1 architecture baseline: local-first single-user installed desktop application using .NET 10 LTS, Avalonia, and SQLite with EF Core. Core operation requires no server and does not use Docker. Future integration/synchronization transport remains open.
 
 ## 1. Architectural Goal
 
@@ -209,7 +207,7 @@ Some domain/application behavior is configurable, including at least directional
 - whether automatic evaluation is used when available,
 - whether hint use influences assessment/scheduling.
 
-Configuration scope and persistence are not yet finalized.
+Automatic evaluation uses a global default with a per-Study-Session override. Hint influence is likewise controlled by the accepted default and per-session policy described in the scheduling semantics.
 
 Do not turn configuration into global mutable flags embedded throughout the domain.
 
@@ -254,7 +252,7 @@ Existing personal familiarity may only be a tie-breaker between otherwise simila
 
 ## 16. Remaining Architecture Scope
 
-The V1 implementation gate is satisfied. Future decisions are limited to details outside the accepted baseline, such as low-interaction representation, automatic-evaluation configuration details, and concrete integration transport when a contract is required.
+The V1 implementation gate is satisfied. Future decisions are limited to details outside the accepted baseline, such as concrete integration transport when a contract is required.
 
 ## Accepted V1 Architecture Direction
 

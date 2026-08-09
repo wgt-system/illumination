@@ -36,6 +36,7 @@ A Learning Item owns conceptually:
 - exactly one reference solution,
 - zero or more hints,
 - optional answer choices,
+- explicit `lowInteractionEligible` property,
 - interaction configuration needed for the item,
 - lifecycle state,
 - content metadata required by import and review.
@@ -481,4 +482,4 @@ Historical Review records must not be replaced by mutable counters alone if late
 
 ## 18. Remaining Domain Decisions
 
-Scheduling names, interval progression, short-term relearning, hint influence, and lifecycle transitions are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. Remaining domain work concerns application-level details such as low-interaction representation and future integration references. `Suspended` and `Mastered` remain explicit lifecycle states outside the assessment scale.
+Scheduling names, interval progression, short-term relearning, hint influence, and lifecycle transitions are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. Remaining domain work concerns future integration references. `Suspended` and `Mastered` remain explicit lifecycle states outside the assessment scale.

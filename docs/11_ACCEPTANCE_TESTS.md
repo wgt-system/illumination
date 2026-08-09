@@ -94,7 +94,7 @@ Given hint influence is enabled
 When the learner uses hints
 Then the configured evaluation/scheduling policy may use that fact.
 
-The interval effect follows the configured policy in `docs/08A_SCHEDULING_SEMANTICS.md`.
+When enabled, hint use lowers the automatic suggested assessment by at most one grade, without forcing the learner's final grade.
 
 ## 7. Automatic Evaluation
 
@@ -168,7 +168,7 @@ And it is excluded from normal study selection.
 
 Given a suspended item
 When the learner reactivates it
-Then it may return to normal study according to the later-defined scheduling rule.
+Then it becomes immediately due while retaining its Review history.
 
 ## 10. Mastered
 
@@ -180,7 +180,7 @@ And it is excluded from normal study selection.
 
 Given a Mastered item
 When the learner unmarks Mastered
-Then it may return to normal study according to the later-defined scheduling rule.
+Then it becomes immediately due while retaining its Review history.
 
 ## 11. Low-Interaction Session
 
@@ -189,7 +189,7 @@ When the learner starts a low-interaction session
 Then only items designated suitable for that mode are selected
 And the learner can complete suitable reviews with minimal required input.
 
-The precise low-interaction suitability representation remains an application-design concern.
+Suitability is determined by the item's explicit `lowInteractionEligible` property.
 
 ## 12. Import
 
@@ -271,7 +271,7 @@ Then Illumination remains authoritative for the resulting learning-state change.
 
 ## 16. Acceptance Scope Notes
 
-The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Low-interaction representation and some future import details remain outside this baseline.
+The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Some future import details remain outside this baseline.
 
 ## 17. Canonical Deck and Deletion Behavior
 

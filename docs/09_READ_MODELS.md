@@ -147,7 +147,7 @@ Candidate fields:
 - number of new eligible items if new-item introduction is supported,
 - Decks contributing eligible items.
 
-The precise low-interaction suitability representation remains an application-design concern; it does not change the settled scheduling semantics.
+Low-interaction suitability is represented by each Learning Item's explicit `lowInteractionEligible` property.
 
 ## 10. Suspended Items
 
