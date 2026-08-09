@@ -3,9 +3,14 @@ namespace Illumination.Domain.Learning;
 public sealed class LearningState
 {
     internal LearningState(DateTimeOffset dueAt)
+        : this(isNew: true, dueAt: dueAt)
+    {
+    }
+
+    internal LearningState(bool isNew, DateTimeOffset dueAt)
     {
         DueAt = dueAt;
-        IsNew = true;
+        IsNew = isNew;
     }
 
     public bool IsNew { get; }

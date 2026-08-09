@@ -19,7 +19,9 @@ public sealed class LearningItem
         IEnumerable<AnswerChoice>? directAnswerChoices,
         IEnumerable<AnswerChoice>? assistanceAnswerChoices,
         IEnumerable<string>? acceptedShortAnswers,
-        bool lowInteractionEligible)
+        bool lowInteractionEligible,
+        LearningItemLifecycleState lifecycleState = LearningItemLifecycleState.Active,
+        bool isNew = true)
     {
         DomainText.RequireNonWhitespace(prompt, nameof(prompt));
 
@@ -34,8 +36,8 @@ public sealed class LearningItem
 
         ResponseMode = responseMode;
         LowInteractionEligible = lowInteractionEligible;
-        LifecycleState = LearningItemLifecycleState.Active;
-        LearningState = new LearningState(initialDueAt);
+        LifecycleState = lifecycleState;
+        LearningState = new LearningState(isNew, initialDueAt);
     }
 
     public LearningItemId Id { get; }
@@ -82,6 +84,26 @@ public sealed class LearningItem
             assistanceAnswerChoices,
             acceptedShortAnswers,
             lowInteractionEligible);
+    }
+
+    internal static LearningItem Rehydrate(
+        LearningItemId id,
+        string prompt,
+        string referenceSolution,
+        DateTimeOffset dueAt,
+        bool isNew,
+        ResponseMode responseMode,
+        IEnumerable<Hint>? hints,
+        IEnumerable<AnswerChoice>? directAnswerChoices,
+        IEnumerable<AnswerChoice>? assistanceAnswerChoices,
+        IEnumerable<string>? acceptedShortAnswers,
+        bool lowInteractionEligible,
+        LearningItemLifecycleState lifecycleState)
+    {
+        return new LearningItem(
+            id, prompt, new ReferenceSolution(referenceSolution), dueAt, responseMode,
+            hints, directAnswerChoices, assistanceAnswerChoices, acceptedShortAnswers,
+            lowInteractionEligible, lifecycleState, isNew);
     }
 
     public static LearningItem Create(
