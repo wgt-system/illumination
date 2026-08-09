@@ -30,6 +30,9 @@ public sealed record LearningItemSnapshot(
     LearningItemLifecycle Lifecycle,
     bool IsNew,
     DateTimeOffset DueAt,
+    double Difficulty,
+    double StabilityDays,
+    bool IsInShortTermRelearning,
     IReadOnlyList<Guid> DeckIds);
 
 public sealed record HintSnapshot(string Text);

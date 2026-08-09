@@ -70,6 +70,9 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             existing.LifecycleState = replacement.LifecycleState;
             existing.IsNew = replacement.IsNew;
             existing.DueAt = replacement.DueAt;
+            existing.Difficulty = replacement.Difficulty;
+            existing.StabilityDays = replacement.StabilityDays;
+            existing.IsInShortTermRelearning = replacement.IsInShortTermRelearning;
 
             context.Hints.RemoveRange(existing.Hints);
             context.AnswerChoices.RemoveRange(existing.AnswerChoices);
@@ -152,6 +155,9 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         ToApplication(record.LifecycleState),
         record.IsNew,
         record.DueAt,
+        record.Difficulty,
+        record.StabilityDays,
+        record.IsInShortTermRelearning,
         record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
 
     private static DeckSnapshot ToSnapshot(DeckRecord record) => new(
@@ -171,7 +177,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
-        ToDomain(snapshot.Lifecycle));
+        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning);
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {

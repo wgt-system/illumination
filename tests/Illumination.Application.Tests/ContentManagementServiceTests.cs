@@ -66,6 +66,27 @@ public class ContentManagementServiceTests
     }
 
     [Fact]
+    public async Task Ordinary_content_update_preserves_complete_learning_state()
+    {
+        var id = Guid.NewGuid();
+        var store = new InMemoryContentPersistence();
+        store.Seed(new LearningItemSnapshot(id, "Prompt", "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false,
+            LearningItemLifecycle.Active, false, Now.AddDays(-1), 8.25, 4.5, true, []));
+        var service = CreateService(store);
+
+        await service.UpdateLearningItemAsync(id, new UpdateLearningItemCommand("Changed", "Changed solution"));
+        var updated = await service.GetLearningItemAsync(id);
+
+        Assert.Equal("Changed", updated.Prompt);
+        Assert.False(updated.IsNew);
+        Assert.Equal(Now.AddDays(-1), updated.DueAt);
+        var snapshot = await store.FindLearningItemAsync(id);
+        Assert.Equal(8.25, snapshot!.Difficulty);
+        Assert.Equal(4.5, snapshot.StabilityDays);
+        Assert.True(snapshot.IsInShortTermRelearning);
+    }
+
+    [Fact]
     public async Task Deck_operations_preserve_membership_identity_and_delete_only_the_deck()
     {
         var store = new InMemoryContentPersistence();
@@ -194,6 +215,8 @@ public class ContentManagementServiceTests
         private readonly ConcurrentDictionary<Guid, DeckSnapshot> _decks = new();
 
         public int SaveLearningItemCount { get; private set; }
+
+        public void Seed(LearningItemSnapshot item) => _items[item.Id] = item;
 
         public Task<IReadOnlyList<LearningItemSnapshot>> ListLearningItemsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<LearningItemSnapshot>>(_items.Values.ToArray());

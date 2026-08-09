@@ -15,6 +15,7 @@ public class IlluminationDbContext(DbContextOptions<IlluminationDbContext> optio
     public DbSet<StudySessionDeckRecord> StudySessionDecks => Set<StudySessionDeckRecord>();
     public DbSet<StudySessionQueueRecord> StudySessionQueue => Set<StudySessionQueueRecord>();
     public DbSet<StudySessionReviewRecord> StudySessionReviews => Set<StudySessionReviewRecord>();
+    public DbSet<ImportProvenanceRecord> ImportProvenance => Set<ImportProvenanceRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => PersistenceModelConfiguration.Configure(modelBuilder);
 }

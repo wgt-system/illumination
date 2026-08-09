@@ -216,7 +216,7 @@ Deliver:
 - Reactivate for Suspended and UnmarkMastered for Mastered,
 - scheduling simulations/acceptance tests.
 
-### v0.3.0 – Interaction Modes
+### v0.3.0 – Study Refinement and Content Acquisition
 
 Deliver:
 

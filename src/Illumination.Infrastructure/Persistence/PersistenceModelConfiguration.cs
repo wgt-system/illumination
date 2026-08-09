@@ -41,6 +41,7 @@ internal static class PersistenceModelConfiguration
         ConfigureStudySessionDeck(modelBuilder.Entity<StudySessionDeckRecord>());
         ConfigureStudySessionQueue(modelBuilder.Entity<StudySessionQueueRecord>());
         ConfigureStudySessionReview(modelBuilder.Entity<StudySessionReviewRecord>());
+        ConfigureImportProvenance(modelBuilder.Entity<ImportProvenanceRecord>());
     }
 
     private static void ConfigureHint(EntityTypeBuilder<HintRecord> entity)
@@ -122,5 +123,19 @@ internal static class PersistenceModelConfiguration
         entity.ToTable("StudySessionReviews");
         entity.HasKey(x => new { x.StudySessionId, x.Position });
         entity.HasOne(x => x.Review).WithMany(x => x.StudySessionAssociations).HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureImportProvenance(EntityTypeBuilder<ImportProvenanceRecord> entity)
+    {
+        entity.ToTable("ImportProvenance");
+        entity.HasKey(x => x.ImportBatchId);
+        entity.Property(x => x.ImportBatchId).HasColumnName("ImportBatchId").ValueGeneratedNever();
+        entity.Property(x => x.ImportedAt).HasColumnName("ImportedAt").HasConversion(
+            value => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)).IsRequired();
+        entity.Property(x => x.Contract).HasColumnName("Contract").IsRequired();
+        entity.Property(x => x.Version).HasColumnName("Version").IsRequired();
+        entity.Property(x => x.ExternalBundleId).HasColumnName("ExternalBundleId");
+        entity.Property(x => x.GeneratedFor).HasColumnName("GeneratedFor");
     }
 }

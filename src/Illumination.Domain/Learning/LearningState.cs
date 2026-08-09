@@ -44,6 +44,15 @@ public sealed class LearningState
         DueAt = dueAt;
     }
 
+    internal void ResetForSemanticContentChange(DateTimeOffset resetAt)
+    {
+        IsNew = true;
+        DueAt = resetAt;
+        Difficulty = 5.0;
+        StabilityDays = 0.5;
+        IsInShortTermRelearning = false;
+    }
+
     public LearningStateProjection ProjectReview(DateTimeOffset completedAt, LearningAssessment assessment)
     {
         if (!Enum.IsDefined(assessment))

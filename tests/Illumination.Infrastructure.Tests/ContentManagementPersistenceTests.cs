@@ -81,6 +81,9 @@ public class ContentManagementPersistenceTests
             LearningItemLifecycle.Active,
             true,
             new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero),
+            5.0,
+            0.5,
+            false,
             []);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => persistence.SaveLearningItemAsync(invalid));

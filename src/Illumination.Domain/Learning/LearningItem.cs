@@ -197,6 +197,11 @@ public sealed class LearningItem
         _acceptedShortAnswers = newAcceptedShortAnswers;
     }
 
+    public void ResetSchedulingForSemanticContentChange(DateTimeOffset resetAt)
+    {
+        LearningState.ResetForSemanticContentChange(resetAt);
+    }
+
     public void Suspend()
     {
         RequireLifecycleState(LearningItemLifecycleState.Active);

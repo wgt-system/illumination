@@ -114,3 +114,19 @@ public sealed class StudySessionReviewRecord
     public StudySessionRecord StudySession { get; set; } = null!;
     public ReviewRecord Review { get; set; } = null!;
 }
+
+public sealed class ImportProvenanceRecord
+{
+    public Guid ImportBatchId { get; set; }
+    public DateTimeOffset ImportedAt { get; set; }
+    public string Contract { get; set; } = null!;
+    public string Version { get; set; } = null!;
+    public string? ExternalBundleId { get; set; }
+    public string? GeneratedFor { get; set; }
+    public int AcceptedOperationCount { get; set; }
+    public int CreatedLearningItemCount { get; set; }
+    public int UpdatedLearningItemCount { get; set; }
+    public int CreatedDeckCount { get; set; }
+    public int UpdatedDeckCount { get; set; }
+    public int AssignmentCount { get; set; }
+}

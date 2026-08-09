@@ -219,7 +219,7 @@ public sealed class ContentManagementService
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
-        ToDomain(snapshot.Lifecycle));
+        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning);
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
@@ -245,6 +245,9 @@ public sealed class ContentManagementService
         ToApplication(item.LifecycleState),
         item.LearningState.IsNew,
         item.LearningState.DueAt,
+        item.LearningState.Difficulty,
+        item.LearningState.StabilityDays,
+        item.LearningState.IsInShortTermRelearning,
         []);
 
     private static DeckSnapshot ToSnapshot(Deck deck) => new(
