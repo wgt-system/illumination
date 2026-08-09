@@ -1,16 +1,132 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:desktop="using:Illumination.Desktop"
+        xmlns:content="using:Illumination.Application.ContentManagement"
         x:Class="Illumination.Desktop.MainWindow"
         x:DataType="desktop:MainWindowViewModel"
-        Title="Illumination"
-        Width="640"
-        Height="360">
-  <Grid RowDefinitions="Auto,*" Margin="32">
-    <TextBlock Text="{Binding Title}" FontSize="28" />
-    <TextBlock Grid.Row="1"
-               Text="The Illumination shell is ready."
-               VerticalAlignment="Center"
-               HorizontalAlignment="Center" />
+        Title="Illumination — standalone workflow host"
+        Width="1100" Height="720" MinWidth="900" MinHeight="600">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Illumination" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="Standalone admin/dev host for v0.2 workflows" Opacity="0.7" />
+    </StackPanel>
+
+    <TabControl Grid.Row="1" Margin="0,18,0,12">
+      <TabItem Header="Decks">
+        <Grid ColumnDefinitions="280,*" ColumnSpacing="20" Margin="12">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Decks" FontSize="20" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedDeck}" MinHeight="300">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="content:DeckView">
+                  <StackPanel Margin="6">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding LearningItemIds.Count, StringFormat='{}{0} item(s)'}" Opacity="0.65" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="Create Deck" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
+            <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+
+          <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,*" RowSpacing="8">
+            <TextBlock Text="Learning Items in selected Deck" FontSize="18" FontWeight="SemiBold" />
+            <ListBox Grid.Row="1" ItemsSource="{Binding SelectedDeckItems}" SelectedItem="{Binding SelectedDeckItem}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="content:LearningItemView">
+                  <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" Margin="6" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+              <Button Content="Remove selected" Command="{Binding RemoveFromDeckCommand}" />
+              <TextBlock Text="Available Learning Items" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0" />
+            </StackPanel>
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <ListBox ItemsSource="{Binding AvailableDeckItems}" SelectedItem="{Binding SelectedAvailableDeckItem}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="content:LearningItemView">
+                    <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" Margin="6" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Button Grid.Column="1" Content="Add selected" Command="{Binding AddToDeckCommand}" VerticalAlignment="Top" />
+            </Grid>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Learning Items">
+        <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding LearningItems}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="content:LearningItemView">
+                  <StackPanel Margin="6" Spacing="3">
+                    <TextBlock Text="{Binding Prompt}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ReferenceSolution}" TextWrapping="Wrap" Opacity="0.7" MaxLines="2" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="10">
+            <TextBlock Text="Create SelfAssessed Learning Item" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="Prompt" />
+            <TextBox Text="{Binding NewPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+            <TextBlock Text="Reference Solution" />
+            <TextBox Text="{Binding NewReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" />
+            <Button Content="Create Learning Item" Command="{Binding CreateLearningItemCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Study">
+        <Grid RowDefinitions="Auto,*" Margin="12" RowSpacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Deck" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedStudyDeck}" Width="280">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="content:DeckView"><TextBlock Text="{Binding Name}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="Start Session" Command="{Binding StartSessionCommand}" />
+            <Button Content="Complete Session" Command="{Binding CompleteSessionCommand}" />
+          </StackPanel>
+          <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="24">
+            <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="16">
+              <TextBlock Text="Current prompt" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Grid.Row="1" Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Start a session to load a Learning Item.'}"
+                         TextWrapping="Wrap" FontSize="24" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="2" Spacing="10">
+                <Button Content="Reveal Solution" Command="{Binding RevealSolutionCommand}" HorizontalAlignment="Left" />
+                <Border IsVisible="{Binding IsSolutionRevealed}" Background="#18000000" CornerRadius="4" Padding="14">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="Reference Solution" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding CurrentStudyItem.ReferenceSolution}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+              <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding HasCurrentStudyItem}">
+                <Button Content="Nochmal" Command="{Binding GradeNochmalCommand}" />
+                <Button Content="Schwer" Command="{Binding GradeSchwerCommand}" />
+                <Button Content="Unsicher" Command="{Binding GradeUnsicherCommand}" />
+                <Button Content="Gut" Command="{Binding GradeGutCommand}" />
+                <Button Content="Leicht" Command="{Binding GradeLeichtCommand}" />
+              </StackPanel>
+              <TextBlock Grid.Row="4" Text="Grades are manual and use the real v0.2 Review and scheduling path." Opacity="0.65" />
+            </Grid>
+          </Border>
+        </Grid>
+      </TabItem>
+    </TabControl>
+
+    <Border Grid.Row="2" Background="#14000000" CornerRadius="4" Padding="10,7">
+      <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+    </Border>
   </Grid>
 </Window>

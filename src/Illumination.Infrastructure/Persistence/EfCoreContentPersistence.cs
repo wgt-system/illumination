@@ -15,18 +15,35 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
+    public async Task<IReadOnlyList<LearningItemSnapshot>> ListLearningItemsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var records = await LoadLearningItems(context)
+            .OrderBy(x => x.Prompt)
+            .ThenBy(x => x.LearningItemId)
+            .ToArrayAsync(cancellationToken);
+        return records.Select(ToSnapshot).ToArray();
+    }
+
     public async Task<LearningItemSnapshot?> FindLearningItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await context.LearningItems
-            .AsNoTracking()
-            .Include(x => x.Hints)
-            .Include(x => x.AnswerChoices)
-            .Include(x => x.AcceptedShortAnswers)
-            .Include(x => x.DeckMemberships)
+        var record = await LoadLearningItems(context)
             .SingleOrDefaultAsync(x => x.LearningItemId == id, cancellationToken);
 
         return record is null ? null : ToSnapshot(record);
+    }
+
+    public async Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var records = await context.Decks
+            .AsNoTracking()
+            .Include(x => x.Memberships)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.DeckId)
+            .ToArrayAsync(cancellationToken);
+        return records.Select(ToSnapshot).ToArray();
     }
 
     public async Task SaveLearningItemAsync(LearningItemSnapshot snapshot, CancellationToken cancellationToken = default)
@@ -113,6 +130,14 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             await context.SaveChangesAsync(cancellationToken);
         }
     }
+
+    private static IQueryable<LearningItemRecord> LoadLearningItems(IlluminationDbContext context) =>
+        context.LearningItems
+            .AsNoTracking()
+            .Include(x => x.Hints)
+            .Include(x => x.AnswerChoices)
+            .Include(x => x.AcceptedShortAnswers)
+            .Include(x => x.DeckMemberships);
 
     private static LearningItemSnapshot ToSnapshot(LearningItemRecord record) => new(
         record.LearningItemId,

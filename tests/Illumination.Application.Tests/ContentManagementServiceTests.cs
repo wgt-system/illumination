@@ -88,6 +88,22 @@ public class ContentManagementServiceTests
     }
 
     [Fact]
+    public async Task Lists_learning_items_and_decks_through_application_owned_views()
+    {
+        var service = CreateService(new InMemoryContentPersistence());
+        var item = await service.CreateLearningItemAsync(new CreateLearningItemCommand("Prompt", "Solution"));
+        var deck = await service.CreateDeckAsync(new CreateDeckCommand("Deck"));
+        await service.AddLearningItemToDeckAsync(deck.Id, item.Id);
+
+        var items = await service.ListLearningItemsAsync();
+        var decks = await service.ListDecksAsync();
+
+        Assert.Equal([item.Id], items.Select(x => x.Id));
+        Assert.Equal([deck.Id], decks.Select(x => x.Id));
+        Assert.Equal([item.Id], decks[0].LearningItemIds);
+    }
+
+    [Fact]
     public async Task Core_content_management_capabilities_run_without_a_remote_service()
     {
         var service = CreateService(new InMemoryContentPersistence());
@@ -179,6 +195,9 @@ public class ContentManagementServiceTests
 
         public int SaveLearningItemCount { get; private set; }
 
+        public Task<IReadOnlyList<LearningItemSnapshot>> ListLearningItemsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<LearningItemSnapshot>>(_items.Values.ToArray());
+
         public Task<LearningItemSnapshot?> FindLearningItemAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(_items.TryGetValue(id, out var item) ? item : null);
 
@@ -191,6 +210,9 @@ public class ContentManagementServiceTests
 
         public Task<DeckSnapshot?> FindDeckAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(_decks.TryGetValue(id, out var deck) ? deck : null);
+
+        public Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DeckSnapshot>>(_decks.Values.ToArray());
 
         public Task SaveDeckAsync(DeckSnapshot deck, CancellationToken cancellationToken = default)
         {

@@ -39,12 +39,16 @@ public class ContentManagementPersistenceTests
 
         var reloaded = await service.GetLearningItemAsync(item.Id);
         var deckView = await service.GetDeckAsync(deck.Id);
+        var listedItems = await service.ListLearningItemsAsync();
+        var listedDecks = await service.ListDecksAsync();
 
         Assert.Equal("Changed", reloaded.Prompt);
         Assert.Equal(LearningItemResponseMode.SelfAssessed, reloaded.ResponseMode);
         Assert.True(reloaded.LowInteractionEligible);
         Assert.Equal([deck.Id], reloaded.DeckIds);
         Assert.Equal([item.Id], deckView.LearningItemIds);
+        Assert.Equal([item.Id], listedItems.Select(x => x.Id));
+        Assert.Equal([deck.Id], listedDecks.Select(x => x.Id));
 
         await service.DeleteDeckAsync(deck.Id);
 

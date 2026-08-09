@@ -36,6 +36,12 @@ public sealed class ContentManagementService
         return ToView(item, []);
     }
 
+    public async Task<IReadOnlyList<LearningItemView>> ListLearningItemsAsync(CancellationToken cancellationToken = default)
+    {
+        var snapshots = await _persistence.ListLearningItemsAsync(cancellationToken);
+        return snapshots.Select(ToView).ToArray();
+    }
+
     public async Task<LearningItemView> GetLearningItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var snapshot = await _persistence.FindLearningItemAsync(id, cancellationToken)
@@ -89,6 +95,12 @@ public sealed class ContentManagementService
         var deck = ExecuteDomain(() => Deck.Create(command.Name));
         await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
         return ToView(deck);
+    }
+
+    public async Task<IReadOnlyList<DeckView>> ListDecksAsync(CancellationToken cancellationToken = default)
+    {
+        var snapshots = await _persistence.ListDecksAsync(cancellationToken);
+        return snapshots.Select(ToView).ToArray();
     }
 
     public async Task<DeckView> GetDeckAsync(Guid id, CancellationToken cancellationToken = default)

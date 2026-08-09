@@ -2,9 +2,13 @@ namespace Illumination.Application.ContentManagement;
 
 public interface IContentPersistence
 {
+    Task<IReadOnlyList<LearningItemSnapshot>> ListLearningItemsAsync(CancellationToken cancellationToken = default);
+
     Task<LearningItemSnapshot?> FindLearningItemAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task SaveLearningItemAsync(LearningItemSnapshot item, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default);
 
     Task<DeckSnapshot?> FindDeckAsync(Guid id, CancellationToken cancellationToken = default);
 
