@@ -88,6 +88,21 @@ public class ContentManagementServiceTests
     }
 
     [Fact]
+    public async Task Core_content_management_capabilities_run_without_a_remote_service()
+    {
+        var service = CreateService(new InMemoryContentPersistence());
+
+        var item = await service.CreateLearningItemAsync(new CreateLearningItemCommand("Prompt", "Solution"));
+        var deck = await service.CreateDeckAsync(new CreateDeckCommand("Local deck"));
+        var membership = await service.AddLearningItemToDeckAsync(deck.Id, item.Id);
+
+        Assert.Equal([item.Id], membership.LearningItemIds);
+        Assert.DoesNotContain(
+            typeof(ContentManagementService).Assembly.GetReferencedAssemblies(),
+            reference => reference.Name == "System.Net.Http");
+    }
+
+    [Fact]
     public async Task Missing_content_and_invalid_domain_input_are_explicit_and_do_not_save_partial_state()
     {
         var store = new InMemoryContentPersistence();
