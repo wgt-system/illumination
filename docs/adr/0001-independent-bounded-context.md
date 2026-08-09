@@ -1,7 +1,9 @@
 # ADR-0001: Illumination Is an Independent Bounded Context
 
-- Status: Accepted
+- Status: Partially superseded by ADR-0009
 - Date: 2026-08-08
+
+Supersession note: ADR-0009 replaces only the assumption that Illumination must provide a complete independently usable end-user application; the independent bounded-context and ownership decision remains valid.
 
 ## Context
 
@@ -9,7 +11,7 @@ Illumination, Vocation, and Wiiii Got This have different domain ownership and i
 
 ## Decision
 
-Illumination is an independent bounded context and independently executable capability runtime.
+Illumination is an independent bounded context and independently usable application.
 
 It owns learning content, reviews, repetition state, and learning progress.
 
@@ -26,4 +28,4 @@ Forbidden:
 
 Shared physical infrastructure remains possible when logical/domain ownership stays separate.
 
-Wiiii Got This may provide the primary end-user presentation without changing Illumination's bounded-context ownership. A complete separate Illumination end-user UI is not required.
+Independent usability does not require Illumination to provide a native client for every platform Wiiii Got This supports.
