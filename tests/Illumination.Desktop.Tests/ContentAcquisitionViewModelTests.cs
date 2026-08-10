@@ -84,11 +84,19 @@ public sealed class ContentAcquisitionViewModelTests
     }
 
     [Fact]
-    public async Task Malformed_json_exposes_and_generates_a_copyable_repair_prompt()
+    public async Task Repair_prompt_is_disabled_for_valid_preview_and_enabled_for_malformed_json()
     {
         var viewModel = CreateViewModel(new FakePersistence(), out _, out _);
         var desktop = new FakeDesktopInteractions();
         viewModel.AttachDesktopInteractions(desktop);
+
+        viewModel.RawJson = Bundle(CreateDeck("valid", "Valid"));
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasCurrentPreview);
+        Assert.False(viewModel.CanGenerateRepairPrompt);
+        Assert.False(viewModel.GenerateRepairPromptCommand.CanExecute(null));
+
         viewModel.RawJson = "{ malformed";
         await viewModel.ValidateCommand.ExecuteAsync(null);
 
@@ -118,6 +126,18 @@ public sealed class ContentAcquisitionViewModelTests
         Assert.Contains("1 Decks created", viewModel.ImportResult);
         Assert.Contains("1 memberships applied", viewModel.ImportResult);
         Assert.Equal(1, refreshCount.Value);
+        Assert.True(viewModel.HasImportResult);
+        Assert.False(viewModel.HasCurrentPreview);
+        Assert.False(viewModel.ImportSelectedCommand.CanExecute(null));
+
+        await viewModel.ImportSelectedCommand.ExecuteAsync(null);
+
+        Assert.Single(persistence.Commits);
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasCurrentPreview);
+        Assert.True(viewModel.ImportSelectedCommand.CanExecute(null));
     }
 
     [Fact]
@@ -134,6 +154,13 @@ public sealed class ContentAcquisitionViewModelTests
         Assert.Empty(persistence.Commits);
         Assert.Empty(viewModel.ImportResult);
         Assert.Contains(viewModel.BundleDiagnostics, diagnostic => diagnostic.Code == "selection.dependency");
+
+        viewModel.Operations[0].IsSelected = true;
+        await viewModel.ImportSelectedCommand.ExecuteAsync(null);
+
+        Assert.Single(persistence.Commits);
+        Assert.DoesNotContain(viewModel.BundleDiagnostics, diagnostic => diagnostic.Code == "selection.dependency");
+        Assert.True(viewModel.HasImportResult);
     }
 
     [Fact]

@@ -12,6 +12,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     private readonly Func<Task> _refreshContent;
     private readonly Action<string> _reportStatus;
     private IDesktopInteractionService? _desktopInteractions;
+    private IReadOnlyList<ContentBundleDiagnostic> _previewBundleDiagnostics = [];
     private IReadOnlyList<ContentBundleDiagnostic> _repairDiagnostics = [];
 
     public ContentAcquisitionViewModel(
@@ -153,15 +154,18 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         var rawJson = RawJson;
         var preview = await _service.PreviewContentBundleAsync(rawJson);
         if (!string.Equals(RawJson, rawJson, StringComparison.Ordinal)) return;
-        _repairDiagnostics = preview.Diagnostics;
-        foreach (var diagnostic in preview.Diagnostics) BundleDiagnostics.Add(ToDisplay(diagnostic));
+        _previewBundleDiagnostics = preview.Diagnostics;
+        _repairDiagnostics = preview.Diagnostics
+            .Concat(preview.Operations.SelectMany(operation => operation.Diagnostics))
+            .ToArray();
+        RestorePreviewDiagnostics();
         foreach (var operation in preview.Operations)
         {
             Operations.Add(new ContentOperationRowViewModel(operation, SelectionChanged));
         }
 
         HasCurrentPreview = true;
-        CanGenerateRepairPrompt = preview.CanGenerateRepairPrompt;
+        CanGenerateRepairPrompt = preview.CanGenerateRepairPrompt && !preview.IsValid;
         var selectable = preview.Operations.Count(x => x.IsSelectable);
         var invalid = preview.Operations.Count - selectable;
         PreviewSummary = $"{selectable} valid · {invalid} invalid";
@@ -201,14 +205,25 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanImportSelected))]
     private async Task ImportSelectedAsync()
     {
+        if (!CanImportSelected()) return;
         IsBusy = true;
         try
         {
+            RestorePreviewDiagnostics();
             var selected = Operations.Where(x => x.IsSelected && x.IsSelectable).Select(x => x.OperationIndex).ToArray();
             var result = await _service.CommitContentBundleAsync(new CommitContentBundleCommand(RawJson, selected));
             ImportResult = $"Imported successfully\n{result.CreatedLearningItemIds.Count} Learning Items created · {result.UpdatedLearningItemIds.Count} updated\n{result.CreatedDeckIds.Count} Decks created · {result.UpdatedDeckIds.Count} updated · {result.AppliedMembershipCount} memberships applied";
-            await _refreshContent();
-            _reportStatus($"Imported {result.CommittedOperationIndices.Count} operations.");
+            HasCurrentPreview = false;
+            CanGenerateRepairPrompt = false;
+            try
+            {
+                await _refreshContent();
+                _reportStatus($"Imported {result.CommittedOperationIndices.Count} operations.");
+            }
+            catch (Exception exception)
+            {
+                _reportStatus($"Import succeeded, but content refresh failed: {exception.Message}");
+            }
         }
         catch (ContentAcquisitionValidationException exception)
         {
@@ -262,6 +277,12 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
 
     private void SelectionChanged() => ImportSelectedCommand.NotifyCanExecuteChanged();
 
+    private void RestorePreviewDiagnostics()
+    {
+        BundleDiagnostics.Clear();
+        foreach (var diagnostic in _previewBundleDiagnostics) BundleDiagnostics.Add(ToDisplay(diagnostic));
+    }
+
     private void InvalidatePreview()
     {
         HasCurrentPreview = false;
@@ -269,6 +290,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         PreviewSummary = string.Empty;
         RepairPrompt = string.Empty;
         ImportResult = string.Empty;
+        _previewBundleDiagnostics = [];
         _repairDiagnostics = [];
         BundleDiagnostics.Clear();
         Operations.Clear();
