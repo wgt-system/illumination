@@ -41,6 +41,69 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     [Fact]
+    public async Task Malformed_learning_item_does_not_crash_duplicate_warning_validation()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var preview = await service.PreviewContentBundleAsync(Bundle(
+            """{"op":"create_learning_item","localRef":"bad","item":{"referenceSolution":"Solution","responseMode":"self_assessed","lowInteractionEligible":false}}""",
+            """{"op":"create_learning_item","localRef":"good","item":{"prompt":"Prompt","referenceSolution":"Solution","responseMode":"self_assessed","lowInteractionEligible":false}}"""));
+
+        Assert.False(preview.IsValid);
+        Assert.Equal(2, preview.Operations.Count);
+        Assert.False(preview.Operations[0].IsSelectable);
+        Assert.True(preview.Operations[1].IsSelectable);
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task Envelope_schema_failure_rejects_preview_and_commit_without_persistence()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var raw = BundleWithMetadata("""{"op":"create_deck","localRef":"deck","deck":{"name":"Deck"}}""", extra: "\"forbidden\":true");
+
+        var preview = await service.PreviewContentBundleAsync(raw);
+        Assert.Contains(preview.Diagnostics, x => x.Code == "bundle.schema");
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(raw, [0])));
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task Invalid_envelope_metadata_rejects_commit()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var raw = BundleWithMetadata("""{"op":"create_deck","localRef":"deck","deck":{"name":"Deck"}}""", generatedFor: new string('x', 501));
+
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(raw, [0])));
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task Valid_selected_subset_commits_even_when_another_operation_is_malformed()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var raw = Bundle(
+            """{"op":"create_learning_item","localRef":"bad","item":{"referenceSolution":"Solution","responseMode":"self_assessed","lowInteractionEligible":false}}""",
+            """{"op":"create_learning_item","localRef":"good","item":{"prompt":"Prompt","referenceSolution":"Solution","responseMode":"self_assessed","lowInteractionEligible":false}}""");
+
+        var result = await service.CommitContentBundleAsync(new CommitContentBundleCommand(raw, [1]));
+        Assert.Single(result.CreatedLearningItemIds);
+        Assert.Single(store.Commits);
+    }
+
+    [Fact]
+    public async Task Empty_selection_is_rejected_without_persistence()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle("""{"op":"create_deck","localRef":"deck","deck":{"name":"Deck"}}}"""), [])));
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
     public async Task Selected_valid_subset_is_dependency_checked_and_committed_atomically()
     {
         var store = new FakePersistence();
@@ -106,6 +169,58 @@ public sealed class ContentAcquisitionServiceTests
         Assert.False(store.CommittedItems[itemId].IsInShortTermRelearning);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Deck_assignment_and_rename_compose_in_either_operation_order(bool renameFirst)
+    {
+        var itemId = Guid.NewGuid();
+        var deckId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [itemId] = Item(itemId, "Prompt") }, Decks = { [deckId] = new DeckSnapshot(deckId, "Old", []) } };
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var assignment = $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemId\":\"{itemId}\"}},\"decks\":[{{\"deckId\":\"{deckId}\"}}]}}";
+        var rename = $"{{\"op\":\"update_deck\",\"deckId\":\"{deckId}\",\"deck\":{{\"name\":\"Renamed\"}}}}";
+        var raw = renameFirst ? Bundle(rename, assignment) : Bundle(assignment, rename);
+
+        await service.CommitContentBundleAsync(new CommitContentBundleCommand(raw, [0, 1]));
+        var deck = Assert.Single(store.Commits).Decks.Single(x => x.Id == deckId);
+        Assert.Equal("Renamed", deck.Name);
+        Assert.Contains(itemId, deck.LearningItemIds);
+    }
+
+    [Fact]
+    public async Task Semantic_then_minor_update_preserves_the_semantic_reset_state()
+    {
+        var itemId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [itemId] = Item(itemId, "Old", isNew: false, difficulty: 8.25, stability: 4.5, relearning: true) } };
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var semantic = $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"semantic\",\"item\":{{\"prompt\":\"Semantic\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}";
+        var minor = $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Final\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}";
+
+        await service.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle(semantic, minor), [0, 1]));
+        var result = store.Commits.Single().LearningItems.Single(x => x.Id == itemId);
+        Assert.Equal("Final", result.Prompt);
+        Assert.True(result.IsNew);
+        Assert.Equal(5.0, result.Difficulty);
+        Assert.Equal(0.5, result.StabilityDays);
+        Assert.False(result.IsInShortTermRelearning);
+    }
+
+    [Fact]
+    public async Task Existing_membership_is_idempotent_and_not_counted_as_applied()
+    {
+        var itemId = Guid.NewGuid();
+        var deckId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [itemId] = Item(itemId, "Prompt") }, Decks = { [deckId] = new DeckSnapshot(deckId, "Deck", [itemId]) } };
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var assignment = $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemId\":\"{itemId}\"}},\"decks\":[{{\"deckId\":\"{deckId}\"}}]}}";
+
+        var result = await service.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle(assignment), [0]));
+        Assert.Equal(0, result.AppliedMembershipCount);
+        Assert.Equal(0, store.Commits.Single().Provenance.AssignmentCount);
+        Assert.Single(store.Commits.Single().Decks.Single().LearningItemIds);
+    }
+
     [Fact]
     public void Public_acquisition_contracts_expose_no_domain_types()
     {
@@ -115,6 +230,7 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     private static string Bundle(params string[] operations) => $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[{string.Join(',', operations)}]}}";
+    private static string BundleWithMetadata(string operation, string? generatedFor = null, string? extra = null) => $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"bundleId\":\"batch\",\"generatedFor\":\"{generatedFor ?? "test"}\",\"operations\":[{operation}]{(extra is null ? string.Empty : "," + extra)}}}";
     private static LearningItemSnapshot Item(Guid id, string prompt, bool isNew = true, double difficulty = 5.0, double stability = 0.5, bool relearning = false) => new(id, prompt, "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false, LearningItemLifecycle.Active, isNew, Now, difficulty, stability, relearning, []);
     private static IEnumerable<Type> Flatten(Type type) { yield return type; if (type.IsArray) foreach (var nested in Flatten(type.GetElementType()!)) yield return nested; if (type.IsGenericType) foreach (var nested in type.GetGenericArguments().SelectMany(Flatten)) yield return nested; }
 
@@ -122,10 +238,11 @@ public sealed class ContentAcquisitionServiceTests
     private sealed class FakePersistence : IContentAcquisitionPersistence
     {
         public Dictionary<Guid, LearningItemSnapshot> Items { get; } = [];
+        public Dictionary<Guid, DeckSnapshot> Decks { get; } = [];
         public Dictionary<Guid, LearningItemSnapshot> CommittedItems { get; } = [];
         public List<ContentAcquisitionCommitSnapshot> Commits { get; } = [];
         public Task<IReadOnlyList<LearningItemSnapshot>> LoadLearningItemsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<LearningItemSnapshot>>(Items.Values.ToArray());
-        public Task<IReadOnlyList<DeckSnapshot>> LoadDecksAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<DeckSnapshot>>([]);
+        public Task<IReadOnlyList<DeckSnapshot>> LoadDecksAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<DeckSnapshot>>(Decks.Values.ToArray());
         public Task CommitAsync(ContentAcquisitionCommitSnapshot snapshot, CancellationToken cancellationToken = default) { Commits.Add(snapshot); foreach (var item in snapshot.LearningItems) CommittedItems[item.Id] = item; return Task.CompletedTask; }
     }
 }

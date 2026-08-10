@@ -83,7 +83,8 @@ Original invalid JSON:
         var decks = await _persistence.LoadDecksAsync(cancellationToken);
         var operations = ValidateOperations(parsed, items, decks);
         var selected = command.SelectedOperationIndices.Distinct().Order().ToArray();
-        var diagnostics = new List<ContentBundleDiagnostic>(parsed.BundleDiagnostics.Where(x => x.Code != "bundle.schema"));
+        var diagnostics = new List<ContentBundleDiagnostic>(parsed.BundleDiagnostics);
+        if (selected.Length == 0) diagnostics.Add(new("selection.empty", "At least one operation must be selected."));
         if (selected.Any(index => index < 0 || index >= operations.Count)) diagnostics.Add(new("selection.index", "Selected operation index is outside the bundle."));
         foreach (var operation in operations.Where(x => selected.Contains(x.OperationIndex)))
         {
@@ -123,19 +124,32 @@ Original invalid JSON:
             if (!root.TryGetProperty("operations", out var operationElement) || operationElement.ValueKind != JsonValueKind.Array)
                 diagnostics.Add(new("bundle.operations", "Operations must be an array."));
             var operations = operationElement.ValueKind == JsonValueKind.Array ? operationElement.EnumerateArray().Select(x => x.Clone()).ToArray() : [];
-            var schemaDiagnostic = EvaluateSchema(root);
+            var schemaDiagnostic = EvaluateEnvelopeSchema(root);
             if (schemaDiagnostic is not null) diagnostics.Add(schemaDiagnostic);
             return new(root, diagnostics, true, operations, contract, version, bundleId, generatedFor);
         }
     }
 
-    private static ContentBundleDiagnostic? EvaluateSchema(JsonElement root)
+    private static ContentBundleDiagnostic? EvaluateEnvelopeSchema(JsonElement root)
     {
         try
         {
             var schema = JsonSchema.FromText(CanonicalSchemaText());
-            var result = schema.Evaluate(JsonNode.Parse(root.GetRawText()));
-            return result.IsValid ? null : new("bundle.schema", "Bundle does not conform to Content Bundle 1.0 schema.");
+            var envelope = JsonNode.Parse(root.GetRawText())!.AsObject();
+            if (!root.TryGetProperty("operations", out var operations) || operations.ValueKind != JsonValueKind.Array)
+                return new("bundle.schema", "Content Bundle envelope does not conform to the canonical schema.");
+
+            envelope["operations"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["op"] = "create_deck",
+                    ["localRef"] = "envelope-check",
+                    ["deck"] = new JsonObject { ["name"] = "Envelope check" }
+                }
+            };
+            var result = schema.Evaluate(envelope);
+            return result.IsValid ? null : new("bundle.schema", "Content Bundle envelope does not conform to the canonical schema.");
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
@@ -184,7 +198,7 @@ Original invalid JSON:
                     foreach (var deck in deckArray.EnumerateArray()) ParseTarget(deck, "deck", "deckId", "deckLocalRef", index, diagnostics, dependencies, out _, expectedType: "create_deck");
             }
             else diagnostics.Add(new("operation.type", "Unsupported or missing operation type.", index));
-            if (op == "create_learning_item" && operationSchemaDiagnostic is null) AddDuplicateWarnings(operation, items, parsed.Operations, index, warnings);
+            if (op == "create_learning_item" && operationSchemaDiagnostic is null && TryGetPrompt(operation, out var prompt)) AddDuplicateWarnings(prompt, items, parsed.Operations, index, warnings);
             var valid = diagnostics.Count == 0;
             result.Add(new(index, op, localRef, targetId, op ?? "Invalid operation", valid, diagnostics, warnings, dependencies, valid));
         }
@@ -242,8 +256,8 @@ Original invalid JSON:
         foreach (var index in selected)
         {
             var element = parsed.Operations[index]; var op = StringProperty(element, "op");
-            if (op == "update_learning_item") { var id = Guid.Parse(StringProperty(element, "itemId")!); var current = itemMap[id]; var updated = UpdateItemSnapshot(current, element, _timeProvider.GetUtcNow()); changedItems[id] = updated; updatedItems.Add(id); }
-            else if (op == "update_deck") { var id = Guid.Parse(StringProperty(element, "deckId")!); var current = deckMap[id]; changedDecks[id] = current with { Name = StringProperty(element.GetProperty("deck"), "name")! }; updatedDecks.Add(id); }
+            if (op == "update_learning_item") { var id = Guid.Parse(StringProperty(element, "itemId")!); var current = changedItems.GetValueOrDefault(id) ?? itemMap[id]; var updated = UpdateItemSnapshot(current, element, _timeProvider.GetUtcNow()); changedItems[id] = updated; updatedItems.Add(id); }
+            else if (op == "update_deck") { var id = Guid.Parse(StringProperty(element, "deckId")!); var current = changedDecks.GetValueOrDefault(id) ?? deckMap[id]; changedDecks[id] = current with { Name = StringProperty(element.GetProperty("deck"), "name")! }; updatedDecks.Add(id); }
             else if (op == "assign_item_to_decks")
             {
                 var itemId = ResolveTargetId(element.GetProperty("item"), "itemId", "itemLocalRef", localItems, itemMap.Keys);
@@ -251,7 +265,9 @@ Original invalid JSON:
                 {
                     var deckId = ResolveTargetId(target, "deckId", "deckLocalRef", localDecks, deckMap.Keys);
                     var current = changedDecks.GetValueOrDefault(deckId) ?? deckMap[deckId];
-                    changedDecks[deckId] = current with { LearningItemIds = current.LearningItemIds.Append(itemId).Distinct().ToArray() }; assignments++;
+                    var membershipAlreadyExists = current.LearningItemIds.Contains(itemId);
+                    changedDecks[deckId] = membershipAlreadyExists ? current : current with { LearningItemIds = current.LearningItemIds.Append(itemId).ToArray() };
+                    if (!membershipAlreadyExists) assignments++;
                 }
             }
         }
@@ -288,7 +304,8 @@ Original invalid JSON:
         diagnostics.Add(new("dependency.missing", $"{property} target is required.", index));
     }
     private static Guid? ParseId(JsonElement element, string property, int index, List<ContentBundleDiagnostic> diagnostics) { var value = StringProperty(element, property); if (!Guid.TryParse(value, out var id) || id == Guid.Empty) { diagnostics.Add(new("target.id", $"{property} must be a non-empty Guid.", index)); return null; } return id; }
-    private static void AddDuplicateWarnings(JsonElement operation, IReadOnlyList<LearningItemSnapshot> existing, IReadOnlyList<JsonElement> all, int index, List<string> warnings) { var prompt = Normalize(PayloadPrompt(operation)); if (existing.Any(x => Normalize(x.Prompt) == prompt)) warnings.Add("Prompt matches an existing Learning Item."); if (all.Take(index).Where(x => StringProperty(x, "op") == "create_learning_item").Any(x => Normalize(PayloadPrompt(x)) == prompt)) warnings.Add("Prompt duplicates an earlier create operation."); }
+    private static void AddDuplicateWarnings(string prompt, IReadOnlyList<LearningItemSnapshot> existing, IReadOnlyList<JsonElement> all, int index, List<string> warnings) { var normalized = Normalize(prompt); if (existing.Any(x => Normalize(x.Prompt) == normalized)) warnings.Add("Prompt matches an existing Learning Item."); if (all.Take(index).Where(x => StringProperty(x, "op") == "create_learning_item").Select(x => TryGetPrompt(x, out var siblingPrompt) ? siblingPrompt : null).Where(x => x is not null).Any(x => Normalize(x!) == normalized)) warnings.Add("Prompt duplicates an earlier create operation."); }
+    private static bool TryGetPrompt(JsonElement operation, out string prompt) { prompt = string.Empty; if (!operation.TryGetProperty("item", out var item) || item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("prompt", out var value) || value.ValueKind != JsonValueKind.String) return false; prompt = value.GetString()!; return !string.IsNullOrWhiteSpace(prompt); }
     private static string Normalize(string text) => string.Join(' ', text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
     private static string? StringProperty(JsonElement element, string name) => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     private static bool PayloadBool(JsonElement operation, string name) => operation.GetProperty("item").GetProperty(name).GetBoolean();
