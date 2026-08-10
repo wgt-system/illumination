@@ -138,6 +138,8 @@ Original invalid JSON:
             var envelope = JsonNode.Parse(root.GetRawText())!.AsObject();
             if (!root.TryGetProperty("operations", out var operations) || operations.ValueKind != JsonValueKind.Array)
                 return new("bundle.schema", "Content Bundle envelope does not conform to the canonical schema.");
+            if (operations.GetArrayLength() == 0)
+                return new("bundle.operations", "Operations must contain at least one operation.");
 
             envelope["operations"] = new JsonArray
             {

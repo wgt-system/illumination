@@ -104,6 +104,30 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     [Fact]
+    public async Task Empty_operations_bundle_is_invalid_in_preview()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var preview = await service.PreviewContentBundleAsync($"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[]}}");
+
+        Assert.False(preview.IsValid);
+        Assert.Contains(preview.Diagnostics, x => x.Code == "bundle.operations");
+        Assert.Empty(preview.Operations);
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task Empty_operations_bundle_cannot_be_committed()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var raw = $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[]}}";
+
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(raw, [])));
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
     public async Task Selected_valid_subset_is_dependency_checked_and_committed_atomically()
     {
         var store = new FakePersistence();
