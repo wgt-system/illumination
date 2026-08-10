@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Application.Study;
 
@@ -13,11 +14,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly TimeProvider _timeProvider;
     private Guid? _activeSessionId;
 
-    public MainWindowViewModel(ContentManagementService content, StudySessionService study, TimeProvider timeProvider)
+    public MainWindowViewModel(
+        ContentManagementService content,
+        StudySessionService study,
+        ContentAcquisitionService acquisition,
+        TimeProvider timeProvider)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _study = study ?? throw new ArgumentNullException(nameof(study));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        ContentAcquisition = new ContentAcquisitionViewModel(
+            acquisition,
+            () => RefreshContentAsync(),
+            message => StatusMessage = message);
     }
 
     public string Title => "Illumination";
@@ -27,6 +36,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<LearningItemView> AvailableDeckItems { get; } = [];
     public ObservableCollection<StudyAssessmentPreviewDisplay> AssessmentPreviews { get; } = [];
     public ObservableCollection<StudyQueueEntryDisplay> UpcomingStudyItems { get; } = [];
+    public ContentAcquisitionViewModel ContentAcquisition { get; }
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(CreateDeckCommand))]
     private string _newDeckName = string.Empty;
@@ -236,6 +246,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var items = await _content.ListLearningItemsAsync();
         Replace(Decks, decks);
         Replace(LearningItems, items);
+        ContentAcquisition.UpdateDecks(decks);
         SelectedDeck = Decks.FirstOrDefault(x => x.Id == selectedDeckId) ?? Decks.FirstOrDefault();
         SelectedStudyDeck = Decks.FirstOrDefault(x => x.Id == selectedStudyDeckId) ?? Decks.FirstOrDefault();
         RebuildDeckMembershipLists();

@@ -1,3 +1,4 @@
+using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Application.Study;
 using Illumination.Desktop;
@@ -56,7 +57,8 @@ public sealed class StudyPresentationTests
         await content.AddLearningItemToDeckAsync(deck.Id, first.Id, TestContext.Current.CancellationToken);
         await content.AddLearningItemToDeckAsync(deck.Id, second.Id, TestContext.Current.CancellationToken);
 
-        var viewModel = new MainWindowViewModel(content, study, timeProvider);
+        var acquisition = new ContentAcquisitionService(new FakeAcquisitionPersistence(), timeProvider);
+        var viewModel = new MainWindowViewModel(content, study, acquisition, timeProvider);
         await viewModel.InitializeAsync();
         await viewModel.StartSessionCommand.ExecuteAsync(null);
 
@@ -91,6 +93,18 @@ public sealed class StudyPresentationTests
     private sealed class IdentityOrdering : IStudySessionOrdering
     {
         public IReadOnlyList<Guid> Order(IReadOnlyList<Guid> learningItemIds) => learningItemIds.ToArray();
+    }
+
+    private sealed class FakeAcquisitionPersistence : IContentAcquisitionPersistence
+    {
+        public Task<IReadOnlyList<LearningItemSnapshot>> LoadLearningItemsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<LearningItemSnapshot>>([]);
+
+        public Task<IReadOnlyList<DeckSnapshot>> LoadDecksAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DeckSnapshot>>([]);
+
+        public Task CommitAsync(ContentAcquisitionCommitSnapshot snapshot, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class FixedDbContextFactory(SqliteConnection connection) : IDbContextFactory<IlluminationDbContext>, IAsyncDisposable

@@ -202,7 +202,7 @@ Original invalid JSON:
             else diagnostics.Add(new("operation.type", "Unsupported or missing operation type.", index));
             if (op == "create_learning_item" && operationSchemaDiagnostic is null && TryGetPrompt(operation, out var prompt)) AddDuplicateWarnings(prompt, items, parsed.Operations, index, warnings);
             var valid = diagnostics.Count == 0;
-            result.Add(new(index, op, localRef, targetId, op ?? "Invalid operation", valid, diagnostics, warnings, dependencies, valid));
+            result.Add(new(index, op, localRef, targetId, OperationSummary(operation, op), valid, diagnostics, warnings, dependencies, valid));
         }
         for (var i = 0; i < result.Count; i++)
         {
@@ -308,6 +308,21 @@ Original invalid JSON:
     private static Guid? ParseId(JsonElement element, string property, int index, List<ContentBundleDiagnostic> diagnostics) { var value = StringProperty(element, property); if (!Guid.TryParse(value, out var id) || id == Guid.Empty) { diagnostics.Add(new("target.id", $"{property} must be a non-empty Guid.", index)); return null; } return id; }
     private static void AddDuplicateWarnings(string prompt, IReadOnlyList<LearningItemSnapshot> existing, IReadOnlyList<JsonElement> all, int index, List<string> warnings) { var normalized = Normalize(prompt); if (existing.Any(x => Normalize(x.Prompt) == normalized)) warnings.Add("Prompt matches an existing Learning Item."); if (all.Take(index).Where(x => StringProperty(x, "op") == "create_learning_item").Select(x => TryGetPrompt(x, out var siblingPrompt) ? siblingPrompt : null).Where(x => x is not null).Any(x => Normalize(x!) == normalized)) warnings.Add("Prompt duplicates an earlier create operation."); }
     private static bool TryGetPrompt(JsonElement operation, out string prompt) { prompt = string.Empty; if (!operation.TryGetProperty("item", out var item) || item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("prompt", out var value) || value.ValueKind != JsonValueKind.String) return false; prompt = value.GetString()!; return !string.IsNullOrWhiteSpace(prompt); }
+    private static string OperationSummary(JsonElement operation, string? operationType)
+    {
+        if (operationType is "create_learning_item" or "update_learning_item" && TryGetPrompt(operation, out var prompt))
+            return prompt;
+        if (operationType is "create_deck" or "update_deck"
+            && operation.TryGetProperty("deck", out var deck)
+            && deck.ValueKind == JsonValueKind.Object
+            && !string.IsNullOrWhiteSpace(StringProperty(deck, "name")))
+            return StringProperty(deck, "name")!;
+        if (operationType == "assign_item_to_decks"
+            && operation.TryGetProperty("decks", out var decks)
+            && decks.ValueKind == JsonValueKind.Array)
+            return $"Assign Learning Item to {decks.GetArrayLength()} {(decks.GetArrayLength() == 1 ? "Deck" : "Decks")}";
+        return operationType ?? "Invalid operation";
+    }
     private static string Normalize(string text) => string.Join(' ', text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
     private static string? StringProperty(JsonElement element, string name) => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     private static bool PayloadBool(JsonElement operation, string name) => operation.GetProperty("item").GetProperty(name).GetBoolean();

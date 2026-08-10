@@ -1,3 +1,4 @@
+using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Application.Study;
 using Illumination.Infrastructure.Persistence;
@@ -30,11 +31,14 @@ internal static class DesktopComposition
 
         var contextFactory = new DesktopDbContextFactory(options);
         var content = new ContentManagementService(new EfCoreContentPersistence(contextFactory), timeProvider);
+        var acquisition = new ContentAcquisitionService(
+            new EfCoreContentAcquisitionPersistence(contextFactory),
+            timeProvider);
         var study = new StudySessionService(
             new EfCoreStudySessionPersistence(contextFactory),
             timeProvider,
             new RandomStudySessionOrdering());
-        var viewModel = new MainWindowViewModel(content, study, timeProvider);
+        var viewModel = new MainWindowViewModel(content, study, acquisition, timeProvider);
         await viewModel.InitializeAsync();
         return viewModel;
     }

@@ -13,7 +13,10 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var viewModel = DesktopComposition.CreateAsync().GetAwaiter().GetResult();
-            desktop.MainWindow = new MainWindow { DataContext = viewModel };
+            var window = new MainWindow { DataContext = viewModel };
+            desktop.MainWindow = window;
+            viewModel.ContentAcquisition.AttachDesktopInteractions(
+                new AvaloniaDesktopInteractionService(() => window));
         }
 
         base.OnFrameworkInitializationCompleted();

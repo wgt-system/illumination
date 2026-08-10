@@ -41,6 +41,20 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     [Fact]
+    public async Task Preview_summaries_expose_human_readable_operation_content()
+    {
+        var service = new ContentAcquisitionService(new FakePersistence(), new FixedTimeProvider(Now));
+        var preview = await service.PreviewContentBundleAsync(Bundle(
+            """{"op":"create_deck","localRef":"deck","deck":{"name":"Java Basics"}}""",
+            """{"op":"create_learning_item","localRef":"item","item":{"prompt":"What is a class?","referenceSolution":"A type definition.","responseMode":"self_assessed","lowInteractionEligible":false}}""",
+            """{"op":"assign_item_to_decks","item":{"itemLocalRef":"item"},"decks":[{"deckLocalRef":"deck"}]}"""));
+
+        Assert.Equal("Java Basics", preview.Operations[0].Summary);
+        Assert.Equal("What is a class?", preview.Operations[1].Summary);
+        Assert.Equal("Assign Learning Item to 1 Deck", preview.Operations[2].Summary);
+    }
+
+    [Fact]
     public async Task Malformed_learning_item_does_not_crash_duplicate_warning_validation()
     {
         var store = new FakePersistence();
