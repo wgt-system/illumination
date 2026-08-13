@@ -263,6 +263,81 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     [Fact]
+    public async Task PreImport_review_binds_to_exact_fingerprint_and_is_attached_on_import()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var bundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"item\",\"item\":{\"prompt\":\"Prompt\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var prompt = await service.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(bundle));
+        var review = PreImportResult(prompt.Items[0].LocalRef, prompt.Items[0].ContentFingerprint, "warning", "model_review", "Clarify wording.", "Rewrite it.");
+
+        var preview = await service.PreviewPreImportQualityReviewAsync(new PreviewPreImportQualityReviewCommand(bundle, review));
+        var result = await service.CommitContentBundleAsync(new CommitContentBundleCommand(bundle, [0], new PreImportQualityReviewSelection(review, QualityReviewPromptMode.Standard, [0])));
+
+        Assert.True(preview.IsValid);
+        Assert.Single(result.CreatedLearningItemIds);
+        var imported = Assert.Single(store.Commits.Single().LearningItems);
+        var qualityReview = Assert.Single(imported.QualityReviews!);
+        Assert.Equal(imported.Id, qualityReview.LearningItemId);
+        Assert.Equal(1, qualityReview.ContentRevision);
+        Assert.Equal(QualityReviewOutcomeSnapshot.Warning, qualityReview.Outcome);
+        Assert.Equal("Rewrite it.", qualityReview.SuggestedCorrection);
+    }
+
+    [Fact]
+    public async Task PreImport_preview_rejects_stale_changed_content_and_preserves_mixed_validity()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var firstBundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"first\",\"item\":{\"prompt\":\"First\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}", "{\"op\":\"create_learning_item\",\"localRef\":\"second\",\"item\":{\"prompt\":\"Second\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var prompt = await service.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(firstBundle));
+        var changedBundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"first\",\"item\":{\"prompt\":\"Changed\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}", "{\"op\":\"create_learning_item\",\"localRef\":\"second\",\"item\":{\"prompt\":\"Second\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var review = $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"1.0\",\"results\":[{PreImportResultJson(prompt.Items[0].LocalRef, prompt.Items[0].ContentFingerprint, "pass", "model_review", "First okay")},{PreImportResultJson(prompt.Items[1].LocalRef, "bad", "pass", "model_review", "Second stale")}]}}";
+
+        var preview = await service.PreviewPreImportQualityReviewAsync(new PreviewPreImportQualityReviewCommand(changedBundle, review));
+
+        Assert.False(preview.IsValid);
+        Assert.Equal(2, preview.Results.Count);
+        Assert.False(preview.Results[0].IsValid);
+        Assert.Contains(preview.Results[0].Diagnostics, x => x.Code == "target.fingerprint");
+        Assert.False(preview.Results[1].IsValid);
+        Assert.Contains(preview.Results[1].Diagnostics, x => x.Code == "target.fingerprint");
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task PreImport_provenance_mismatch_cannot_be_imported()
+    {
+        var store = new FakePersistence();
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var bundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"item\",\"item\":{\"prompt\":\"Prompt\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var prompt = await service.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(bundle, QualityReviewPromptMode.Standard));
+        var review = PreImportResult(prompt.Items[0].LocalRef, prompt.Items[0].ContentFingerprint, "pass", "source_grounded_review", "Wrong provenance.");
+
+        var preview = await service.PreviewPreImportQualityReviewAsync(new PreviewPreImportQualityReviewCommand(bundle, review, QualityReviewPromptMode.Standard));
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(bundle, [0], new PreImportQualityReviewSelection(review, QualityReviewPromptMode.Standard, [0]))));
+
+        Assert.False(preview.IsValid);
+        Assert.Contains(preview.Results[0].Diagnostics, x => x.Code == "result.evidence_type");
+        Assert.Empty(store.Commits);
+    }
+
+    [Fact]
+    public async Task Reviewed_import_failure_does_not_leave_a_partial_commit()
+    {
+        var store = new FakePersistence { ThrowOnCommit = true };
+        var service = new ContentAcquisitionService(store, new FixedTimeProvider(Now));
+        var bundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"item\",\"item\":{\"prompt\":\"Prompt\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var prompt = await service.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(bundle));
+        var review = PreImportResult(prompt.Items[0].LocalRef, prompt.Items[0].ContentFingerprint, "needs_review", "model_review", "Needs review.");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CommitContentBundleAsync(new CommitContentBundleCommand(bundle, [0], new PreImportQualityReviewSelection(review, QualityReviewPromptMode.Standard, [0]))));
+
+        Assert.Empty(store.Commits);
+        Assert.Empty(store.CommittedItems);
+    }
+
+    [Fact]
     public void Public_acquisition_contracts_expose_no_domain_types()
     {
         var types = new[] { typeof(ContentAcquisitionService), typeof(IContentAcquisitionPersistence), typeof(GenerateContentPromptCommand), typeof(ContentBundlePreview), typeof(ContentImportResult) };
@@ -271,6 +346,12 @@ public sealed class ContentAcquisitionServiceTests
     }
 
     private static string Bundle(params string[] operations) => $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[{string.Join(',', operations)}]}}";
+    private static string PreImportResult(string localRef, string fingerprint, string outcome, string evidence, string findings, string? correction = null) => $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"1.0\",\"results\":[{PreImportResultJson(localRef, fingerprint, outcome, evidence, findings, correction)}]}}";
+    private static string PreImportResultJson(string localRef, string fingerprint, string outcome, string evidence, string findings, string? correction = null)
+    {
+        var optional = correction is null ? string.Empty : $",\"suggestedCorrection\":\"{correction}\"";
+        return $"{{\"localRef\":\"{localRef}\",\"contentFingerprint\":\"{fingerprint}\",\"outcome\":\"{outcome}\",\"evidenceType\":\"{evidence}\",\"findings\":\"{findings}\"{optional}}}";
+    }
     private static string BundleWithMetadata(string operation, string? generatedFor = null, string? extra = null) => $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"bundleId\":\"batch\",\"generatedFor\":\"{generatedFor ?? "test"}\",\"operations\":[{operation}]{(extra is null ? string.Empty : "," + extra)}}}";
     private static LearningItemSnapshot Item(Guid id, string prompt, bool isNew = true, double difficulty = 5.0, double stability = 0.5, bool relearning = false) => new(id, prompt, "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false, LearningItemLifecycle.Active, isNew, Now, difficulty, stability, relearning, []);
     private static IEnumerable<Type> Flatten(Type type) { yield return type; if (type.IsArray) foreach (var nested in Flatten(type.GetElementType()!)) yield return nested; if (type.IsGenericType) foreach (var nested in type.GetGenericArguments().SelectMany(Flatten)) yield return nested; }
@@ -282,8 +363,9 @@ public sealed class ContentAcquisitionServiceTests
         public Dictionary<Guid, DeckSnapshot> Decks { get; } = [];
         public Dictionary<Guid, LearningItemSnapshot> CommittedItems { get; } = [];
         public List<ContentAcquisitionCommitSnapshot> Commits { get; } = [];
+        public bool ThrowOnCommit { get; init; }
         public Task<IReadOnlyList<LearningItemSnapshot>> LoadLearningItemsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<LearningItemSnapshot>>(Items.Values.ToArray());
         public Task<IReadOnlyList<DeckSnapshot>> LoadDecksAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<DeckSnapshot>>(Decks.Values.ToArray());
-        public Task CommitAsync(ContentAcquisitionCommitSnapshot snapshot, CancellationToken cancellationToken = default) { Commits.Add(snapshot); foreach (var item in snapshot.LearningItems) CommittedItems[item.Id] = item; return Task.CompletedTask; }
+        public Task CommitAsync(ContentAcquisitionCommitSnapshot snapshot, CancellationToken cancellationToken = default) { if (ThrowOnCommit) throw new InvalidOperationException("Simulated atomic persistence failure."); Commits.Add(snapshot); foreach (var item in snapshot.LearningItems) CommittedItems[item.Id] = item; return Task.CompletedTask; }
     }
 }

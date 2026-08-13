@@ -41,6 +41,30 @@ public sealed class ContentAcquisitionPersistenceTests
     }
 
     [Fact]
+    public async Task Reviewed_create_import_persists_quality_review_on_stable_item()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+        var bundle = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"item\",\"item\":{\"prompt\":\"Reviewed Prompt\",\"referenceSolution\":\"Reviewed Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+
+        var prompt = await acquisition.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(bundle));
+        var review = $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"1.0\",\"results\":[{{\"localRef\":\"item\",\"contentFingerprint\":\"{prompt.Items[0].ContentFingerprint}\",\"outcome\":\"warning\",\"evidenceType\":\"model_review\",\"findings\":\"Check source wording.\"}}]}}";
+
+        var import = await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(bundle, [0], new PreImportQualityReviewSelection(review, QualityReviewPromptMode.Standard, [0])));
+
+        await using var verify = await factory.CreateDbContextAsync();
+        var record = Assert.Single(await verify.LearningItems.Include(x => x.QualityReviews).ToArrayAsync());
+        var qualityReview = Assert.Single(record.QualityReviews);
+        Assert.Equal(import.CreatedLearningItemIds.Single(), record.LearningItemId);
+        Assert.Equal(record.LearningItemId, qualityReview.LearningItemId);
+        Assert.Equal(1, qualityReview.ContentRevision);
+        Assert.Equal(1, (int)qualityReview.Outcome);
+    }
+
+    [Fact]
     public async Task Bulk_import_persists_exact_item_count_and_is_immediately_available_to_content_and_study()
     {
         const int itemCount = 30;
@@ -113,13 +137,14 @@ public sealed class ContentAcquisitionPersistenceTests
         await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
         var persistence = new EfCoreContentAcquisitionPersistence(factory);
         var batchId = Guid.NewGuid();
-        await persistence.CommitAsync(CommitSnapshot(batchId, Guid.NewGuid(), "First"));
+        await persistence.CommitAsync(CommitSnapshot(batchId, Guid.NewGuid(), "First", reviewed: true));
 
-        await Assert.ThrowsAnyAsync<Exception>(() => persistence.CommitAsync(CommitSnapshot(batchId, Guid.NewGuid(), "Second")));
+        await Assert.ThrowsAnyAsync<Exception>(() => persistence.CommitAsync(CommitSnapshot(batchId, Guid.NewGuid(), "Second", reviewed: true)));
         await using var verify = await factory.CreateDbContextAsync();
         Assert.Single(await verify.LearningItems.ToArrayAsync());
         Assert.Single(await verify.ImportProvenance.ToArrayAsync());
         Assert.DoesNotContain(await verify.LearningItems.ToArrayAsync(), item => item.Prompt == "Second");
+        Assert.Single(await verify.QualityReviews.ToArrayAsync());
     }
 
     [Fact]
@@ -159,8 +184,8 @@ public sealed class ContentAcquisitionPersistenceTests
         return await context.LearningItems.Where(x => x.LearningItemId == itemId).Select(x => x.ContentRevision).SingleAsync();
     }
 
-    private static ContentAcquisitionCommitSnapshot CommitSnapshot(Guid batchId, Guid itemId, string prompt) => new(
-        [new LearningItemSnapshot(itemId, prompt, "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false, LearningItemLifecycle.Active, true, Now, 5.0, 0.5, false, [])],
+    private static ContentAcquisitionCommitSnapshot CommitSnapshot(Guid batchId, Guid itemId, string prompt, bool reviewed = false) => new(
+        [new LearningItemSnapshot(itemId, prompt, "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false, LearningItemLifecycle.Active, true, Now, 5.0, 0.5, false, [], QualityReviews: reviewed ? [new QualityReviewSnapshot(Guid.NewGuid(), itemId, 1, QualityReviewOutcomeSnapshot.Warning, QualityReviewEvidenceTypeSnapshot.ModelReview, "Review finding.", null, null)] : null)],
         [],
         new ContentAcquisitionProvenanceSnapshot(batchId, Now, ContentAcquisitionService.Contract, ContentAcquisitionService.Version, null, null, 1, 1, 0, 0, 0, 0));
 

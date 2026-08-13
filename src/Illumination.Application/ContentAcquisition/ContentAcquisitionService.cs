@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Security.Cryptography;
 using Illumination.Application.ContentManagement;
 using Illumination.Domain.Decks;
 using Illumination.Domain.Identity;
@@ -13,7 +14,10 @@ public sealed class ContentAcquisitionService
 {
     public const string Contract = "illumination.content-bundle";
     public const string Version = "1.0";
+    public const string PreImportQualityReviewContract = "illumination.preimport-quality-review-result";
+    public const string PreImportQualityReviewVersion = "1.0";
     private const string SchemaResourceName = "Illumination.Application.Schemas.illumination-content-bundle-1.0.schema.json";
+    private const string PreImportSchemaResourceName = "Illumination.Application.Schemas.illumination-preimport-quality-review-result-1.0.schema.json";
     private readonly IContentAcquisitionPersistence _persistence;
     private readonly TimeProvider _timeProvider;
 
@@ -67,6 +71,38 @@ Original invalid JSON:
 ");
     }
 
+    public async Task<GeneratedPreImportQualityReviewPrompt> GeneratePreImportQualityReviewPromptAsync(
+        GeneratePreImportQualityReviewPromptCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ValidatePromptMode(command.Mode);
+        var bundlePreview = await PreviewContentBundleAsync(command.RawBundleJson, cancellationToken);
+        if (!bundlePreview.IsValid) throw new ContentAcquisitionValidationException("Content Bundle must be valid before generating a pre-import review prompt.", bundlePreview.Diagnostics.Concat(bundlePreview.Operations.SelectMany(x => x.Diagnostics)).ToArray());
+        var parsed = Parse(command.RawBundleJson);
+        var requested = command.OperationIndices?.Distinct().Order().ToArray() ?? parsed.Operations.Select((operation, index) => (operation, index)).Where(x => StringProperty(x.operation, "op") == "create_learning_item").Select(x => x.index).ToArray();
+        var items = requested.Select(index => CreatePreImportPromptItem(parsed.Operations, index)).ToArray();
+        if (items.Length == 0) throw new ArgumentException("At least one valid create_learning_item operation is required.", nameof(command));
+        var evidence = RequiredEvidenceType(command.Mode);
+        var promptItems = string.Join(Environment.NewLine + Environment.NewLine, items.Select(item => $"localRef: {item.LocalRef}\noperationIndex: {item.OperationIndex}\ncontentRevision: 1\ncontentFingerprint: {item.ContentFingerprint}\nPrompt: {item.Prompt}\nReference Solution: {item.ReferenceSolution}"));
+        var prompt = $"You are reviewing Learning Items before import into Illumination. Review only the supplied create_learning_item content; do not modify it.\n\nReturn JSON only using contract \"{PreImportQualityReviewContract}\" version \"{PreImportQualityReviewVersion}\". Return one result per supplied localRef. Preserve each exact localRef and contentFingerprint. Emit evidenceType \"{evidence}\" for every result. Use outcome pass, warning, or needs_review; include human-readable findings and optionally suggestedCorrection. Do not use user_review or a generic Verified state. A suggested correction is informational and will never be applied automatically.\n\nItems:\n{promptItems}\n\nJSON shape example:\n{{\"contract\":\"{PreImportQualityReviewContract}\",\"version\":\"{PreImportQualityReviewVersion}\",\"results\":[{{\"localRef\":\"{items[0].LocalRef}\",\"contentFingerprint\":\"{items[0].ContentFingerprint}\",\"outcome\":\"pass\",\"evidenceType\":\"{evidence}\",\"findings\":\"...\"}}]}}";
+        return new GeneratedPreImportQualityReviewPrompt(prompt, items);
+    }
+
+    public async Task<PreImportQualityReviewPreview> PreviewPreImportQualityReviewAsync(
+        PreviewPreImportQualityReviewCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ValidatePromptMode(command.Mode);
+        var bundle = await PreviewContentBundleAsync(command.RawBundleJson, cancellationToken);
+        var parsedBundle = Parse(command.RawBundleJson);
+        var parsedResults = ParsePreImportResults(command.RawResultJson);
+        var results = ValidatePreImportResults(parsedBundle, parsedResults, bundle.Operations, command.Mode);
+        var diagnostics = parsedResults.BundleDiagnostics.Concat(bundle.Diagnostics.Select(x => new PreImportQualityReviewResultDiagnostic(x.Code, x.Message, x.OperationIndex))).ToArray();
+        return new(diagnostics.Length == 0 && results.All(x => x.IsValid), diagnostics, results);
+    }
+
     public async Task<ContentBundlePreview> PreviewContentBundleAsync(string rawJson, CancellationToken cancellationToken = default)
     {
         var parsed = Parse(rawJson);
@@ -101,7 +137,15 @@ Original invalid JSON:
         }
         if (diagnostics.Count > 0) throw new ContentAcquisitionValidationException("Content Bundle cannot be committed.", diagnostics);
 
-        var plan = BuildPlan(parsed, selected, items, decks, operations);
+        IReadOnlyDictionary<string, PreImportAcceptedReview> acceptedReviews = new Dictionary<string, PreImportAcceptedReview>(StringComparer.Ordinal);
+        if (command.AcceptedQualityReview is { } reviewSelection)
+        {
+            var review = ValidatePreImportSelection(parsed, reviewSelection, selected, operations);
+            if (review.Diagnostics.Count > 0) throw new ContentAcquisitionValidationException("Pre-import Quality Review cannot be accepted.", review.Diagnostics.Select(x => new ContentBundleDiagnostic(x.Code, x.Message, x.ResultIndex)).ToArray());
+            acceptedReviews = review.Accepted;
+        }
+
+        var plan = BuildPlan(parsed, selected, items, decks, operations, acceptedReviews);
         await _persistence.CommitAsync(plan.Snapshot, cancellationToken);
         return new(plan.Snapshot.Provenance.ImportBatchId, plan.Snapshot.Provenance.ImportedAt, plan.CreatedItems, plan.UpdatedItems, plan.CreatedDecks, plan.UpdatedDecks, plan.AssignmentCount, selected, operations.Select(x => x.OperationIndex).Where(x => !selected.Contains(x)).ToArray());
     }
@@ -127,10 +171,141 @@ Original invalid JSON:
                 diagnostics.Add(new("bundle.operations", "Operations must be an array."));
             var operations = operationElement.ValueKind == JsonValueKind.Array ? operationElement.EnumerateArray().Select(x => x.Clone()).ToArray() : [];
             var schemaDiagnostic = EvaluateEnvelopeSchema(root);
-            if (schemaDiagnostic is not null) diagnostics.Add(schemaDiagnostic);
+            if (schemaDiagnostic is not null) diagnostics.Add(new(schemaDiagnostic.Code, schemaDiagnostic.Message));
             return new(root, diagnostics, true, operations, contract, version, bundleId, generatedFor);
         }
     }
+
+    private static PreImportQualityReviewPromptItem CreatePreImportPromptItem(IReadOnlyList<JsonElement> operations, int index)
+    {
+        if (index < 0 || index >= operations.Count || StringProperty(operations[index], "op") != "create_learning_item") throw new ArgumentException($"Operation index {index} is not a create_learning_item operation.");
+        var operation = operations[index];
+        var item = operation.GetProperty("item");
+        return new(StringProperty(operation, "localRef")!, index, 1, ComputeContentFingerprint(operation), item.GetProperty("prompt").GetString()!, item.GetProperty("referenceSolution").GetString()!);
+    }
+
+    private static ParsedPreImportResults ParsePreImportResults(string rawJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawJson)) return new(null, [new("json.empty", "Quality Review Result JSON is required.")], []);
+        try
+        {
+            using var document = JsonDocument.Parse(rawJson);
+            var root = document.RootElement.Clone();
+            if (root.ValueKind != JsonValueKind.Object) return new(root, [new("result.root", "Quality Review Result root must be an object.")], []);
+            var diagnostics = new List<PreImportQualityReviewResultDiagnostic>();
+            if (StringProperty(root, "contract") != PreImportQualityReviewContract) diagnostics.Add(new("result.contract", "Unsupported or missing pre-import review contract."));
+            if (StringProperty(root, "version") != PreImportQualityReviewVersion) diagnostics.Add(new("result.version", "Unsupported or missing pre-import review version."));
+            var results = root.TryGetProperty("results", out var array) && array.ValueKind == JsonValueKind.Array ? array.EnumerateArray().Select(x => x.Clone()).ToArray() : [];
+            if (!root.TryGetProperty("results", out var resultsElement) || resultsElement.ValueKind != JsonValueKind.Array) diagnostics.Add(new("result.results", "Results must be an array."));
+            else if (resultsElement.GetArrayLength() == 0) diagnostics.Add(new("result.results", "Results must contain at least one result."));
+            var schemaDiagnostic = EvaluatePreImportEnvelopeSchema(root, results.Length);
+            if (schemaDiagnostic is not null) diagnostics.Add(new(schemaDiagnostic.Code, schemaDiagnostic.Message));
+            return new(root, diagnostics, results);
+        }
+        catch (JsonException) { return new(null, [new("json.malformed", "Quality Review Result JSON is malformed.")], []); }
+    }
+
+    private static List<PreImportQualityReviewResultPreview> ValidatePreImportResults(ParsedBundle bundle, ParsedPreImportResults results, IReadOnlyList<ContentBundleOperationPreview> operations, QualityReviewPromptMode mode)
+    {
+        var result = new List<PreImportQualityReviewResultPreview>();
+        var operationMap = operations.Where(x => x.OperationType == "create_learning_item" && x.LocalRef is not null).GroupBy(x => x.LocalRef!, StringComparer.Ordinal).ToDictionary(x => x.Key, x => x.First(), StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var expectedEvidence = mode == QualityReviewPromptMode.SourceGrounded ? CurationQualityReviewEvidenceType.SourceGroundedReview : CurationQualityReviewEvidenceType.ModelReview;
+        for (var index = 0; index < results.Results.Count; index++)
+        {
+            var element = results.Results[index];
+            var diagnostics = new List<PreImportQualityReviewResultDiagnostic>();
+            var localRef = StringProperty(element, "localRef");
+            var fingerprint = StringProperty(element, "contentFingerprint");
+            var outcome = TryCurationOutcome(element);
+            var evidence = TryCurationEvidence(element);
+            var findings = StringProperty(element, "findings");
+            var correction = StringProperty(element, "suggestedCorrection");
+            var schemaDiagnostic = EvaluatePreImportResultSchema(element);
+            if (schemaDiagnostic is not null) diagnostics.Add(new(schemaDiagnostic.Code, schemaDiagnostic.Message, index));
+            if (string.IsNullOrWhiteSpace(localRef)) diagnostics.Add(new("target.localRef", "localRef is required.", index));
+            else if (!seen.Add(localRef)) diagnostics.Add(new("target.duplicate", "Each localRef may be reviewed at most once.", index));
+            ContentBundleOperationPreview? operation = null;
+            if (localRef is not null && !operationMap.TryGetValue(localRef, out operation)) diagnostics.Add(new("target.localRef.unknown", "localRef does not identify a valid create_learning_item operation.", index));
+            else if (operation is { IsValid: false }) diagnostics.Add(new("target.operation.invalid", "Target create_learning_item operation is invalid.", index));
+            if (operation is { IsValid: true } && fingerprint is not null && !string.Equals(fingerprint, ComputeContentFingerprint(bundle.Operations[operation.OperationIndex]), StringComparison.Ordinal)) diagnostics.Add(new("target.fingerprint", "Content fingerprint does not match the reviewed bundle content.", index));
+            if (evidence is { } actual && actual != expectedEvidence) diagnostics.Add(new("result.evidence_type", $"This {mode} exchange requires {EvidenceName(expectedEvidence)}.", index));
+            result.Add(new(index, localRef, operation?.OperationIndex, fingerprint, outcome, evidence, findings, correction, diagnostics.Count == 0, diagnostics));
+        }
+        return result;
+    }
+
+    private static PreImportSelectionValidation ValidatePreImportSelection(ParsedBundle bundle, PreImportQualityReviewSelection selection, IReadOnlyList<int> selectedOperations, IReadOnlyList<ContentBundleOperationPreview> operations)
+    {
+        ValidatePromptMode(selection.Mode);
+        var parsed = ParsePreImportResults(selection.RawResultJson);
+        var previews = ValidatePreImportResults(bundle, parsed, operations, selection.Mode);
+        var diagnostics = new List<PreImportQualityReviewResultDiagnostic>(parsed.BundleDiagnostics);
+        var selected = selection.SelectedResultIndices.Distinct().Order().ToArray();
+        if (selected.Length == 0) diagnostics.Add(new("selection.empty", "At least one pre-import review result must be selected."));
+        if (selected.Any(x => x < 0 || x >= previews.Count)) diagnostics.Add(new("selection.index", "Selected review result index is outside the result set."));
+        var accepted = new Dictionary<string, PreImportAcceptedReview>(StringComparer.Ordinal);
+        foreach (var index in selected.Where(x => x >= 0 && x < previews.Count))
+        {
+            var preview = previews[index];
+            diagnostics.AddRange(preview.Diagnostics);
+            if (!preview.IsValid) diagnostics.Add(new("selection.invalid", "Selected pre-import review result is invalid.", index));
+            if (preview.LocalRef is { } localRef)
+            {
+                var operationIndex = preview.OperationIndex;
+                if (operationIndex is null || !selectedOperations.Contains(operationIndex.Value)) diagnostics.Add(new("selection.operation", "The reviewed create operation must also be selected for import.", index));
+                else if (preview.Outcome is { } outcome && preview.EvidenceType is { } evidence && preview.Findings is { } findings) accepted[localRef] = new(outcome switch { CurationQualityReviewOutcome.Pass => QualityReviewOutcomeSnapshot.Pass, CurationQualityReviewOutcome.Warning => QualityReviewOutcomeSnapshot.Warning, CurationQualityReviewOutcome.NeedsReview => QualityReviewOutcomeSnapshot.NeedsReview, _ => throw new ArgumentOutOfRangeException() }, evidence switch { CurationQualityReviewEvidenceType.ModelReview => QualityReviewEvidenceTypeSnapshot.ModelReview, CurationQualityReviewEvidenceType.SourceGroundedReview => QualityReviewEvidenceTypeSnapshot.SourceGroundedReview, CurationQualityReviewEvidenceType.UserReview => QualityReviewEvidenceTypeSnapshot.UserReview, _ => throw new ArgumentOutOfRangeException() }, findings, preview.SuggestedCorrection);
+            }
+        }
+        return new(accepted, diagnostics);
+    }
+
+    private static ContentBundleDiagnostic? EvaluatePreImportEnvelopeSchema(JsonElement root, int resultCount)
+    {
+        try
+        {
+            var schema = JsonSchema.FromText(PreImportSchemaText());
+            var envelope = JsonNode.Parse(root.GetRawText())!.AsObject();
+            envelope["results"] = new JsonArray { new JsonObject { ["localRef"] = "schema-check", ["contentFingerprint"] = new string('0', 64), ["outcome"] = "pass", ["evidenceType"] = "model_review", ["findings"] = "Schema check" } };
+            return schema.Evaluate(envelope).IsValid ? null : new("result.schema", "Pre-import Quality Review Result envelope does not conform to schema 1.0.");
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException) { return new("result.schema", "Pre-import Quality Review Result schema could not be evaluated."); }
+    }
+
+    private static PreImportQualityReviewResultDiagnostic? EvaluatePreImportResultSchema(JsonElement result)
+    {
+        try
+        {
+            var wrapper = new JsonObject { ["contract"] = PreImportQualityReviewContract, ["version"] = PreImportQualityReviewVersion, ["results"] = new JsonArray { JsonNode.Parse(result.GetRawText())! } };
+            return JsonSchema.FromText(PreImportSchemaText()).Evaluate(wrapper).IsValid ? null : new("result.schema", "Result does not conform to the pre-import Quality Review Result 1.0 operation shape.");
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException) { return new("result.schema", "Result could not be validated against the pre-import Quality Review Result schema."); }
+    }
+
+    private static string ComputeContentFingerprint(JsonElement operation)
+    {
+        var item = operation.GetProperty("item");
+        var canonical = new JsonObject
+        {
+            ["prompt"] = item.GetProperty("prompt").GetString(),
+            ["referenceSolution"] = item.GetProperty("referenceSolution").GetString(),
+            ["hints"] = CanonicalStrings(item, "hints"),
+            ["responseMode"] = item.GetProperty("responseMode").GetString(),
+            ["directAnswerChoices"] = CanonicalChoices(item, "directAnswerChoices"),
+            ["assistanceAnswerChoices"] = CanonicalChoices(item, "assistanceAnswerChoices"),
+            ["acceptedShortAnswers"] = CanonicalStrings(item, "acceptedShortAnswers")
+        };
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToJsonString()))).ToLowerInvariant();
+    }
+
+    private static JsonArray CanonicalStrings(JsonElement item, string property) => item.TryGetProperty(property, out var values) && values.ValueKind == JsonValueKind.Array ? new JsonArray(values.EnumerateArray().Select(x => (JsonNode?)x.GetString()).ToArray()) : [];
+    private static JsonArray CanonicalChoices(JsonElement item, string property) => item.TryGetProperty(property, out var values) && values.ValueKind == JsonValueKind.Array ? new JsonArray(values.EnumerateArray().Select(x => (JsonNode?)new JsonObject { ["text"] = x.GetProperty("text").GetString(), ["correct"] = x.TryGetProperty("correct", out var correct) && correct.ValueKind == JsonValueKind.True }).ToArray()) : [];
+    private static CurationQualityReviewOutcome? TryCurationOutcome(JsonElement element) => StringProperty(element, "outcome") switch { "pass" => CurationQualityReviewOutcome.Pass, "warning" => CurationQualityReviewOutcome.Warning, "needs_review" => CurationQualityReviewOutcome.NeedsReview, _ => null };
+    private static CurationQualityReviewEvidenceType? TryCurationEvidence(JsonElement element) => StringProperty(element, "evidenceType") switch { "model_review" => CurationQualityReviewEvidenceType.ModelReview, "source_grounded_review" => CurationQualityReviewEvidenceType.SourceGroundedReview, "user_review" => CurationQualityReviewEvidenceType.UserReview, _ => null };
+    private static string RequiredEvidenceType(QualityReviewPromptMode mode) => mode switch { QualityReviewPromptMode.SourceGrounded => "source_grounded_review", QualityReviewPromptMode.Standard or QualityReviewPromptMode.Strict => "model_review", _ => throw new ArgumentOutOfRangeException(nameof(mode)) };
+    private static string EvidenceName(CurationQualityReviewEvidenceType evidence) => evidence switch { CurationQualityReviewEvidenceType.ModelReview => "model_review", CurationQualityReviewEvidenceType.SourceGroundedReview => "source_grounded_review", CurationQualityReviewEvidenceType.UserReview => "user_review", _ => throw new ArgumentOutOfRangeException(nameof(evidence)) };
+    private static void ValidatePromptMode(QualityReviewPromptMode mode) { if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported quality review prompt mode."); }
+    private static string PreImportSchemaText() => typeof(ContentAcquisitionService).Assembly.GetManifestResourceStream(PreImportSchemaResourceName) is { } stream ? new StreamReader(stream).ReadToEnd() : throw new InvalidOperationException("Pre-import Quality Review schema resource is unavailable.");
 
     private static ContentBundleDiagnostic? EvaluateEnvelopeSchema(JsonElement root)
     {
@@ -242,7 +417,7 @@ Original invalid JSON:
         }
     }
 
-    private ImportPlan BuildPlan(ParsedBundle parsed, IReadOnlyList<int> selected, IReadOnlyList<LearningItemSnapshot> items, IReadOnlyList<DeckSnapshot> decks, IReadOnlyList<ContentBundleOperationPreview> previews)
+    private ImportPlan BuildPlan(ParsedBundle parsed, IReadOnlyList<int> selected, IReadOnlyList<LearningItemSnapshot> items, IReadOnlyList<DeckSnapshot> decks, IReadOnlyList<ContentBundleOperationPreview> previews, IReadOnlyDictionary<string, PreImportAcceptedReview> acceptedReviews)
     {
         var itemMap = items.ToDictionary(x => x.Id);
         var deckMap = decks.ToDictionary(x => x.Id);
@@ -254,7 +429,7 @@ Original invalid JSON:
         foreach (var index in selected)
         {
             var element = parsed.Operations[index]; var op = StringProperty(element, "op");
-            if (op == "create_learning_item") { var id = LearningItemId.New().Value; localItems[StringProperty(element, "localRef")!] = id; var snapshot = CreateItemSnapshot(id, element, _timeProvider.GetUtcNow()); changedItems[id] = snapshot; createdItems.Add(id); }
+            if (op == "create_learning_item") { var localRef = StringProperty(element, "localRef")!; var id = LearningItemId.New().Value; localItems[localRef] = id; var snapshot = CreateItemSnapshot(id, element, _timeProvider.GetUtcNow()); if (acceptedReviews.TryGetValue(localRef, out var review)) snapshot = snapshot with { QualityReviews = [new QualityReviewSnapshot(QualityReviewId.New().Value, id, 1, review.Outcome, review.EvidenceType, review.Findings, review.SuggestedCorrection, null)] }; changedItems[id] = snapshot; createdItems.Add(id); }
             else if (op == "create_deck") { var id = DeckId.New().Value; localDecks[StringProperty(element, "localRef")!] = id; var snapshot = new DeckSnapshot(id, StringProperty(element.GetProperty("deck"), "name")!, []); changedDecks[id] = snapshot; createdDecks.Add(id); }
         }
         foreach (var index in selected)
@@ -342,5 +517,8 @@ Original invalid JSON:
     private static LearningItemSnapshot ToSnapshot(LearningItem item) => new(item.Id.Value, item.Prompt, item.ReferenceSolution.Content, item.ResponseMode switch { ResponseMode.SelfAssessed => LearningItemResponseMode.SelfAssessed, ResponseMode.Selection => LearningItemResponseMode.Selection, ResponseMode.ShortText => LearningItemResponseMode.ShortText, ResponseMode.Code => LearningItemResponseMode.Code, _ => throw new ArgumentOutOfRangeException() }, item.Hints.Select(x => new HintSnapshot(x.Text)).ToArray(), item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(), item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(), item.AcceptedShortAnswers.ToArray(), item.LowInteractionEligible, item.LifecycleState switch { LearningItemLifecycleState.Active => LearningItemLifecycle.Active, LearningItemLifecycleState.Suspended => LearningItemLifecycle.Suspended, LearningItemLifecycleState.Mastered => LearningItemLifecycle.Mastered, _ => throw new ArgumentOutOfRangeException() }, item.LearningState.IsNew, item.LearningState.DueAt, item.LearningState.Difficulty, item.LearningState.StabilityDays, item.LearningState.IsInShortTermRelearning, [], item.ContentRevision, item.QualityReviews.Select(x => new QualityReviewSnapshot(x.Id.Value, x.LearningItemId.Value, x.ContentRevision, (QualityReviewOutcomeSnapshot)x.Outcome, (QualityReviewEvidenceTypeSnapshot)x.EvidenceType, x.Findings, x.SuggestedCorrection, x.SupersededBy?.Value)).ToArray(), item.UserFlagDefinitionIds.Select(x => x.Value).ToArray());
     private static string CanonicalSchemaText() => typeof(ContentAcquisitionService).Assembly.GetManifestResourceStream(SchemaResourceName) is { } stream ? new StreamReader(stream).ReadToEnd() : throw new InvalidOperationException("Canonical Content Bundle schema resource is unavailable.");
     private sealed record ParsedBundle(JsonElement? Root, IReadOnlyList<ContentBundleDiagnostic> BundleDiagnostics, bool CanRepair, IReadOnlyList<JsonElement> Operations, string? Contract, string? Version, string? BundleId, string? GeneratedFor);
+    private sealed record ParsedPreImportResults(JsonElement? Root, IReadOnlyList<PreImportQualityReviewResultDiagnostic> BundleDiagnostics, IReadOnlyList<JsonElement> Results);
+    private sealed record PreImportSelectionValidation(IReadOnlyDictionary<string, PreImportAcceptedReview> Accepted, IReadOnlyList<PreImportQualityReviewResultDiagnostic> Diagnostics);
+    private sealed record PreImportAcceptedReview(QualityReviewOutcomeSnapshot Outcome, QualityReviewEvidenceTypeSnapshot EvidenceType, string Findings, string? SuggestedCorrection);
     private sealed record ImportPlan(ContentAcquisitionCommitSnapshot Snapshot, IReadOnlyList<Guid> CreatedItems, IReadOnlyList<Guid> UpdatedItems, IReadOnlyList<Guid> CreatedDecks, IReadOnlyList<Guid> UpdatedDecks, int AssignmentCount);
 }
