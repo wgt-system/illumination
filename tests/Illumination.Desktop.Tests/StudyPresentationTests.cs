@@ -49,7 +49,8 @@ public sealed class StudyPresentationTests
         }
 
         var timeProvider = new FixedTimeProvider(Now);
-        var content = new ContentManagementService(new EfCoreContentPersistence(factory), timeProvider);
+        var contentPersistence = new EfCoreContentPersistence(factory);
+        var content = new ContentManagementService(contentPersistence, timeProvider);
         var study = new StudySessionService(new EfCoreStudySessionPersistence(factory), timeProvider, new IdentityOrdering());
         var first = await content.CreateLearningItemAsync(new CreateLearningItemCommand("First prompt", "First solution"), TestContext.Current.CancellationToken);
         var second = await content.CreateLearningItemAsync(new CreateLearningItemCommand("Second prompt", "Second solution"), TestContext.Current.CancellationToken);
@@ -58,7 +59,7 @@ public sealed class StudyPresentationTests
         await content.AddLearningItemToDeckAsync(deck.Id, second.Id, TestContext.Current.CancellationToken);
 
         var acquisition = new ContentAcquisitionService(new FakeAcquisitionPersistence(), timeProvider);
-        var viewModel = new MainWindowViewModel(content, study, acquisition, timeProvider);
+        var viewModel = new MainWindowViewModel(content, study, acquisition, new ContentCurationService(contentPersistence, contentPersistence), new QualityReviewExchangeService(contentPersistence, contentPersistence), timeProvider);
         await viewModel.InitializeAsync();
         await viewModel.StartSessionCommand.ExecuteAsync(null);
 

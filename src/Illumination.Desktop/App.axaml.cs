@@ -15,8 +15,9 @@ public partial class App : Avalonia.Application
             var viewModel = DesktopComposition.CreateAsync().GetAwaiter().GetResult();
             var window = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = window;
-            viewModel.ContentAcquisition.AttachDesktopInteractions(
-                new AvaloniaDesktopInteractionService(() => window));
+            var interactions = new AvaloniaDesktopInteractionService(() => window);
+            viewModel.ContentAcquisition.AttachDesktopInteractions(interactions);
+            viewModel.ContentCuration.AttachDesktopInteractions(interactions);
         }
 
         base.OnFrameworkInitializationCompleted();

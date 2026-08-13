@@ -18,6 +18,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ContentManagementService content,
         StudySessionService study,
         ContentAcquisitionService acquisition,
+        ContentCurationService curation,
+        QualityReviewExchangeService qualityExchange,
         TimeProvider timeProvider)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
@@ -27,6 +29,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             acquisition,
             () => RefreshContentAsync(),
             message => StatusMessage = message);
+        ContentCuration = new ContentCurationViewModel(curation, qualityExchange, message => StatusMessage = message);
     }
 
     public string Title => "Illumination";
@@ -37,6 +40,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<StudyAssessmentPreviewDisplay> AssessmentPreviews { get; } = [];
     public ObservableCollection<StudyQueueEntryDisplay> UpcomingStudyItems { get; } = [];
     public ContentAcquisitionViewModel ContentAcquisition { get; }
+    public ContentCurationViewModel ContentCuration { get; }
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(CreateDeckCommand))]
     private string _newDeckName = string.Empty;
@@ -83,6 +87,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task InitializeAsync() => RefreshContentAsync();
 
     partial void OnSelectedDeckChanged(DeckView? value) => RebuildDeckMembershipLists();
+
+    partial void OnCurrentStudyItemChanged(StudySessionItemView? value) => ContentCuration.SetStudyItem(value?.Id);
 
     [RelayCommand(CanExecute = nameof(CanCreateDeck))]
     private async Task CreateDeckAsync() => await RunAsync(async () =>
@@ -162,6 +168,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(CanRevealSolution))]
     private void RevealSolution() => IsSolutionRevealed = true;
+
+    [RelayCommand]
+    private Task ToggleStudyFlagAsync(Guid flagId) => ContentCuration.ToggleFlagCommand.ExecuteAsync(flagId);
 
     private bool CanRevealSolution() => HasCurrentStudyItem && !IsSolutionRevealed;
 
@@ -247,6 +256,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Replace(Decks, decks);
         Replace(LearningItems, items);
         ContentAcquisition.UpdateDecks(decks);
+        await ContentCuration.RefreshAsync(items);
         SelectedDeck = Decks.FirstOrDefault(x => x.Id == selectedDeckId) ?? Decks.FirstOrDefault();
         SelectedStudyDeck = Decks.FirstOrDefault(x => x.Id == selectedStudyDeckId) ?? Decks.FirstOrDefault();
         RebuildDeckMembershipLists();

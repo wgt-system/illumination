@@ -31,6 +31,9 @@ internal static class DesktopComposition
 
         var contextFactory = new DesktopDbContextFactory(options);
         var content = new ContentManagementService(new EfCoreContentPersistence(contextFactory), timeProvider);
+        var contentPersistence = new EfCoreContentPersistence(contextFactory);
+        var curation = new ContentCurationService(contentPersistence, contentPersistence);
+        var qualityExchange = new QualityReviewExchangeService(contentPersistence, contentPersistence);
         var acquisition = new ContentAcquisitionService(
             new EfCoreContentAcquisitionPersistence(contextFactory),
             timeProvider);
@@ -38,7 +41,7 @@ internal static class DesktopComposition
             new EfCoreStudySessionPersistence(contextFactory),
             timeProvider,
             new RandomStudySessionOrdering());
-        var viewModel = new MainWindowViewModel(content, study, acquisition, timeProvider);
+        var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider);
         await viewModel.InitializeAsync();
         return viewModel;
     }
