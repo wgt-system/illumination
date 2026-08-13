@@ -124,6 +124,61 @@ public class StudySessionServiceTests
     }
 
     [Fact]
+    public async Task Low_interaction_filter_is_applied_before_new_item_limit()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var eligible = Guid.NewGuid();
+        var excluded = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [eligible, excluded]);
+        store.Items[eligible] = Item(eligible, isNew: true) with { LowInteractionEligible = true };
+        store.Items[excluded] = Item(excluded, isNew: true) with { LowInteractionEligible = false };
+
+        var session = await CreateService(store).StartStudySessionAsync(new StartStudySessionCommand([deckId], NewItemLimit: 1, LowInteractionOnly: true));
+
+        Assert.Equal([eligible], session.Queue);
+    }
+
+    [Fact]
+    public async Task Assisted_selection_produces_exact_correctness_and_suggestion()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [itemId]);
+        store.Items[itemId] = Item(itemId) with
+        {
+            ResponseMode = LearningItemResponseMode.Selection,
+            DirectAnswerChoices = [new AnswerChoiceSnapshot("A", true), new AnswerChoiceSnapshot("B", false)]
+        };
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Assisted));
+
+        var evaluation = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, ["choice-0"]));
+
+        Assert.True(evaluation.AutomaticCorrectness);
+        Assert.Equal(StudyLearningAssessment.Gut, evaluation.SuggestedAssessment);
+    }
+
+    [Fact]
+    public async Task Short_text_normalization_is_conservative_and_hint_assistance_can_suggest_unsicher()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [itemId]);
+        store.Items[itemId] = Item(itemId) with { ResponseMode = LearningItemResponseMode.ShortText, AcceptedShortAnswers = ["Café"] , Hints = [new HintSnapshot("Hint")] };
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Assisted, ConsiderAssistance: true));
+        await service.RevealNextHintAsync(session.Id);
+
+        var evaluation = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, ShortTextResponse: "  cafe\u0301  "));
+
+        Assert.True(evaluation.AutomaticCorrectness);
+        Assert.Equal(StudyLearningAssessment.Unsicher, evaluation.SuggestedAssessment);
+    }
+
+    [Fact]
     public async Task Session_identity_is_stable_and_get_next_repeats_until_review()
     {
         var store = CreateStoreWithSingleItem(out var deckId, out var itemId);

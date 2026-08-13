@@ -329,10 +329,15 @@ public sealed class LearningItem
     public Review CompleteReview(
         DateTimeOffset completedAt,
         LearningAssessment assessment,
-        string? submittedResponse = null)
+        string? submittedResponse = null,
+        bool? automaticCorrectness = null,
+        LearningAssessment? suggestedAssessment = null,
+        int hintCount = 0,
+        bool assistanceAnswerChoicesRevealed = false,
+        bool referenceSolutionRevealed = false)
     {
         RequireLifecycleState(LearningItemLifecycleState.Active);
-        var review = Review.Create(Id, completedAt, assessment, submittedResponse);
+        var review = Review.Create(Id, completedAt, assessment, submittedResponse, automaticCorrectness, suggestedAssessment, hintCount, assistanceAnswerChoicesRevealed, referenceSolutionRevealed);
         LearningState.ApplyReview(completedAt, assessment);
         return review;
     }

@@ -1,6 +1,7 @@
 using Illumination.Application.ContentManagement;
 using Illumination.Domain.Identity;
 using Illumination.Domain.Learning;
+using System.Text;
 
 namespace Illumination.Application.Study;
 
@@ -11,6 +12,7 @@ public sealed class StudySessionService
     private readonly IStudySessionPersistence _persistence;
     private readonly TimeProvider _timeProvider;
     private readonly IStudySessionOrdering _ordering;
+    private readonly Dictionary<(Guid SessionId, Guid ItemId), AppearanceState> _appearances = [];
 
     public StudySessionService(IStudySessionPersistence persistence, TimeProvider timeProvider, IStudySessionOrdering ordering)
     {
@@ -22,6 +24,7 @@ public sealed class StudySessionService
     public async Task<StudySessionView> StartStudySessionAsync(StartStudySessionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        if (!Enum.IsDefined(command.EvaluationMode)) throw new StudyValidationException("Unsupported evaluation mode.");
         var selectedDeckIds = ValidateSelectedDecks(command.SelectedDeckIds);
         var newItemLimit = ValidateNewItemOptions(command.NewItemLimit, command.AllNew);
         var decks = await _persistence.LoadDecksAsync(selectedDeckIds, cancellationToken);
@@ -43,14 +46,14 @@ public sealed class StudySessionService
         }
 
         var sessionStart = _timeProvider.GetUtcNow();
-        var eligible = items.Where(IsActive).ToArray();
+        var eligible = items.Where(IsActive).Where(item => !command.LowInteractionOnly || item.LowInteractionEligible).ToArray();
         var queue = new List<Guid>();
         queue.AddRange(Order(eligible.Where(item => item.IsInShortTermRelearning).Select(item => item.Id).ToArray()));
         queue.AddRange(Order(eligible.Where(item => !item.IsInShortTermRelearning && !item.IsNew && item.DueAt <= sessionStart).Select(item => item.Id).ToArray()));
         var newItems = Order(eligible.Where(item => item.IsNew).Select(item => item.Id).ToArray());
         queue.AddRange(command.AllNew ? newItems : newItems.Take(newItemLimit!.Value));
 
-        var session = new StudySessionSnapshot(Guid.NewGuid(), sessionStart, null, selectedDeckIds, queue, []);
+        var session = new StudySessionSnapshot(Guid.NewGuid(), sessionStart, null, selectedDeckIds, queue, [], command.EvaluationMode, command.ConsiderAssistance, command.LowInteractionOnly);
         await _persistence.SaveStartedStudySessionAsync(session, cancellationToken);
         return ToView(session);
     }
@@ -65,7 +68,7 @@ public sealed class StudySessionService
 
         var item = await _persistence.FindLearningItemAsync(session.Queue[0], cancellationToken)
             ?? throw new StudyNotFoundException($"Learning Item '{session.Queue[0]}' was not found.");
-        return new StudySessionItemView(item.Id, item.Prompt, item.ReferenceSolution);
+        return ToItemView(item);
     }
 
     public async Task<IReadOnlyList<StudyAssessmentPreview>> GetAssessmentPreviewsAsync(Guid sessionId, CancellationToken cancellationToken = default)
@@ -73,6 +76,49 @@ public sealed class StudySessionService
         var session = await LoadSessionAsync(sessionId, cancellationToken);
         var item = await LoadCurrentItemAsync(session, cancellationToken);
         return BuildAssessmentPreviews(session, item, _timeProvider.GetUtcNow());
+    }
+
+    public async Task<StudyInteractionStateView> RevealNextHintAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await LoadSessionAsync(sessionId, cancellationToken);
+        var item = await LoadCurrentItemAsync(session, cancellationToken);
+        var state = GetAppearance(sessionId, item.Id);
+        if (state.RevealedHintCount < item.Hints.Count) state.RevealedHintCount++;
+        return ToInteractionView(sessionId, item.Id, state, item);
+    }
+
+    public async Task<StudyInteractionStateView> RevealAssistanceAnswerChoicesAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await LoadSessionAsync(sessionId, cancellationToken);
+        var item = await LoadCurrentItemAsync(session, cancellationToken);
+        var state = GetAppearance(sessionId, item.Id);
+        state.AssistanceRevealed = true;
+        return ToInteractionView(sessionId, item.Id, state, item);
+    }
+
+    public async Task<StudyInteractionStateView> RevealReferenceSolutionAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await LoadSessionAsync(sessionId, cancellationToken);
+        var item = await LoadCurrentItemAsync(session, cancellationToken);
+        var state = GetAppearance(sessionId, item.Id);
+        state.ReferenceRevealed = true;
+        return ToInteractionView(sessionId, item.Id, state, item);
+    }
+
+    public async Task<StudyResponseEvaluationResult> SubmitResponseAsync(SubmitStudyResponseCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var session = await LoadSessionAsync(command.SessionId, cancellationToken);
+        var item = await LoadCurrentItemAsync(session, cancellationToken);
+        if (item.Id != command.LearningItemId) throw new StudyValidationException("The submitted Learning Item is not the current queue item.");
+        var state = GetAppearance(session.Id, item.Id);
+        var evaluation = session.EvaluationMode == StudyEvaluationMode.Assisted
+            ? EvaluateResponse(item, command)
+            : (null, CaptureResponse(item, command));
+        state.AutomaticCorrectness = evaluation.Correctness;
+        state.SubmittedResponse = evaluation.Response;
+        state.SuggestedAssessment = SuggestAssessment(session, item, evaluation.Correctness, state);
+        return new(session.Id, item.Id, evaluation.Correctness, state.SuggestedAssessment, evaluation.Response);
     }
 
     public async Task<StudySessionTransparencyView> GetStudySessionTransparencyAsync(
@@ -130,7 +176,11 @@ public sealed class StudySessionService
         var item = ToDomain(snapshot);
         var completedAt = _timeProvider.GetUtcNow();
         var assessment = ToDomain(command.Assessment);
-        var review = item.CompleteReview(completedAt, assessment, command.SubmittedResponse);
+        var appearance = GetAppearance(session.Id, item.Id.Value);
+        var automaticCorrectness = command.AutomaticCorrectness ?? appearance.AutomaticCorrectness;
+        var suggestedAssessment = command.SuggestedAssessment ?? appearance.SuggestedAssessment;
+        var submittedResponse = command.SubmittedResponse ?? appearance.SubmittedResponse;
+        var review = item.CompleteReview(completedAt, assessment, submittedResponse, automaticCorrectness, suggestedAssessment is { } suggested ? ToDomain(suggested) : null, appearance.RevealedHintCount, appearance.AssistanceRevealed, appearance.ReferenceRevealed);
         var updatedQueue = session.Queue.Skip(1).ToList();
         switch (assessment)
         {
@@ -156,7 +206,7 @@ public sealed class StudySessionService
             ReviewIds = session.ReviewIds.Append(review.Id.Value).ToArray(),
         };
         var updatedItem = ToSnapshot(item, snapshot.DeckIds);
-        var reviewSnapshot = new StudyReviewSnapshot(review.Id.Value, review.LearningItemId.Value, review.CompletedAt, ToApplication(review.Assessment), review.SubmittedResponse);
+        var reviewSnapshot = new StudyReviewSnapshot(review.Id.Value, review.LearningItemId.Value, review.CompletedAt, ToApplication(review.Assessment), review.SubmittedResponse, review.AutomaticCorrectness, review.SuggestedAssessment is { } acceptedSuggestion ? ToApplication(acceptedSuggestion) : null, review.HintCount, review.AssistanceAnswerChoicesRevealed, review.ReferenceSolutionRevealed);
         await _persistence.CommitReviewAsync(updatedItem, reviewSnapshot, updatedSession, cancellationToken);
         return new StudyReviewResult(review.Id.Value, review.LearningItemId.Value, review.CompletedAt, ToView(updatedSession));
     }
@@ -276,6 +326,49 @@ public sealed class StudySessionService
     }
 
     private static StudySessionView ToView(StudySessionSnapshot session) => new(session.Id, session.StartedAt, session.CompletedAt, session.SelectedDeckIds, session.Queue, session.ReviewIds);
+
+    private static StudySessionItemView ToItemView(StudyLearningItemSnapshot item) => new(
+        item.Id, item.Prompt, item.ReferenceSolution, item.ResponseMode,
+        item.DirectAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"choice-{index}", choice.Text)).ToArray(),
+        item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"assistance-{index}", choice.Text)).ToArray(),
+        item.Hints.Select(x => x.Text).ToArray(), item.AcceptedShortAnswers, item.LowInteractionEligible);
+
+    private AppearanceState GetAppearance(Guid sessionId, Guid itemId) => _appearances.TryGetValue((sessionId, itemId), out var state) ? state : (_appearances[(sessionId, itemId)] = new AppearanceState());
+
+    private static StudyInteractionStateView ToInteractionView(Guid sessionId, Guid itemId, AppearanceState state, StudyLearningItemSnapshot item) => new(sessionId, itemId, item.Hints.Take(state.RevealedHintCount).Select(x => x.Text).ToArray(), state.AssistanceRevealed, state.ReferenceRevealed, state.SubmittedResponse, state.AssistanceRevealed ? item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"assistance-{index}", choice.Text)).ToArray() : null, state.ReferenceRevealed ? item.ReferenceSolution : null);
+
+    private static (bool? Correctness, string? Response) EvaluateResponse(StudyLearningItemSnapshot item, SubmitStudyResponseCommand command)
+    {
+        return item.ResponseMode switch
+        {
+            LearningItemResponseMode.Selection => (command.SelectedChoiceIds is not null && command.SelectedChoiceIds.Order().SequenceEqual(item.DirectAnswerChoices.Select((choice, index) => (choice.IsCorrect ? $"choice-{index}" : null)).Where(x => x is not null).Select(x => x!).Order()), string.Join(",", command.SelectedChoiceIds ?? [])),
+            LearningItemResponseMode.ShortText => (command.ShortTextResponse is not null && item.AcceptedShortAnswers.Any(answer => string.Equals(NormalizeShortText(answer), NormalizeShortText(command.ShortTextResponse), StringComparison.OrdinalIgnoreCase)), command.ShortTextResponse),
+            LearningItemResponseMode.Code => (null, command.CodeResponse),
+            _ => (null, command.ShortTextResponse ?? command.CodeResponse),
+        };
+    }
+
+    private static string? CaptureResponse(StudyLearningItemSnapshot item, SubmitStudyResponseCommand command) => item.ResponseMode switch
+    {
+        LearningItemResponseMode.Selection => string.Join(",", command.SelectedChoiceIds ?? []),
+        LearningItemResponseMode.ShortText => command.ShortTextResponse,
+        LearningItemResponseMode.Code => command.CodeResponse,
+        _ => command.ShortTextResponse ?? command.CodeResponse,
+    };
+
+    private static string NormalizeShortText(string value) => value.Trim().Normalize(NormalizationForm.FormC);
+
+    private static StudyLearningAssessment? SuggestAssessment(StudySessionSnapshot session, StudyLearningItemSnapshot item, bool? correctness, AppearanceState state) => session.EvaluationMode == StudyEvaluationMode.Assisted && item.ResponseMode is LearningItemResponseMode.Selection or LearningItemResponseMode.ShortText && correctness is not null ? correctness.Value && session.ConsiderAssistance && (state.RevealedHintCount > 0 || state.AssistanceRevealed) ? StudyLearningAssessment.Unsicher : correctness.Value ? StudyLearningAssessment.Gut : StudyLearningAssessment.Schwer : null;
+
+    private sealed class AppearanceState
+    {
+        public int RevealedHintCount { get; set; }
+        public bool AssistanceRevealed { get; set; }
+        public bool ReferenceRevealed { get; set; }
+        public bool? AutomaticCorrectness { get; set; }
+        public StudyLearningAssessment? SuggestedAssessment { get; set; }
+        public string? SubmittedResponse { get; set; }
+    }
 
     private static StudySessionQueueItemView ToQueueItemView(StudyLearningItemSnapshot snapshot) => new(snapshot.Id, snapshot.Prompt, snapshot.IsInShortTermRelearning);
 

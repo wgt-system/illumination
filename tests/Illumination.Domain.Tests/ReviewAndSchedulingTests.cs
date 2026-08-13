@@ -26,6 +26,18 @@ public class ReviewAndSchedulingTests
     }
 
     [Fact]
+    public void Review_captures_v05_interaction_facts_without_changing_learning_state_shape()
+    {
+        var review = Review.Create(LearningItemId.New(), CompletedAt, LearningAssessment.Gut, "answer", true, LearningAssessment.Gut, 2, true, true);
+
+        Assert.True(review.AutomaticCorrectness);
+        Assert.Equal(LearningAssessment.Gut, review.SuggestedAssessment);
+        Assert.Equal(2, review.HintCount);
+        Assert.True(review.AssistanceAnswerChoicesRevealed);
+        Assert.True(review.ReferenceSolutionRevealed);
+    }
+
+    [Fact]
     public void New_learning_state_uses_the_initial_scheduling_defaults()
     {
         var item = CreateItem();

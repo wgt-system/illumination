@@ -11,16 +11,28 @@ public enum StudyLearningAssessment
     Leicht,
 }
 
+public enum StudyEvaluationMode { Manual, Assisted }
+public sealed record StudyAnswerChoiceView(string Id, string Text);
+
 public sealed record StartStudySessionCommand(
     IReadOnlyList<Guid> SelectedDeckIds,
     int? NewItemLimit = null,
-    bool AllNew = false);
+    bool AllNew = false,
+    StudyEvaluationMode EvaluationMode = StudyEvaluationMode.Manual,
+    bool ConsiderAssistance = false,
+    bool LowInteractionOnly = false);
 
 public sealed record SubmitStudyReviewCommand(
     Guid SessionId,
     Guid LearningItemId,
     StudyLearningAssessment Assessment,
-    string? SubmittedResponse = null);
+    string? SubmittedResponse = null,
+    bool? AutomaticCorrectness = null,
+    StudyLearningAssessment? SuggestedAssessment = null);
+
+public sealed record SubmitStudyResponseCommand(Guid SessionId, Guid LearningItemId, IReadOnlyList<string>? SelectedChoiceIds = null, string? ShortTextResponse = null, string? CodeResponse = null);
+public sealed record StudyResponseEvaluationResult(Guid SessionId, Guid LearningItemId, bool? AutomaticCorrectness, StudyLearningAssessment? SuggestedAssessment, string? SubmittedResponse);
+public sealed record StudyInteractionStateView(Guid SessionId, Guid LearningItemId, IReadOnlyList<string> RevealedHintTexts, bool AssistanceAnswerChoicesRevealed, bool ReferenceSolutionRevealed, string? SubmittedResponse, IReadOnlyList<StudyAnswerChoiceView>? RevealedAssistanceAnswerChoices = null, string? RevealedReferenceSolution = null);
 
 public sealed record StudySessionView(
     Guid Id,
@@ -33,7 +45,13 @@ public sealed record StudySessionView(
 public sealed record StudySessionItemView(
     Guid Id,
     string Prompt,
-    string ReferenceSolution);
+    string ReferenceSolution,
+    ContentManagement.LearningItemResponseMode ResponseMode = ContentManagement.LearningItemResponseMode.SelfAssessed,
+    IReadOnlyList<StudyAnswerChoiceView>? DirectAnswerChoices = null,
+    IReadOnlyList<StudyAnswerChoiceView>? AssistanceAnswerChoices = null,
+    IReadOnlyList<string>? Hints = null,
+    IReadOnlyList<string>? AcceptedShortAnswers = null,
+    bool LowInteractionEligible = false);
 
 public sealed record StudyReviewResult(
     Guid ReviewId,
@@ -86,7 +104,12 @@ public sealed record StudyReviewSnapshot(
     Guid LearningItemId,
     DateTimeOffset CompletedAt,
     StudyLearningAssessment Assessment,
-    string? SubmittedResponse);
+    string? SubmittedResponse,
+    bool? AutomaticCorrectness = null,
+    StudyLearningAssessment? SuggestedAssessment = null,
+    int HintCount = 0,
+    bool AssistanceAnswerChoicesRevealed = false,
+    bool ReferenceSolutionRevealed = false);
 
 public sealed record StudySessionSnapshot(
     Guid Id,
@@ -94,7 +117,10 @@ public sealed record StudySessionSnapshot(
     DateTimeOffset? CompletedAt,
     IReadOnlyList<Guid> SelectedDeckIds,
     IReadOnlyList<Guid> Queue,
-    IReadOnlyList<Guid> ReviewIds);
+    IReadOnlyList<Guid> ReviewIds,
+    StudyEvaluationMode EvaluationMode = StudyEvaluationMode.Manual,
+    bool ConsiderAssistance = false,
+    bool LowInteractionOnly = false);
 
 public sealed class StudyNotFoundException : Exception
 {
