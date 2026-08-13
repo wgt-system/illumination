@@ -87,6 +87,17 @@ public sealed class QualityReview
         string? suggestedCorrection = null) =>
         new(id, learningItemId, contentRevision, outcome, evidenceType, findings, suggestedCorrection, null);
 
+    public static QualityReview Restore(
+        QualityReviewId id,
+        LearningItemId learningItemId,
+        int contentRevision,
+        QualityReviewOutcome outcome,
+        QualityReviewEvidenceType evidenceType,
+        string findings,
+        string? suggestedCorrection,
+        QualityReviewId? supersededBy) =>
+        new(id, learningItemId, contentRevision, outcome, evidenceType, findings, suggestedCorrection, supersededBy);
+
     internal QualityReview SupersededByReview(QualityReviewId supersedingReviewId) =>
         new(Id, LearningItemId, ContentRevision, Outcome, EvidenceType, Findings, SuggestedCorrection, supersedingReviewId);
 }

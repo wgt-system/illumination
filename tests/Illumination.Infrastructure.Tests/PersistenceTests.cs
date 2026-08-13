@@ -25,7 +25,7 @@ public class PersistenceTests
         var tableNames = new List<string>();
         while (reader.Read()) tableNames.Add(reader.GetString(0));
 
-        Assert.Equal(["AcceptedShortAnswers", "AnswerChoices", "DeckLearningItems", "Decks", "Hints", "ImportProvenance", "LearningItems", "Reviews", "StudySessionDecks", "StudySessionQueue", "StudySessionReviews", "StudySessions"], tableNames);
+        Assert.Equal(["AcceptedShortAnswers", "AnswerChoices", "DeckLearningItems", "Decks", "Hints", "ImportProvenance", "LearningItemUserFlags", "LearningItems", "QualityReviews", "Reviews", "StudySessionDecks", "StudySessionQueue", "StudySessionReviews", "StudySessions", "UserFlagDefinitions"], tableNames);
     }
 
     [Fact]
@@ -113,6 +113,41 @@ public class PersistenceTests
         context.SaveChanges();
         Assert.Empty(context.Hints);
         Assert.Empty(context.LearningItems);
+    }
+
+    [Fact]
+    public void Content_quality_history_and_flags_round_trip_across_contexts()
+    {
+        using var connection = OpenConnection();
+        using (var setup = CreateContext(connection))
+        {
+            setup.Database.Migrate();
+            var item = LearningItem.Create(
+                LearningItemId.From(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")),
+                "Prompt", "Solution", new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero));
+            var first = QualityReview.Create(item.Id, item.ContentRevision, Illumination.Domain.Learning.QualityReviewOutcome.Warning, Illumination.Domain.Learning.QualityReviewEvidenceType.ModelReview, "Ambiguous wording.");
+            var replacement = QualityReview.Create(item.Id, item.ContentRevision, Illumination.Domain.Learning.QualityReviewOutcome.Pass, Illumination.Domain.Learning.QualityReviewEvidenceType.UserReview, "Reviewed wording.", "Use the precise term.");
+            item.AcceptQualityReview(first);
+            item.AcceptQualityReview(replacement, [first.Id]);
+            var flag = UserFlagDefinition.Create(UserFlagDefinitionId.From(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")), "Needs follow-up", "Review source later.");
+            item.AddUserFlag(flag);
+
+            setup.UserFlagDefinitions.Add(new UserFlagDefinitionRecord { UserFlagDefinitionId = flag.Id.Value, Name = flag.Name, Meaning = flag.Meaning });
+            setup.LearningItems.Add(DomainPersistenceMapper.ToRecord(item));
+            setup.SaveChanges();
+        }
+
+        using var reload = CreateContext(connection);
+        var record = reload.LearningItems.Include(x => x.QualityReviews).Include(x => x.UserFlagAssignments).Single();
+        var itemAfterRestart = DomainPersistenceMapper.ToDomain(record);
+        Assert.Equal(1, itemAfterRestart.ContentRevision);
+        Assert.Equal(2, itemAfterRestart.QualityReviews.Count);
+        var activeReview = itemAfterRestart.QualityReviews.Single(x => !x.IsSuperseded);
+        Assert.Equal(activeReview.Id, itemAfterRestart.QualityReviews.Single(x => x.IsSuperseded).SupersededBy);
+        Assert.Equal(Illumination.Domain.Learning.QualityReviewEvidenceType.UserReview, itemAfterRestart.QualityReviews.Single(x => !x.IsSuperseded).EvidenceType);
+        Assert.Equal(Illumination.Domain.Learning.QualityReviewOutcome.Pass, itemAfterRestart.CurrentQualityState!.Outcome);
+        Assert.Single(itemAfterRestart.UserFlagDefinitionIds);
+        Assert.Equal("Needs follow-up", reload.UserFlagDefinitions.Single().Name);
     }
 
     private static SqliteConnection OpenConnection()

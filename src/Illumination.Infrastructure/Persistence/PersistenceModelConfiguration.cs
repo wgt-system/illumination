@@ -25,11 +25,14 @@ internal static class PersistenceModelConfiguration
         learningItems.Property(x => x.Difficulty).HasColumnName("Difficulty").IsRequired();
         learningItems.Property(x => x.StabilityDays).HasColumnName("StabilityDays").IsRequired();
         learningItems.Property(x => x.IsInShortTermRelearning).HasColumnName("IsInShortTermRelearning").IsRequired();
+        learningItems.Property(x => x.ContentRevision).HasColumnName("ContentRevision").HasDefaultValue(1).IsRequired();
         learningItems.HasIndex(x => x.DueAt).HasDatabaseName("IX_LearningItems_DueAt");
         learningItems.HasMany(x => x.Hints).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         learningItems.HasMany(x => x.AnswerChoices).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         learningItems.HasMany(x => x.AcceptedShortAnswers).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         learningItems.HasMany(x => x.DeckMemberships).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
+        learningItems.HasMany(x => x.QualityReviews).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
+        learningItems.HasMany(x => x.UserFlagAssignments).WithOne(x => x.LearningItem).HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
 
         ConfigureHint(modelBuilder.Entity<HintRecord>());
         ConfigureChoice(modelBuilder.Entity<AnswerChoiceRecord>());
@@ -42,6 +45,9 @@ internal static class PersistenceModelConfiguration
         ConfigureStudySessionQueue(modelBuilder.Entity<StudySessionQueueRecord>());
         ConfigureStudySessionReview(modelBuilder.Entity<StudySessionReviewRecord>());
         ConfigureImportProvenance(modelBuilder.Entity<ImportProvenanceRecord>());
+        ConfigureQualityReview(modelBuilder.Entity<QualityReviewRecord>());
+        ConfigureUserFlagDefinition(modelBuilder.Entity<UserFlagDefinitionRecord>());
+        ConfigureLearningItemUserFlag(modelBuilder.Entity<LearningItemUserFlagRecord>());
     }
 
     private static void ConfigureHint(EntityTypeBuilder<HintRecord> entity)
@@ -137,5 +143,33 @@ internal static class PersistenceModelConfiguration
         entity.Property(x => x.Version).HasColumnName("Version").IsRequired();
         entity.Property(x => x.ExternalBundleId).HasColumnName("ExternalBundleId");
         entity.Property(x => x.GeneratedFor).HasColumnName("GeneratedFor");
+    }
+
+    private static void ConfigureQualityReview(EntityTypeBuilder<QualityReviewRecord> entity)
+    {
+        entity.ToTable("QualityReviews");
+        entity.HasKey(x => x.QualityReviewId);
+        entity.Property(x => x.QualityReviewId).ValueGeneratedNever();
+        entity.Property(x => x.Outcome).HasConversion<string>().IsRequired();
+        entity.Property(x => x.EvidenceType).HasConversion<string>().IsRequired();
+        entity.Property(x => x.Findings).IsRequired();
+        entity.HasIndex(x => new { x.LearningItemId, x.ContentRevision });
+        entity.HasOne<QualityReviewRecord>().WithMany().HasForeignKey(x => x.SupersededBy).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureUserFlagDefinition(EntityTypeBuilder<UserFlagDefinitionRecord> entity)
+    {
+        entity.ToTable("UserFlagDefinitions");
+        entity.HasKey(x => x.UserFlagDefinitionId);
+        entity.Property(x => x.UserFlagDefinitionId).ValueGeneratedNever();
+        entity.Property(x => x.Name).IsRequired();
+        entity.Property(x => x.Meaning).IsRequired();
+    }
+
+    private static void ConfigureLearningItemUserFlag(EntityTypeBuilder<LearningItemUserFlagRecord> entity)
+    {
+        entity.ToTable("LearningItemUserFlags");
+        entity.HasKey(x => new { x.LearningItemId, x.UserFlagDefinitionId });
+        entity.HasOne(x => x.UserFlagDefinition).WithMany().HasForeignKey(x => x.UserFlagDefinitionId).OnDelete(DeleteBehavior.Restrict);
     }
 }

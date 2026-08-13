@@ -15,6 +15,13 @@ public interface IContentPersistence
     Task SaveDeckAsync(DeckSnapshot deck, CancellationToken cancellationToken = default);
 
     Task DeleteDeckAsync(Guid id, CancellationToken cancellationToken = default);
+
+}
+
+public interface IUserFlagDefinitionPersistence
+{
+    Task<IReadOnlyList<UserFlagDefinitionSnapshot>> ListUserFlagDefinitionsAsync(CancellationToken cancellationToken = default);
+    Task SaveUserFlagDefinitionAsync(UserFlagDefinitionSnapshot definition, CancellationToken cancellationToken = default);
 }
 
 public sealed record LearningItemSnapshot(
@@ -33,10 +40,29 @@ public sealed record LearningItemSnapshot(
     double Difficulty,
     double StabilityDays,
     bool IsInShortTermRelearning,
-    IReadOnlyList<Guid> DeckIds);
+    IReadOnlyList<Guid> DeckIds,
+    int ContentRevision = 1,
+    IReadOnlyList<QualityReviewSnapshot>? QualityReviews = null,
+    IReadOnlyList<Guid>? UserFlagDefinitionIds = null);
 
 public sealed record HintSnapshot(string Text);
 
 public sealed record AnswerChoiceSnapshot(string Text, bool IsCorrect);
 
 public sealed record DeckSnapshot(Guid Id, string Name, IReadOnlyList<Guid> LearningItemIds);
+
+public enum QualityReviewOutcomeSnapshot { Pass, Warning, NeedsReview }
+
+public enum QualityReviewEvidenceTypeSnapshot { ModelReview, SourceGroundedReview, UserReview }
+
+public sealed record QualityReviewSnapshot(
+    Guid Id,
+    Guid LearningItemId,
+    int ContentRevision,
+    QualityReviewOutcomeSnapshot Outcome,
+    QualityReviewEvidenceTypeSnapshot EvidenceType,
+    string Findings,
+    string? SuggestedCorrection,
+    Guid? SupersededBy);
+
+public sealed record UserFlagDefinitionSnapshot(Guid Id, string Name, string Meaning);

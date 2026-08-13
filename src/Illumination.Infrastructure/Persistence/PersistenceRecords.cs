@@ -17,10 +17,45 @@ public sealed class LearningItemRecord
     public double Difficulty { get; set; }
     public double StabilityDays { get; set; }
     public bool IsInShortTermRelearning { get; set; }
+    public int ContentRevision { get; set; }
     public List<HintRecord> Hints { get; } = [];
     public List<AnswerChoiceRecord> AnswerChoices { get; } = [];
     public List<AcceptedShortAnswerRecord> AcceptedShortAnswers { get; } = [];
     public List<DeckLearningItemRecord> DeckMemberships { get; } = [];
+    public List<QualityReviewRecord> QualityReviews { get; } = [];
+    public List<LearningItemUserFlagRecord> UserFlagAssignments { get; } = [];
+}
+
+public sealed class QualityReviewRecord
+{
+    public Guid QualityReviewId { get; set; }
+    public Guid LearningItemId { get; set; }
+    public int ContentRevision { get; set; }
+    public QualityReviewOutcome Outcome { get; set; }
+    public QualityReviewEvidenceType EvidenceType { get; set; }
+    public string Findings { get; set; } = null!;
+    public string? SuggestedCorrection { get; set; }
+    public Guid? SupersededBy { get; set; }
+    public LearningItemRecord LearningItem { get; set; } = null!;
+}
+
+public enum QualityReviewOutcome { Pass, Warning, NeedsReview }
+
+public enum QualityReviewEvidenceType { ModelReview, SourceGroundedReview, UserReview }
+
+public sealed class UserFlagDefinitionRecord
+{
+    public Guid UserFlagDefinitionId { get; set; }
+    public string Name { get; set; } = null!;
+    public string Meaning { get; set; } = null!;
+}
+
+public sealed class LearningItemUserFlagRecord
+{
+    public Guid LearningItemId { get; set; }
+    public Guid UserFlagDefinitionId { get; set; }
+    public LearningItemRecord LearningItem { get; set; } = null!;
+    public UserFlagDefinitionRecord UserFlagDefinition { get; set; } = null!;
 }
 
 public sealed class HintRecord

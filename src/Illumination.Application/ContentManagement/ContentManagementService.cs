@@ -219,7 +219,13 @@ public sealed class ContentManagementService
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
-        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning);
+        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning,
+        snapshot.ContentRevision,
+        (snapshot.QualityReviews ?? []).Select(x => QualityReview.Restore(
+            QualityReviewId.From(x.Id), LearningItemId.From(x.LearningItemId), x.ContentRevision,
+            (QualityReviewOutcome)x.Outcome, (QualityReviewEvidenceType)x.EvidenceType,
+            x.Findings, x.SuggestedCorrection, x.SupersededBy.HasValue ? QualityReviewId.From(x.SupersededBy.Value) : null)),
+        (snapshot.UserFlagDefinitionIds ?? []).Select(UserFlagDefinitionId.From));
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
@@ -248,7 +254,11 @@ public sealed class ContentManagementService
         item.LearningState.Difficulty,
         item.LearningState.StabilityDays,
         item.LearningState.IsInShortTermRelearning,
-        []);
+        [], item.ContentRevision,
+        item.QualityReviews.Select(x => new QualityReviewSnapshot(
+            x.Id.Value, x.LearningItemId.Value, x.ContentRevision, (QualityReviewOutcomeSnapshot)x.Outcome,
+            (QualityReviewEvidenceTypeSnapshot)x.EvidenceType, x.Findings, x.SuggestedCorrection, x.SupersededBy?.Value)).ToArray(),
+        item.UserFlagDefinitionIds.Select(x => x.Value).ToArray());
 
     private static DeckSnapshot ToSnapshot(Deck deck) => new(
         deck.Id.Value,

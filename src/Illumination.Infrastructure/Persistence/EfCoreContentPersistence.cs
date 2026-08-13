@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Illumination.Infrastructure.Persistence;
 
-public sealed class EfCoreContentPersistence : IContentPersistence
+public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDefinitionPersistence
 {
     private readonly IDbContextFactory<IlluminationDbContext> _contextFactory;
 
@@ -34,6 +34,24 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         return record is null ? null : ToSnapshot(record);
     }
 
+    public async Task<IReadOnlyList<UserFlagDefinitionSnapshot>> ListUserFlagDefinitionsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.UserFlagDefinitions.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.UserFlagDefinitionId)
+            .Select(x => new UserFlagDefinitionSnapshot(x.UserFlagDefinitionId, x.Name, x.Meaning)).ToArrayAsync(cancellationToken);
+    }
+
+    public async Task SaveUserFlagDefinitionAsync(UserFlagDefinitionSnapshot definition, CancellationToken cancellationToken = default)
+    {
+        var domain = UserFlagDefinition.Create(UserFlagDefinitionId.From(definition.Id), definition.Name, definition.Meaning);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var existing = await context.UserFlagDefinitions.SingleOrDefaultAsync(x => x.UserFlagDefinitionId == domain.Id.Value, cancellationToken);
+        if (existing is null)
+            context.UserFlagDefinitions.Add(new UserFlagDefinitionRecord { UserFlagDefinitionId = domain.Id.Value, Name = domain.Name, Meaning = domain.Meaning });
+        else { existing.Name = domain.Name; existing.Meaning = domain.Meaning; }
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -54,6 +72,8 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             .Include(x => x.Hints)
             .Include(x => x.AnswerChoices)
             .Include(x => x.AcceptedShortAnswers)
+            .Include(x => x.QualityReviews)
+            .Include(x => x.UserFlagAssignments)
             .SingleOrDefaultAsync(x => x.LearningItemId == snapshot.Id, cancellationToken);
 
         var replacement = DomainPersistenceMapper.ToRecord(domainItem);
@@ -73,6 +93,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             existing.Difficulty = replacement.Difficulty;
             existing.StabilityDays = replacement.StabilityDays;
             existing.IsInShortTermRelearning = replacement.IsInShortTermRelearning;
+            existing.ContentRevision = replacement.ContentRevision;
 
             context.Hints.RemoveRange(existing.Hints);
             context.AnswerChoices.RemoveRange(existing.AnswerChoices);
@@ -83,6 +104,12 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             existing.Hints.AddRange(replacement.Hints);
             existing.AnswerChoices.AddRange(replacement.AnswerChoices);
             existing.AcceptedShortAnswers.AddRange(replacement.AcceptedShortAnswers);
+            context.QualityReviews.RemoveRange(existing.QualityReviews);
+            context.LearningItemUserFlags.RemoveRange(existing.UserFlagAssignments);
+            existing.QualityReviews.Clear();
+            existing.UserFlagAssignments.Clear();
+            existing.QualityReviews.AddRange(replacement.QualityReviews);
+            existing.UserFlagAssignments.AddRange(replacement.UserFlagAssignments);
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -140,7 +167,9 @@ public sealed class EfCoreContentPersistence : IContentPersistence
             .Include(x => x.Hints)
             .Include(x => x.AnswerChoices)
             .Include(x => x.AcceptedShortAnswers)
-            .Include(x => x.DeckMemberships);
+            .Include(x => x.DeckMemberships)
+            .Include(x => x.QualityReviews)
+            .Include(x => x.UserFlagAssignments);
 
     private static LearningItemSnapshot ToSnapshot(LearningItemRecord record) => new(
         record.LearningItemId,
@@ -158,7 +187,11 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         record.Difficulty,
         record.StabilityDays,
         record.IsInShortTermRelearning,
-        record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
+        record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray(), record.ContentRevision,
+        record.QualityReviews.OrderBy(x => x.QualityReviewId).Select(x => new QualityReviewSnapshot(
+            x.QualityReviewId, x.LearningItemId, x.ContentRevision, (QualityReviewOutcomeSnapshot)x.Outcome,
+            (QualityReviewEvidenceTypeSnapshot)x.EvidenceType, x.Findings, x.SuggestedCorrection, x.SupersededBy)).ToArray(),
+        record.UserFlagAssignments.Select(x => x.UserFlagDefinitionId).Distinct().ToArray());
 
     private static DeckSnapshot ToSnapshot(DeckRecord record) => new(
         record.DeckId,
@@ -177,7 +210,13 @@ public sealed class EfCoreContentPersistence : IContentPersistence
         snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
-        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning);
+        ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning,
+        snapshot.ContentRevision,
+        (snapshot.QualityReviews ?? []).Select(x => QualityReview.Restore(
+            QualityReviewId.From(x.Id), LearningItemId.From(x.LearningItemId), x.ContentRevision,
+            (Illumination.Domain.Learning.QualityReviewOutcome)x.Outcome, (Illumination.Domain.Learning.QualityReviewEvidenceType)x.EvidenceType,
+            x.Findings, x.SuggestedCorrection, x.SupersededBy.HasValue ? QualityReviewId.From(x.SupersededBy.Value) : null)),
+        (snapshot.UserFlagDefinitionIds ?? []).Select(UserFlagDefinitionId.From));
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {

@@ -21,6 +21,7 @@ public static class DomainPersistenceMapper
             Difficulty = item.LearningState.Difficulty,
             StabilityDays = item.LearningState.StabilityDays,
             IsInShortTermRelearning = item.LearningState.IsInShortTermRelearning,
+            ContentRevision = item.ContentRevision,
         };
 
         record.Hints.AddRange(item.Hints.Select((hint, position) => new HintRecord
@@ -33,6 +34,15 @@ public static class DomainPersistenceMapper
         {
             LearningItemId = record.LearningItemId, Position = position, Value = value,
         }));
+        record.QualityReviews.AddRange(item.QualityReviews.Select(review => new QualityReviewRecord
+        {
+            QualityReviewId = review.Id.Value, LearningItemId = review.LearningItemId.Value,
+            ContentRevision = review.ContentRevision, Outcome = (QualityReviewOutcome)review.Outcome,
+            EvidenceType = (QualityReviewEvidenceType)review.EvidenceType, Findings = review.Findings,
+            SuggestedCorrection = review.SuggestedCorrection, SupersededBy = review.SupersededBy?.Value,
+        }));
+        record.UserFlagAssignments.AddRange(item.UserFlagDefinitionIds.Select(id => new LearningItemUserFlagRecord
+        { LearningItemId = item.Id.Value, UserFlagDefinitionId = id.Value }));
         return record;
     }
 
@@ -47,7 +57,12 @@ public static class DomainPersistenceMapper
             choices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
             record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value),
             record.LowInteractionEligible, record.LifecycleState, record.Difficulty, record.StabilityDays,
-            record.IsInShortTermRelearning);
+            record.IsInShortTermRelearning, record.ContentRevision,
+            record.QualityReviews.OrderBy(x => x.QualityReviewId).Select(x => QualityReview.Restore(
+                QualityReviewId.From(x.QualityReviewId), LearningItemId.From(x.LearningItemId), x.ContentRevision,
+                (Illumination.Domain.Learning.QualityReviewOutcome)x.Outcome, (Illumination.Domain.Learning.QualityReviewEvidenceType)x.EvidenceType, x.Findings,
+                x.SuggestedCorrection, x.SupersededBy.HasValue ? QualityReviewId.From(x.SupersededBy.Value) : null)),
+            record.UserFlagAssignments.Select(x => UserFlagDefinitionId.From(x.UserFlagDefinitionId)));
     }
 
     public static DeckRecord ToRecord(Deck deck)

@@ -91,6 +91,32 @@ public sealed class BackupAndMigrationSafetyTests
         Assert.True(HasTable(fixture.DatabasePath, "LearningItems"));
     }
 
+    [Fact]
+    public async Task Released_v03_database_is_backed_up_and_preserved_before_v04_migration()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var fixture = new DatabaseFixture();
+        await using (var oldContext = new IlluminationDbContext(fixture.CreateOptions()))
+        {
+            await oldContext.Database.MigrateAsync("20260809223433_AddContentImportProvenance", cancellationToken);
+            await oldContext.Database.OpenConnectionAsync(cancellationToken);
+            await using var command = oldContext.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "INSERT INTO LearningItems (LearningItemId, Prompt, ReferenceSolutionContent, ResponseMode, LowInteractionEligible, LifecycleState, IsNew, DueAt, Difficulty, StabilityDays, IsInShortTermRelearning) VALUES ($id, 'v0.3 prompt', 'v0.3 solution', 'SelfAssessed', 1, 'Active', 0, '2030-01-02T03:04:05.0000000+00:00', 4.25, 12.5, 0)";
+            command.Parameters.Add(new SqliteParameter("$id", Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")));
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        var coordinator = new SqliteMigrationCoordinator(fixture.CreateOptions(), new LocalSqliteBackupService(fixture.BackupDirectory, 1, fixture.TimeProvider));
+        await coordinator.MigrateAsync(cancellationToken);
+
+        var backup = Assert.Single(Directory.GetFiles(fixture.BackupDirectory, "illumination-backup-*.sqlite"));
+        Assert.Equal("v0.3 prompt", ReadScalar(backup, "SELECT Prompt FROM LearningItems"));
+        Assert.False(HasTable(backup, "QualityReviews"));
+        Assert.Equal("v0.3 prompt", ReadScalar(fixture.DatabasePath, "SELECT Prompt FROM LearningItems"));
+        Assert.Equal("1", ReadScalar(fixture.DatabasePath, "SELECT ContentRevision FROM LearningItems"));
+        Assert.True(HasTable(fixture.DatabasePath, "QualityReviews"));
+    }
+
     private static bool HasTable(string databasePath, string tableName)
     {
         using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
@@ -99,6 +125,15 @@ public sealed class BackupAndMigrationSafetyTests
         command.CommandText = "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name)";
         command.Parameters.AddWithValue("$name", tableName);
         return Convert.ToInt32(command.ExecuteScalar()) == 1;
+    }
+
+    private static string ReadScalar(string databasePath, string sql)
+    {
+        using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToString(command.ExecuteScalar())!;
     }
 
     private sealed class ThrowingBackupService : ILocalSqliteBackupService

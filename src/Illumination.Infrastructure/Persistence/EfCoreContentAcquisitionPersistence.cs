@@ -43,7 +43,18 @@ public sealed class EfCoreContentAcquisitionPersistence : IContentAcquisitionPer
         var domain = ToDomain(snapshot); var replacement = DomainPersistenceMapper.ToRecord(domain);
         var existing = await context.LearningItems.Include(x => x.Hints).Include(x => x.AnswerChoices).Include(x => x.AcceptedShortAnswers).SingleOrDefaultAsync(x => x.LearningItemId == snapshot.Id, cancellationToken);
         if (existing is null) context.LearningItems.Add(replacement);
-        else { existing.Prompt = replacement.Prompt; existing.ReferenceSolutionContent = replacement.ReferenceSolutionContent; existing.ResponseMode = replacement.ResponseMode; existing.LowInteractionEligible = replacement.LowInteractionEligible; existing.LifecycleState = replacement.LifecycleState; existing.IsNew = replacement.IsNew; existing.DueAt = replacement.DueAt; existing.Difficulty = replacement.Difficulty; existing.StabilityDays = replacement.StabilityDays; existing.IsInShortTermRelearning = replacement.IsInShortTermRelearning; context.Hints.RemoveRange(existing.Hints); context.AnswerChoices.RemoveRange(existing.AnswerChoices); context.AcceptedShortAnswers.RemoveRange(existing.AcceptedShortAnswers); existing.Hints.Clear(); existing.AnswerChoices.Clear(); existing.AcceptedShortAnswers.Clear(); existing.Hints.AddRange(replacement.Hints); existing.AnswerChoices.AddRange(replacement.AnswerChoices); existing.AcceptedShortAnswers.AddRange(replacement.AcceptedShortAnswers); }
+        else
+        {
+            var contentChanged = existing.Prompt != replacement.Prompt
+                || existing.ReferenceSolutionContent != replacement.ReferenceSolutionContent
+                || existing.ResponseMode != replacement.ResponseMode
+                || !existing.Hints.OrderBy(x => x.Position).Select(x => x.Text).SequenceEqual(replacement.Hints.OrderBy(x => x.Position).Select(x => x.Text))
+                || !existing.AnswerChoices.OrderBy(x => x.Role).ThenBy(x => x.Position).Select(x => (x.Role, x.Text, x.IsCorrect)).SequenceEqual(replacement.AnswerChoices.OrderBy(x => x.Role).ThenBy(x => x.Position).Select(x => (x.Role, x.Text, x.IsCorrect)))
+                || !existing.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value).SequenceEqual(replacement.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value), StringComparer.Ordinal);
+            existing.Prompt = replacement.Prompt; existing.ReferenceSolutionContent = replacement.ReferenceSolutionContent; existing.ResponseMode = replacement.ResponseMode; existing.LowInteractionEligible = replacement.LowInteractionEligible; existing.LifecycleState = replacement.LifecycleState; existing.IsNew = replacement.IsNew; existing.DueAt = replacement.DueAt; existing.Difficulty = replacement.Difficulty; existing.StabilityDays = replacement.StabilityDays; existing.IsInShortTermRelearning = replacement.IsInShortTermRelearning;
+            if (contentChanged) checked { existing.ContentRevision++; }
+            context.Hints.RemoveRange(existing.Hints); context.AnswerChoices.RemoveRange(existing.AnswerChoices); context.AcceptedShortAnswers.RemoveRange(existing.AcceptedShortAnswers); existing.Hints.Clear(); existing.AnswerChoices.Clear(); existing.AcceptedShortAnswers.Clear(); existing.Hints.AddRange(replacement.Hints); existing.AnswerChoices.AddRange(replacement.AnswerChoices); existing.AcceptedShortAnswers.AddRange(replacement.AcceptedShortAnswers);
+        }
     }
 
     private static async Task SaveDeckAsync(IlluminationDbContext context, DeckSnapshot snapshot, CancellationToken cancellationToken)
