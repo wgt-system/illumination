@@ -1,0 +1,35 @@
+name: Architecture decision
+description: Record a proposed Illumination architecture decision for review
+title: "ADR: "
+labels: []
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and problem
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options and trade-offs
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed decision
+      description: This issue is not accepted until the decision is reviewed and recorded in the appropriate ADR.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Product and bounded-context impact
+      description: Explain effects on Illumination ownership, WGT boundaries, local-first operation, and future integration.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals

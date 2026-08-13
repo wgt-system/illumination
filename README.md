@@ -8,9 +8,11 @@ Illumination is a separate bounded context. It owns learning content, learning i
 
 It does not own job opportunities, Vocation learning clusters, devices, platform discovery, or generic service orchestration.
 
-## Current project status
+## Current release baseline
 
-The implementation gate for the V1 baseline is satisfied. Illumination is being built as a local-first, single-user executable capability runtime. Wiiii Got This is the primary end-user presentation on Windows and iPhone; an Avalonia host may remain for standalone administration and development.
+Illumination v0.4.0 is the current stable release. It provides Learning Item and Deck content, lifecycle management, five-grade Reviews and deterministic scheduling, Study Sessions, Content Acquisition through Content Bundle 1.0, Content Quality & Curation, SQLite/EF Core persistence, migrations, and local backup safety. The optional Avalonia host exposes administration and development workflows.
+
+The next planned direction is v0.5 Interaction Modes & Evaluation. Its response interaction, assisted evaluation, hint influence, and low-interaction filtering semantics are specified but are not claimed as released behavior here.
 
 ## Product direction
 
@@ -83,16 +85,45 @@ The accepted V1 runtime baseline is C# / .NET 10 LTS, SQLite, and EF Core's SQLi
 Feature milestones are expected to use `vMAJOR.MINOR.PATCH`, progressing through `v0.y.0` releases toward a coherent `v1.0.0`. The number of pre-1.0 milestones is not predetermined.
 
 
-## V1 technology baseline
+## Technology stack
 
-Illumination V1 is planned as a local-first executable capability runtime using:
+Illumination is a local-first executable capability runtime using:
 
 - C# / .NET
 - SQLite
 
+- EF Core SQLite provider
+- Avalonia and CommunityToolkit.Mvvm for the optional standalone Desktop host
+- xUnit v3 for tests
+
 Core operation does not require a remote server.
 
-The stack is selected from the current product architecture rather than from prior user skill familiarity. Wiiii Got This provides the primary end-user presentation.
+Wiiii Got This provides the primary end-user presentation. Core operation does not require a remote server.
+
+## Repository layout
+
+- `src/` — Domain, Application, Infrastructure, and optional Desktop host
+- `tests/` — automated test projects
+- `docs/` — product, architecture, acceptance, and roadmap sources of truth
+- `schemas/` — versioned machine-readable contracts
+- `examples/` — contract examples
+- `.github/` — CI and contribution templates
+
+## Prerequisites and commands
+
+Install the .NET 10 SDK. From the repository root:
+
+```powershell
+dotnet restore Illumination.slnx
+dotnet build Illumination.slnx --no-restore
+dotnet test Illumination.slnx --no-build
+```
+
+Run the optional standalone Desktop host with:
+
+```powershell
+dotnet run --project src/Illumination.Desktop/Illumination.Desktop.csproj
+```
 
 ## Structured content contract
 
@@ -102,3 +133,9 @@ Illumination Content Bundle 1.0 is defined by:
 - `examples/content-bundle-1.0.example.json`
 
 The contract supports explicit create/update operations and user-reviewed partial imports.
+
+Quality-review exchange schemas are also versioned under `schemas/`. The durable product and architecture decisions are documented in `docs/`, especially the Domain Model, Application Design, Architecture, Acceptance Tests, Implementation Plan, and ADRs.
+
+## Branch and release model
+
+Normal development happens on `dev`. `main` contains stable milestone releases. Releases are tagged with semantic-style version names such as `v0.4.0`. Issues describe planned work and decisions; they do not imply a mandatory branch-per-Issue workflow.

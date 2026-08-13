@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-audit:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Illumination.slnx
+      - name: Build
+        run: dotnet build Illumination.slnx --no-restore --configuration Release
+      - name: Test
+        run: dotnet test Illumination.slnx --no-build --configuration Release
+      - name: NuGet vulnerability audit
+        shell: pwsh
+        run: |
+          $output = dotnet list Illumination.slnx package --vulnerable --include-transitive 2>&1 | Out-String
+          $exitCode = $LASTEXITCODE
+          $output
+          if ($exitCode -ne 0) { exit $exitCode }
+          if ($output -match '(?im)^\s*(Critical|High|Moderate|Low)\s+') {
+            throw 'NuGet vulnerability audit reported vulnerable packages.'
+          }

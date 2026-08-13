@@ -1,0 +1,36 @@
+name: Bug report
+description: Report behavior that contradicts an accepted Illumination contract
+title: ""
+labels: []
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Cite the authoritative specification or acceptance scenario.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include focused steps and environment details; remove secrets and personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: affected-area
+    attributes:
+      label: Affected area
+      description: Domain, Application, Infrastructure, Desktop host, tests, or repository infrastructure.

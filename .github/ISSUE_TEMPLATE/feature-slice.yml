@@ -1,0 +1,46 @@
+name: Feature slice
+description: Propose a bounded Illumination capability or implementation slice
+title: ""
+labels: []
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: State the user or system outcome without prescribing unapproved design.
+    validations:
+      required: true
+  - type: textarea
+    id: specification
+    attributes:
+      label: Authoritative specification/docs
+      description: Link relevant docs, ADRs, schemas, or acceptance scenarios.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable, testable completion criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: State what this slice does not change or implement.
+    validations:
+      required: true
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected area
+      options:
+        - Domain
+        - Application
+        - Infrastructure/persistence
+        - Desktop host
+        - Tests
+        - Documentation/repository infrastructure
+    validations:
+      required: true
