@@ -104,6 +104,11 @@ public sealed class BackupAndMigrationSafetyTests
             command.CommandText = "INSERT INTO LearningItems (LearningItemId, Prompt, ReferenceSolutionContent, ResponseMode, LowInteractionEligible, LifecycleState, IsNew, DueAt, Difficulty, StabilityDays, IsInShortTermRelearning) VALUES ($id, 'v0.3 prompt', 'v0.3 solution', 'SelfAssessed', 1, 'Active', 0, '2030-01-02T03:04:05.0000000+00:00', 4.25, 12.5, 0)";
             command.Parameters.Add(new SqliteParameter("$id", Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")));
             await command.ExecuteNonQueryAsync(cancellationToken);
+            await using var review = oldContext.Database.GetDbConnection().CreateCommand();
+            review.CommandText = "INSERT INTO Reviews (ReviewId, LearningItemId, CompletedAt, Assessment, SubmittedResponse) VALUES ($review, $item, '2030-01-02T03:04:05.0000000+00:00', 'Good', NULL)";
+            review.Parameters.Add(new SqliteParameter("$review", Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")));
+            review.Parameters.Add(new SqliteParameter("$item", Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")));
+            await review.ExecuteNonQueryAsync(cancellationToken);
         }
 
         var coordinator = new SqliteMigrationCoordinator(fixture.CreateOptions(), new LocalSqliteBackupService(fixture.BackupDirectory, 1, fixture.TimeProvider));
@@ -112,8 +117,10 @@ public sealed class BackupAndMigrationSafetyTests
         var backup = Assert.Single(Directory.GetFiles(fixture.BackupDirectory, "illumination-backup-*.sqlite"));
         Assert.Equal("v0.3 prompt", ReadScalar(backup, "SELECT Prompt FROM LearningItems"));
         Assert.False(HasTable(backup, "QualityReviews"));
+        Assert.Equal("1", ReadScalar(backup, "SELECT COUNT(*) FROM Reviews"));
         Assert.Equal("v0.3 prompt", ReadScalar(fixture.DatabasePath, "SELECT Prompt FROM LearningItems"));
         Assert.Equal("1", ReadScalar(fixture.DatabasePath, "SELECT ContentRevision FROM LearningItems"));
+        Assert.Equal("1", ReadScalar(fixture.DatabasePath, "SELECT COUNT(*) FROM Reviews"));
         Assert.True(HasTable(fixture.DatabasePath, "QualityReviews"));
     }
 

@@ -110,6 +110,70 @@ public sealed class ContentAcquisitionPersistenceTests
     }
 
     [Fact]
+    public async Task Multi_item_review_exchange_imports_only_explicitly_accepted_reviews()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+
+        var operations = new List<string>
+        {
+            "{\"op\":\"create_deck\",\"localRef\":\"release-deck\",\"deck\":{\"name\":\"Release Deck\"}}",
+        };
+        operations.AddRange(Enumerable.Range(1, 3).Select(index =>
+            $"{{\"op\":\"create_learning_item\",\"localRef\":\"release-item-{index}\",\"item\":{{\"prompt\":\"Prompt {index}\",\"referenceSolution\":\"Solution {index}\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}"));
+        operations.AddRange(Enumerable.Range(1, 3).Select(index =>
+            $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemLocalRef\":\"release-item-{index}\"}},\"decks\":[{{\"deckLocalRef\":\"release-deck\"}}]}}"));
+        var bundle = Bundle([.. operations]);
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+        var preview = await acquisition.PreviewContentBundleAsync(bundle);
+        Assert.True(preview.IsValid);
+
+        var prompt = await acquisition.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(bundle));
+        var results = string.Join(',', prompt.Items.Select((item, index) =>
+            $"{{\"localRef\":\"{item.LocalRef}\",\"contentFingerprint\":\"{item.ContentFingerprint}\",\"outcome\":\"{(index == 0 ? "pass" : index == 1 ? "warning" : "needs_review")}\",\"evidenceType\":\"model_review\",\"findings\":\"Finding {index + 1}\"}}"));
+        var reviewJson = $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"1.0\",\"results\":[{results}]}}";
+        var reviewPreview = await acquisition.PreviewPreImportQualityReviewAsync(new PreviewPreImportQualityReviewCommand(bundle, reviewJson));
+        Assert.True(reviewPreview.IsValid);
+        Assert.Equal(3, reviewPreview.Results.Count);
+
+        var imported = await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(
+            bundle, Enumerable.Range(0, operations.Count).ToArray(),
+            new PreImportQualityReviewSelection(reviewJson, QualityReviewPromptMode.Standard, [0, 2])));
+
+        await using var verify = await factory.CreateDbContextAsync();
+        var items = await verify.LearningItems.Include(x => x.QualityReviews).ToArrayAsync();
+        Assert.Equal(3, items.Length);
+        Assert.Equal(2, items.Count(x => x.QualityReviews.Count == 1));
+        Assert.Single(items.Where(x => x.QualityReviews.Count == 0));
+        Assert.All(items.Where(x => x.QualityReviews.Count == 1), x => Assert.Equal(1, x.ContentRevision));
+        Assert.Equal(3, imported.CreatedLearningItemIds.Count);
+    }
+
+    [Fact]
+    public async Task Changed_pre_import_fingerprint_is_rejected_without_mutating_content_or_reviews()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+        var original = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"stale-item\",\"item\":{\"prompt\":\"Original\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var prompt = await acquisition.GeneratePreImportQualityReviewPromptAsync(new GeneratePreImportQualityReviewPromptCommand(original));
+        var staleReview = $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"1.0\",\"results\":[{{\"localRef\":\"stale-item\",\"contentFingerprint\":\"changed\",\"outcome\":\"pass\",\"evidenceType\":\"model_review\",\"findings\":\" stale \"}}]}}";
+        var changed = Bundle("{\"op\":\"create_learning_item\",\"localRef\":\"stale-item\",\"item\":{\"prompt\":\"Changed\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}");
+        var preview = await acquisition.PreviewPreImportQualityReviewAsync(new PreviewPreImportQualityReviewCommand(changed, staleReview));
+        Assert.False(preview.IsValid);
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(
+            changed, [0], new PreImportQualityReviewSelection(staleReview, QualityReviewPromptMode.Standard, [0]))));
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.LearningItems.ToArrayAsync());
+        Assert.Empty(await verify.QualityReviews.ToArrayAsync());
+        Assert.NotEmpty(prompt.Items);
+    }
+
+    [Fact]
     public async Task Malformed_bundle_cannot_mutate_real_sqlite_persistence()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

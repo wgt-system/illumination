@@ -428,6 +428,22 @@ Application capabilities should support:
 
 Quality Review results are bound to the Learning Item content revision they reviewed. An accepted result may explicitly supersede older reviews for the same item and revision; supersession is never inferred from Review Type, and superseded reviews remain historical. A content edit that changes quality-relevant content creates exactly one new revision; a no-op or non-content update does not. Current quality state is derived only from non-superseded reviews for the current revision, with precedence `NeedsReview` → `Warning` → `Pass` → no assurance. `NeedsReview` is visible and actionable but is not an automatic import block. Application contracts expose no Domain or EF types.
 
+The two supported external review exchanges use different identity anchors.  For already
+persisted Learning Items, the generated prompt carries the stable Learning Item ID and
+current `ContentRevision`; returned results are accepted only when both still match.  For
+pre-import creates, the prompt carries the operation `localRef` and a content fingerprint;
+the result must preserve both so that a changed bundle cannot receive an old review.  Both
+flows preview results before persistence, keep invalid/stale/provenance-mismatched results
+visible but non-accepting, and require explicit selection.  Warning and NeedsReview are
+importable evidence states, not automatic blocks.  A suggested correction remains advisory
+until separately applied through normal content-update semantics.
+
+Quality Review is evidence, not factual verification: Illumination does not expose a generic
+`Verified` state or infer trust from evidence type.  User Flags are user-defined annotations;
+creating, assigning, removing, or filtering flags is independent of ContentRevision,
+scheduling/Learning State, and CurrentQualityState.  Multiple flags may coexist, and review
+history remains immutable when flags change.
+
 ## 14. Future Vocation Integration
 
 The application layer may later expose a bounded operation such as:

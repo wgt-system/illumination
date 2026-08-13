@@ -469,6 +469,30 @@ Then findings are previewed before explicit acceptance
 And no direct LLM API is required
 And the accepted immutable result is bound to the reviewed content revision.
 
+### v0.4 release integration coverage
+
+The release test suite exercises the complete persistence path rather than only isolated
+service doubles.  The integrated scenarios include:
+
+- a realistic multi-item Content Bundle whose mixed `Pass`, `Warning`, and `NeedsReview`
+  results are previewed, explicitly selected, and atomically imported;
+- `localRef` plus content-fingerprint binding for pre-import reviews, including rejection
+  of changed/fingerprint-stale results and import of unselected items without assurance;
+- stable Learning Item ID plus `ContentRevision` binding for existing-item review exchange;
+- immutable review history with explicit same-item/same-revision supersession;
+- persistence/reload of multiple user-defined flags without changing revision, scheduling,
+  or quality state;
+- migration of a released v0.3 database to v0.4 with ContentRevision `1`, preserved
+  scheduling/review data, and backup-before-migration enforcement; and
+- Desktop checks that both review surfaces require explicit selection, while Warning and
+  NeedsReview remain consciously selectable and Study flag toggles leave the active session
+  intact.
+
+Quality Review is evidence supplied by an external review exchange, not factual verification.
+Acceptance is always explicit; suggested corrections are advisory and are never applied as
+part of review acceptance.  Supersession is an explicit user choice and never inferred from
+evidence type or outcome.
+
 ## 14. Vocation Boundary
 
 Given no Vocation integration is configured

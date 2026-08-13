@@ -294,6 +294,16 @@ Illumination may support multiple import versions concurrently during migration.
 
 An implementation must not reinterpret an older bundle under newer semantics without an explicit migration path.
 
+Pre-import Quality Review is an optional, explicit exchange layered over this contract. The
+generated review prompt identifies each create operation by `localRef` and content
+fingerprint. Returned results are previewed and validated against those values before an
+accepted subset is attached to the newly created Learning Items at ContentRevision `1`.
+Results that are stale, invalid, or provenance-mismatched remain diagnosable but cannot be
+accepted; valid results are never selected implicitly. Items without an accepted result are
+still importable, and Warning/NeedsReview are evidence states rather than automatic import
+blocks. Review acceptance is atomic with the content commit and never applies a suggested
+correction.
+
 ## 18. Import Provenance
 
 Illumination retains import history containing:
