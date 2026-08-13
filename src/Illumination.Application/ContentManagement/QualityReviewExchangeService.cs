@@ -60,12 +60,16 @@ public sealed class QualityReviewExchangeService
         return new GeneratedQualityReviewPrompt(prompt);
     }
 
-    public async Task<QualityReviewExchangePreview> PreviewAsync(string rawJson, CancellationToken cancellationToken = default)
+    public async Task<QualityReviewExchangePreview> PreviewAsync(
+        string rawJson,
+        QualityReviewPromptMode mode = QualityReviewPromptMode.Standard,
+        CancellationToken cancellationToken = default)
     {
+        ValidateMode(mode);
         var parsed = Parse(rawJson);
         if (parsed.Root is null) return new(false, parsed.BundleDiagnostics, []);
         var snapshots = await _contentPersistence.ListLearningItemsAsync(cancellationToken);
-        var previews = ValidateResults(parsed, snapshots);
+        var previews = ValidateResults(parsed, snapshots, mode);
         return new(parsed.BundleDiagnostics.Count == 0 && previews.All(x => x.IsValid), parsed.BundleDiagnostics, previews);
     }
 
@@ -74,9 +78,10 @@ public sealed class QualityReviewExchangeService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        ValidateMode(command.Mode);
         var parsed = Parse(command.RawJson);
         var snapshots = await _contentPersistence.ListLearningItemsAsync(cancellationToken);
-        var previews = ValidateResults(parsed, snapshots);
+        var previews = ValidateResults(parsed, snapshots, command.Mode);
         var selected = command.SelectedResultIndices.Distinct().Order().ToArray();
         var diagnostics = new List<QualityReviewResultDiagnostic>(parsed.BundleDiagnostics);
         if (selected.Any(index => index < 0 || index >= previews.Count)) diagnostics.Add(new("selection.index", "Selected result index is outside the result set."));
@@ -138,7 +143,10 @@ public sealed class QualityReviewExchangeService
         catch (Exception exception) when (exception is JsonException or InvalidOperationException) { return new("result.schema", "Canonical result schema could not be evaluated."); }
     }
 
-    private static List<QualityReviewResultPreview> ValidateResults(ParsedResults parsed, IReadOnlyList<LearningItemSnapshot> snapshots)
+    private static List<QualityReviewResultPreview> ValidateResults(
+        ParsedResults parsed,
+        IReadOnlyList<LearningItemSnapshot> snapshots,
+        QualityReviewPromptMode mode)
     {
         var result = new List<QualityReviewResultPreview>();
         for (var index = 0; index < parsed.Results.Count; index++)
@@ -157,6 +165,11 @@ public sealed class QualityReviewExchangeService
             else if (snapshots.All(item => item.Id != itemId.Value)) diagnostics.Add(new("target.item.missing", "Learning Item was not found.", index));
             if (revision is null || revision < 1) diagnostics.Add(new("target.revision", "contentRevision must be a positive integer.", index));
             else if (itemId is { } id && snapshots.SingleOrDefault(item => item.Id == id)?.ContentRevision != revision) diagnostics.Add(new("target.revision.stale", "Result does not target the Learning Item's current ContentRevision.", index));
+            var expectedEvidence = mode == QualityReviewPromptMode.SourceGrounded
+                ? CurationQualityReviewEvidenceType.SourceGroundedReview
+                : CurationQualityReviewEvidenceType.ModelReview;
+            if (evidence is { } actualEvidence && actualEvidence != expectedEvidence)
+                diagnostics.Add(new("result.evidence_type", $"This {mode} exchange requires {ToContractEvidence(expectedEvidence)}.", index));
             result.Add(new(index, itemId, revision, outcome, evidence, findings, correction, diagnostics.Count == 0, diagnostics));
         }
         return result;
@@ -178,6 +191,11 @@ public sealed class QualityReviewExchangeService
     private static CurationQualityReviewEvidenceType? TryEvidence(JsonElement element) => StringProperty(element, "evidenceType") switch { "model_review" => CurationQualityReviewEvidenceType.ModelReview, "source_grounded_review" => CurationQualityReviewEvidenceType.SourceGroundedReview, "user_review" => CurationQualityReviewEvidenceType.UserReview, _ => null };
     private static CurationQualityReviewOutcome ToApplicationOutcome(string value) => value switch { "pass" => CurationQualityReviewOutcome.Pass, "warning" => CurationQualityReviewOutcome.Warning, "needs_review" => CurationQualityReviewOutcome.NeedsReview, _ => throw new ArgumentOutOfRangeException(nameof(value)) };
     private static CurationQualityReviewEvidenceType ToApplicationEvidence(string value) => value switch { "model_review" => CurationQualityReviewEvidenceType.ModelReview, "source_grounded_review" => CurationQualityReviewEvidenceType.SourceGroundedReview, "user_review" => CurationQualityReviewEvidenceType.UserReview, _ => throw new ArgumentOutOfRangeException(nameof(value)) };
+    private static string ToContractEvidence(CurationQualityReviewEvidenceType value) => value switch { CurationQualityReviewEvidenceType.ModelReview => "model_review", CurationQualityReviewEvidenceType.SourceGroundedReview => "source_grounded_review", CurationQualityReviewEvidenceType.UserReview => "user_review", _ => throw new ArgumentOutOfRangeException(nameof(value)) };
+    private static void ValidateMode(QualityReviewPromptMode mode)
+    {
+        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported quality review prompt mode.");
+    }
     private static string SchemaText() => typeof(QualityReviewExchangeService).Assembly.GetManifestResourceStream(SchemaResourceName) is { } stream ? new StreamReader(stream).ReadToEnd() : throw new InvalidOperationException("Canonical Quality Review Result schema resource is unavailable.");
     private sealed record ParsedResults(JsonElement? Root, IReadOnlyList<QualityReviewResultDiagnostic> BundleDiagnostics, IReadOnlyList<JsonElement> Results);
 }

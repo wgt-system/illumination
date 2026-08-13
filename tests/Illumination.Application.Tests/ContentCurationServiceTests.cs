@@ -137,6 +137,27 @@ public sealed class ContentCurationServiceTests
         Assert.Empty(store.SavedItems);
     }
 
+    [Theory]
+    [InlineData(QualityReviewPromptMode.Standard, "user_review")]
+    [InlineData(QualityReviewPromptMode.Strict, "source_grounded_review")]
+    [InlineData(QualityReviewPromptMode.SourceGrounded, "model_review")]
+    public async Task Preview_rejects_evidence_type_that_does_not_match_exchange_mode(QualityReviewPromptMode mode, string evidenceType)
+    {
+        var itemId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [itemId] = Item(itemId) } };
+        var service = new QualityReviewExchangeService(store, store);
+        var raw = Bundle(Result(itemId, 1, "pass", evidenceType, "Finding."));
+
+        var preview = await service.PreviewAsync(raw, mode);
+        await Assert.ThrowsAsync<QualityReviewExchangeValidationException>(() =>
+            service.AcceptSelectedAsync(new AcceptQualityReviewResultsCommand(raw, [0], mode)));
+
+        Assert.False(preview.IsValid);
+        Assert.False(Assert.Single(preview.Results).IsValid);
+        Assert.Contains(preview.Results[0].Diagnostics, x => x.Code == "result.evidence_type");
+        Assert.Empty(store.SavedItems);
+    }
+
     [Fact]
     public async Task Stale_result_is_rejected_without_saving()
     {
@@ -162,7 +183,7 @@ public sealed class ContentCurationServiceTests
         var service = new QualityReviewExchangeService(store, store);
         var raw = Bundle(Result(itemId, 1, "warning", "source_grounded_review", "Needs a source.", "Rewrite it."));
 
-        var accepted = await service.AcceptSelectedAsync(new AcceptQualityReviewResultsCommand(raw, [0]));
+        var accepted = await service.AcceptSelectedAsync(new AcceptQualityReviewResultsCommand(raw, [0], QualityReviewPromptMode.SourceGrounded));
 
         var item = Assert.Single(accepted.AcceptedItems);
         Assert.Equal("Prompt", item.Prompt);

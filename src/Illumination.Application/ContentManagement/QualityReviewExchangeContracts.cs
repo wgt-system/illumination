@@ -32,7 +32,10 @@ public sealed record QualityReviewExchangePreview(
     IReadOnlyList<QualityReviewResultDiagnostic> Diagnostics,
     IReadOnlyList<QualityReviewResultPreview> Results);
 
-public sealed record AcceptQualityReviewResultsCommand(string RawJson, IReadOnlyList<int> SelectedResultIndices);
+public sealed record AcceptQualityReviewResultsCommand(
+    string RawJson,
+    IReadOnlyList<int> SelectedResultIndices,
+    QualityReviewPromptMode Mode = QualityReviewPromptMode.Standard);
 
 public sealed record QualityReviewExchangeAcceptanceResult(IReadOnlyList<CuratedLearningItemView> AcceptedItems);
 
