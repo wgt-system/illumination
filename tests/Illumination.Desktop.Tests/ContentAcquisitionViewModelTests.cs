@@ -244,7 +244,7 @@ public sealed class ContentAcquisitionViewModelTests
 
         Assert.True(viewModel.HasQualityReviewPreview);
         Assert.Equal(1, viewModel.QualityReviewResults.Count(x => x.IsSelectable));
-        Assert.Contains(viewModel.QualityReviewResults, x => x.IsWarning && x.IsSelected);
+        Assert.Contains(viewModel.QualityReviewResults, x => x.IsWarning && !x.IsSelected);
         Assert.Contains(viewModel.QualityReviewResults, x => x.HasDiagnostics && !x.IsSelectable);
 
         viewModel.QualityReviewResults.Single(x => x.IsSelectable).IsSelected = true;

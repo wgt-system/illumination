@@ -577,7 +577,7 @@ public sealed partial class QualityReviewResultRowViewModel : ObservableObject
         Diagnostics = string.Join(" · ", result.Diagnostics.Select(x => x.Message));
         IsValid = result.IsValid;
         IsSelectable = result.IsValid && result.Outcome is not null;
-        _isSelected = IsSelectable;
+        _isSelected = false;
     }
 
     public int ResultIndex { get; }
