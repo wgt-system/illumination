@@ -216,6 +216,65 @@ public sealed class ContentAcquisitionViewModelTests
     }
 
     [Fact]
+    public async Task Quality_review_prompt_preview_selection_and_atomic_import_use_reviewed_results()
+    {
+        var persistence = new FakePersistence();
+        var viewModel = CreateViewModel(persistence, out _, out _);
+        viewModel.RawJson = Bundle(
+            CreateDeck("deck", "Deck"),
+            CreateItem("item-a", "Prompt A"),
+            CreateItem("item-b", "Prompt B"),
+            AssignItem("item-a", "deck"),
+            AssignItem("item-b", "deck"));
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+        await viewModel.GenerateQualityReviewPromptCommand.ExecuteAsync(null);
+
+        Assert.Contains("preimport-quality-review-result", viewModel.QualityReviewPrompt);
+        Assert.Contains("Standard", viewModel.QualityReviewMode.ToString());
+        Assert.Equal(2, viewModel.QualityReviewPromptItems.Count);
+
+        var first = viewModel.QualityReviewPromptItems[0];
+        var second = viewModel.QualityReviewPromptItems[1];
+        viewModel.RawQualityReviewJson = ReviewBundle(
+            ReviewResult(first, "warning", "model_review", "Check terminology.", "Use the canonical term."),
+            ReviewResult(second, "needs_review", "model_review", "Source is unclear.", null, fingerprint: "stale"));
+
+        await viewModel.PreviewQualityReviewCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasQualityReviewPreview);
+        Assert.Equal(1, viewModel.QualityReviewResults.Count(x => x.IsSelectable));
+        Assert.Contains(viewModel.QualityReviewResults, x => x.IsWarning && x.IsSelected);
+        Assert.Contains(viewModel.QualityReviewResults, x => x.HasDiagnostics && !x.IsSelectable);
+
+        viewModel.QualityReviewResults.Single(x => x.IsSelectable).IsSelected = true;
+        await viewModel.ImportSelectedCommand.ExecuteAsync(null);
+
+        Assert.Single(persistence.Commits);
+        Assert.Contains(persistence.Commits.Single().LearningItems, item => (item.QualityReviews ?? []).Any(review => review.Findings == "Check terminology."));
+        Assert.Contains("Learning Items created", viewModel.ImportResult);
+    }
+
+    [Fact]
+    public async Task Import_remains_possible_without_accepting_review_results()
+    {
+        var persistence = new FakePersistence();
+        var viewModel = CreateViewModel(persistence, out _, out _);
+        viewModel.RawJson = ValidDependentBundle();
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+        await viewModel.GenerateQualityReviewPromptCommand.ExecuteAsync(null);
+        var item = viewModel.QualityReviewPromptItems.Single();
+        viewModel.RawQualityReviewJson = ReviewBundle(ReviewResult(item, "pass", "model_review", "Looks good."));
+        await viewModel.PreviewQualityReviewCommand.ExecuteAsync(null);
+        viewModel.ClearQualityReviewSelectionCommand.Execute(null);
+
+        await viewModel.ImportSelectedCommand.ExecuteAsync(null);
+
+        Assert.Single(persistence.Commits);
+        Assert.All(persistence.Commits.Single().LearningItems, learningItem => Assert.Empty(learningItem.QualityReviews ?? []));
+    }
+
+    [Fact]
     public void Large_acquisition_text_areas_and_primary_preview_are_bounded_in_xaml()
     {
         var root = FindRepositoryRoot();
@@ -260,6 +319,12 @@ public sealed class ContentAcquisitionViewModelTests
 
     private static string AssignItem(string itemLocalRef, string deckLocalRef) =>
         $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemLocalRef\":\"{itemLocalRef}\"}},\"decks\":[{{\"deckLocalRef\":\"{deckLocalRef}\"}}]}}";
+
+    private static string ReviewBundle(params string[] results) =>
+        $"{{\"contract\":\"{ContentAcquisitionService.PreImportQualityReviewContract}\",\"version\":\"{ContentAcquisitionService.PreImportQualityReviewVersion}\",\"results\":[{string.Join(',', results)}]}}";
+
+    private static string ReviewResult(PreImportQualityReviewPromptItem item, string outcome, string evidence, string findings, string? suggestedCorrection = null, string? fingerprint = null) =>
+        $"{{\"localRef\":\"{item.LocalRef}\",\"contentFingerprint\":\"{fingerprint ?? item.ContentFingerprint}\",\"outcome\":\"{outcome}\",\"evidenceType\":\"{evidence}\",\"findings\":\"{findings}\"{(suggestedCorrection is null ? string.Empty : $",\"suggestedCorrection\":\"{suggestedCorrection}\"")}}}";
 
     private static string Bundle(params string[] operations) =>
         $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[{string.Join(',', operations)}]}}";

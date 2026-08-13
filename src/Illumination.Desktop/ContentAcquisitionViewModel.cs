@@ -29,6 +29,10 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     public ObservableCollection<ContentOperationRowViewModel> Operations { get; } = [];
     public ObservableCollection<ContentOperationRowViewModel> PrimaryOperations { get; } = [];
     public ObservableCollection<ContentOperationRowViewModel> VisibleTechnicalOperations { get; } = [];
+    public ObservableCollection<QualityReviewResultRowViewModel> QualityReviewResults { get; } = [];
+    public ObservableCollection<QualityReviewDiagnosticDisplay> QualityReviewDiagnostics { get; } = [];
+    public IReadOnlyList<QualityReviewPromptMode> QualityReviewModes { get; } = Enum.GetValues<QualityReviewPromptMode>();
+    public IReadOnlyList<PreImportQualityReviewPromptItem> QualityReviewPromptItems { get; private set; } = [];
     public ObservableCollection<AcquisitionDiagnosticDisplay> BundleDiagnostics { get; } = [];
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
@@ -64,7 +68,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     [ObservableProperty, NotifyPropertyChangedFor(nameof(IsInteractionEnabled)), NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand)), NotifyCanExecuteChangedFor(nameof(CopyPromptCommand)), NotifyCanExecuteChangedFor(nameof(LoadJsonFileCommand)), NotifyCanExecuteChangedFor(nameof(ValidateCommand)), NotifyCanExecuteChangedFor(nameof(GenerateRepairPromptCommand)), NotifyCanExecuteChangedFor(nameof(CopyRepairPromptCommand)), NotifyCanExecuteChangedFor(nameof(ImportSelectedCommand))]
     private bool _isBusy;
 
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ImportSelectedCommand))]
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ImportSelectedCommand)), NotifyCanExecuteChangedFor(nameof(GenerateQualityReviewPromptCommand)), NotifyCanExecuteChangedFor(nameof(PreviewQualityReviewCommand)), NotifyCanExecuteChangedFor(nameof(LoadQualityReviewFileCommand))]
     private bool _hasCurrentPreview;
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GenerateRepairPromptCommand))]
@@ -76,6 +80,24 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasImportResult))]
     private string _importResult = string.Empty;
 
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasQualityReviewPrompt)), NotifyCanExecuteChangedFor(nameof(CopyQualityReviewPromptCommand))]
+    private string _qualityReviewPrompt = string.Empty;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewQualityReviewCommand)), NotifyCanExecuteChangedFor(nameof(GenerateQualityReviewPromptCommand))]
+    private string _rawQualityReviewJson = string.Empty;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ImportSelectedCommand))]
+    private bool _hasQualityReviewPreview;
+
+    [ObservableProperty]
+    private string _qualityReviewSummary = string.Empty;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GenerateQualityReviewPromptCommand)), NotifyCanExecuteChangedFor(nameof(PreviewQualityReviewCommand))]
+    private bool _currentBundleIsValid;
+
+    [ObservableProperty]
+    private QualityReviewPromptMode _qualityReviewMode = QualityReviewPromptMode.Standard;
+
     [ObservableProperty]
     private bool _showAllTechnicalOperations;
 
@@ -86,6 +108,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     public bool HasGeneratedPrompt => !string.IsNullOrWhiteSpace(GeneratedPrompt);
     public bool HasRepairPrompt => !string.IsNullOrWhiteSpace(RepairPrompt);
     public bool HasImportResult => !string.IsNullOrWhiteSpace(ImportResult);
+    public bool HasQualityReviewPrompt => !string.IsNullOrWhiteSpace(QualityReviewPrompt);
     public bool IsInteractionEnabled => !IsBusy;
     public bool HasTechnicalOperations => TechnicalOperationCount > 0;
     public bool HasVisibleTechnicalOperations => VisibleTechnicalOperations.Count > 0;
@@ -102,7 +125,9 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     {
         _desktopInteractions = desktopInteractions ?? throw new ArgumentNullException(nameof(desktopInteractions));
         LoadJsonFileCommand.NotifyCanExecuteChanged();
+        LoadQualityReviewFileCommand.NotifyCanExecuteChanged();
         CopyPromptCommand.NotifyCanExecuteChanged();
+        CopyQualityReviewPromptCommand.NotifyCanExecuteChanged();
         CopyRepairPromptCommand.NotifyCanExecuteChanged();
     }
 
@@ -128,6 +153,8 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     }
 
     partial void OnRawJsonChanged(string value) => InvalidatePreview();
+
+    partial void OnRawQualityReviewJsonChanged(string value) => InvalidateQualityReviewPreview();
 
     [RelayCommand(CanExecute = nameof(CanGeneratePrompt))]
     private async Task GeneratePromptAsync() => await RunBusyAsync(() =>
@@ -186,6 +213,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         UpdateOperationPresentation();
 
         HasCurrentPreview = true;
+        CurrentBundleIsValid = preview.IsValid;
         CanGenerateRepairPrompt = preview.CanGenerateRepairPrompt && !preview.IsValid;
         var selectable = preview.Operations.Count(x => x.IsSelectable);
         var invalid = preview.Operations.Count - selectable;
@@ -195,6 +223,70 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     });
 
     private bool CanValidate() => !IsBusy && !string.IsNullOrWhiteSpace(RawJson);
+
+    [RelayCommand(CanExecute = nameof(CanGenerateQualityReviewPrompt))]
+    private async Task GenerateQualityReviewPromptAsync() => await RunBusyAsync(async () =>
+    {
+        var generated = await _service.GeneratePreImportQualityReviewPromptAsync(
+            new GeneratePreImportQualityReviewPromptCommand(RawJson, QualityReviewMode));
+        QualityReviewPrompt = generated.Prompt;
+        QualityReviewPromptItems = generated.Items;
+        OnPropertyChanged(nameof(QualityReviewPromptItems));
+        _reportStatus($"Quality Review prompt generated for {generated.Items.Count} Learning Items.");
+    });
+
+    private bool CanGenerateQualityReviewPrompt() => !IsBusy && HasCurrentPreview && CurrentBundleIsValid;
+
+    [RelayCommand(CanExecute = nameof(CanCopyQualityReviewPrompt))]
+    private async Task CopyQualityReviewPromptAsync() => await CopyAsync(QualityReviewPrompt, "Quality Review prompt copied.");
+
+    private bool CanCopyQualityReviewPrompt() => !IsBusy && _desktopInteractions is not null && HasQualityReviewPrompt;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewQualityReview))]
+    private async Task PreviewQualityReviewAsync() => await RunBusyAsync(async () =>
+    {
+        InvalidateQualityReviewPreview();
+        var preview = await _service.PreviewPreImportQualityReviewAsync(
+            new PreviewPreImportQualityReviewCommand(RawJson, RawQualityReviewJson, QualityReviewMode));
+        foreach (var diagnostic in preview.Diagnostics) QualityReviewDiagnostics.Add(ToDisplay(diagnostic));
+        foreach (var result in preview.Results)
+        {
+            var operation = result.OperationIndex is { } operationIndex
+                ? Operations.FirstOrDefault(candidate => candidate.OperationIndex == operationIndex)
+                : null;
+            QualityReviewResults.Add(new QualityReviewResultRowViewModel(result, operation, QualityReviewSelectionChanged));
+        }
+        HasQualityReviewPreview = true;
+        var valid = preview.Results.Count(x => x.IsValid);
+        var invalid = preview.Results.Count - valid;
+        QualityReviewSummary = $"{valid} valid review results · {invalid} invalid";
+        _reportStatus($"Quality Review results previewed: {valid} valid, {invalid} invalid.");
+    });
+
+    private bool CanPreviewQualityReview() => !IsBusy && HasCurrentPreview && CurrentBundleIsValid && !string.IsNullOrWhiteSpace(RawQualityReviewJson);
+
+    [RelayCommand(CanExecute = nameof(CanLoadQualityReviewFile))]
+    private async Task LoadQualityReviewFileAsync() => await RunBusyAsync(async () =>
+    {
+        var loaded = await _desktopInteractions!.LoadJsonFileAsync();
+        if (loaded is null) return;
+        RawQualityReviewJson = loaded;
+        _reportStatus("Quality Review result loaded. Preview when ready.");
+    });
+
+    private bool CanLoadQualityReviewFile() => !IsBusy && _desktopInteractions is not null && HasCurrentPreview;
+
+    [RelayCommand]
+    private void SelectAllValidQualityReviews()
+    {
+        foreach (var result in QualityReviewResults.Where(x => x.IsSelectable)) result.IsSelected = true;
+    }
+
+    [RelayCommand]
+    private void ClearQualityReviewSelection()
+    {
+        foreach (var result in QualityReviewResults) result.IsSelected = false;
+    }
 
     [RelayCommand]
     private void SelectAllValid()
@@ -247,9 +339,15 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         {
             RestorePreviewDiagnostics();
             var selected = Operations.Where(x => x.IsSelected && x.IsSelectable).Select(x => x.OperationIndex).ToArray();
-            var result = await _service.CommitContentBundleAsync(new CommitContentBundleCommand(RawJson, selected));
+            var selectedReviews = QualityReviewResults.Where(x => x.IsSelected && x.IsSelectable).Select(x => x.ResultIndex).ToArray();
+            var acceptedReviews = selectedReviews.Length == 0
+                ? null
+                : new PreImportQualityReviewSelection(RawQualityReviewJson, QualityReviewMode, selectedReviews);
+            var result = await _service.CommitContentBundleAsync(new CommitContentBundleCommand(RawJson, selected, acceptedReviews));
             ImportResult = $"Imported successfully\n{result.CreatedLearningItemIds.Count} Learning Items created · {result.UpdatedLearningItemIds.Count} updated\n{result.CreatedDeckIds.Count} Decks created · {result.UpdatedDeckIds.Count} updated · {result.AppliedMembershipCount} memberships applied";
             HasCurrentPreview = false;
+            CurrentBundleIsValid = false;
+            HasQualityReviewPreview = false;
             CanGenerateRepairPrompt = false;
             try
             {
@@ -313,6 +411,8 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
 
     private void SelectionChanged() => ImportSelectedCommand.NotifyCanExecuteChanged();
 
+    private void QualityReviewSelectionChanged() => ImportSelectedCommand.NotifyCanExecuteChanged();
+
     private void RestorePreviewDiagnostics()
     {
         BundleDiagnostics.Clear();
@@ -351,6 +451,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         PreviewSummary = string.Empty;
         RepairPrompt = string.Empty;
         ImportResult = string.Empty;
+        CurrentBundleIsValid = false;
         ShowAllTechnicalOperations = false;
         ShowImportedDetails = false;
         _previewBundleDiagnostics = [];
@@ -359,6 +460,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         Operations.Clear();
         PrimaryOperations.Clear();
         VisibleTechnicalOperations.Clear();
+        InvalidateQualityReviewPreview();
         LearningItemOperationCount = 0;
         DeckOperationCount = 0;
         AssignmentOperationCount = 0;
@@ -370,8 +472,20 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         ImportSelectedCommand.NotifyCanExecuteChanged();
     }
 
+    private void InvalidateQualityReviewPreview()
+    {
+        HasQualityReviewPreview = false;
+        QualityReviewSummary = string.Empty;
+        QualityReviewDiagnostics.Clear();
+        QualityReviewResults.Clear();
+        ImportSelectedCommand.NotifyCanExecuteChanged();
+    }
+
     private static AcquisitionDiagnosticDisplay ToDisplay(ContentBundleDiagnostic diagnostic) =>
         new(diagnostic.Code, diagnostic.Message, diagnostic.OperationIndex is { } index ? $"Operation {index + 1}" : "Bundle");
+
+    private static QualityReviewDiagnosticDisplay ToDisplay(PreImportQualityReviewResultDiagnostic diagnostic) =>
+        new(diagnostic.Code, diagnostic.Message, diagnostic.ResultIndex is { } index ? $"Review result {index + 1}" : "Review bundle");
 }
 
 public sealed partial class ContentOperationRowViewModel : ObservableObject
@@ -435,3 +549,65 @@ public sealed partial class ContentOperationRowViewModel : ObservableObject
 }
 
 public sealed record AcquisitionDiagnosticDisplay(string Code, string Message, string Scope);
+
+public sealed partial class QualityReviewResultRowViewModel : ObservableObject
+{
+    private readonly Action _selectionChanged;
+
+    public QualityReviewResultRowViewModel(
+        PreImportQualityReviewResultPreview result,
+        ContentOperationRowViewModel? operation,
+        Action selectionChanged)
+    {
+        _selectionChanged = selectionChanged;
+        ResultIndex = result.ResultIndex;
+        OperationIndex = result.OperationIndex;
+        LocalRef = result.LocalRef ?? "(missing localRef)";
+        Prompt = operation?.Summary ?? LocalRef;
+        Outcome = result.Outcome switch
+        {
+            CurationQualityReviewOutcome.Pass => "Pass",
+            CurationQualityReviewOutcome.Warning => "Warning",
+            CurationQualityReviewOutcome.NeedsReview => "Needs Review",
+            _ => "Invalid"
+        };
+        Findings = result.Findings ?? string.Empty;
+        SuggestedCorrection = result.SuggestedCorrection ?? string.Empty;
+        Fingerprint = result.ContentFingerprint ?? string.Empty;
+        Diagnostics = string.Join(" · ", result.Diagnostics.Select(x => x.Message));
+        IsValid = result.IsValid;
+        IsSelectable = result.IsValid && result.Outcome is not null;
+        _isSelected = IsSelectable;
+    }
+
+    public int ResultIndex { get; }
+    public int? OperationIndex { get; }
+    public string LocalRef { get; }
+    public string Prompt { get; }
+    public string Outcome { get; }
+    public string Findings { get; }
+    public string SuggestedCorrection { get; }
+    public string Fingerprint { get; }
+    public string Diagnostics { get; }
+    public bool IsValid { get; }
+    public bool IsSelectable { get; }
+    public bool HasSuggestedCorrection => !string.IsNullOrWhiteSpace(SuggestedCorrection);
+    public bool HasDiagnostics => !string.IsNullOrWhiteSpace(Diagnostics);
+    public bool IsNeedsReview => Outcome == "Needs Review";
+    public bool IsWarning => Outcome == "Warning";
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        if (!IsSelectable && value)
+        {
+            IsSelected = false;
+            return;
+        }
+        _selectionChanged();
+    }
+}
+
+public sealed record QualityReviewDiagnosticDisplay(string Code, string Message, string Scope);
