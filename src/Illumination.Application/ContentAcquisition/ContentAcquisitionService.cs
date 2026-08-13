@@ -283,7 +283,8 @@ Original invalid JSON:
     private static LearningItemSnapshot UpdateItemSnapshot(LearningItemSnapshot current, JsonElement operation, DateTimeOffset now)
     {
         var item = LearningItem.Restore(LearningItemId.From(current.Id), current.Prompt, current.ReferenceSolution, current.DueAt, current.IsNew, PayloadMode(current.ResponseMode), current.Hints.Select(x => new Hint(x.Text)), current.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)), current.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)), current.AcceptedShortAnswers, current.LowInteractionEligible, PayloadLifecycle(current.Lifecycle), current.Difficulty, current.StabilityDays, current.IsInShortTermRelearning);
-        item.ChangePrompt(PayloadPrompt(operation)); item.ChangeReferenceSolution(PayloadReference(operation)); item.ReplaceHints(PayloadHints(operation)); item.ChangeInteractionConfiguration(PayloadMode(operation), PayloadChoices(operation, "directAnswerChoices"), PayloadChoices(operation, "assistanceAnswerChoices"), PayloadStrings(operation, "acceptedShortAnswers")); item.ChangeLowInteractionEligibility(PayloadBool(operation, "lowInteractionEligible"));
+        item.UpdateContent(PayloadPrompt(operation), PayloadReference(operation), PayloadMode(operation), PayloadHints(operation), PayloadChoices(operation, "directAnswerChoices"), PayloadChoices(operation, "assistanceAnswerChoices"), PayloadStrings(operation, "acceptedShortAnswers"));
+        item.ChangeLowInteractionEligibility(PayloadBool(operation, "lowInteractionEligible"));
         if (StringProperty(operation, "significance") == "semantic") item.ResetSchedulingForSemanticContentChange(now);
         return ToSnapshot(item) with { DeckIds = current.DeckIds };
     }

@@ -186,43 +186,9 @@ public sealed class LearningItem
             lowInteractionEligible);
     }
 
-    public void ChangePrompt(string prompt)
-    {
-        DomainText.RequireNonWhitespace(prompt, nameof(prompt));
-        Prompt = prompt;
-    }
-
-    public void ChangeReferenceSolution(string referenceSolution)
-    {
-        ReferenceSolution = new ReferenceSolution(referenceSolution);
-    }
-
-    public void ReplaceHints(IEnumerable<Hint>? hints)
-    {
-        _hints.Clear();
-        _hints.AddRange(CopyHints(hints));
-    }
-
     public void ChangeLowInteractionEligibility(bool lowInteractionEligible)
     {
         LowInteractionEligible = lowInteractionEligible;
-    }
-
-    public void ChangeInteractionConfiguration(
-        ResponseMode responseMode,
-        IEnumerable<AnswerChoice>? directAnswerChoices = null,
-        IEnumerable<AnswerChoice>? assistanceAnswerChoices = null,
-        IEnumerable<string>? acceptedShortAnswers = null)
-    {
-        var newDirectAnswerChoices = CopyAnswerChoices(directAnswerChoices);
-        var newAssistanceAnswerChoices = CopyAnswerChoices(assistanceAnswerChoices);
-        var newAcceptedShortAnswers = CopyAcceptedShortAnswers(acceptedShortAnswers);
-        ValidateInteractionConfiguration(responseMode, newDirectAnswerChoices, newAssistanceAnswerChoices, newAcceptedShortAnswers);
-
-        ResponseMode = responseMode;
-        _directAnswerChoices = newDirectAnswerChoices;
-        _assistanceAnswerChoices = newAssistanceAnswerChoices;
-        _acceptedShortAnswers = newAcceptedShortAnswers;
     }
 
     public bool UpdateContent(
@@ -458,11 +424,8 @@ public sealed class LearningItem
             return null;
         }
 
-        var review = currentReviews
-            .OrderByDescending(candidate => OutcomePriority(candidate.Outcome))
-            .ThenByDescending(candidate => Array.IndexOf(_qualityReviews.ToArray(), candidate))
-            .First();
-        return new CurrentQualityState(review.Outcome, review.EvidenceType, review.Findings, review.SuggestedCorrection, review.Id);
+        var outcome = currentReviews.MaxBy(candidate => OutcomePriority(candidate.Outcome))!.Outcome;
+        return new CurrentQualityState(outcome);
     }
 
     private static int OutcomePriority(QualityReviewOutcome outcome) => outcome switch

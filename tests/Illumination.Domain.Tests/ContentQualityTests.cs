@@ -54,7 +54,7 @@ public sealed class ContentQualityTests
         Assert.False(review.IsSuperseded);
         Assert.Equal(promptBefore, item.Prompt);
         Assert.NotNull(item.CurrentQualityState);
-        Assert.Equal(review.Id, item.CurrentQualityState!.ReviewId);
+        Assert.Equal(QualityReviewOutcome.Pass, item.CurrentQualityState!.Outcome);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class ContentQualityTests
         item.AcceptQualityReview(needsReview);
 
         Assert.Equal(QualityReviewOutcome.NeedsReview, item.CurrentQualityState!.Outcome);
-        Assert.Equal(QualityReviewEvidenceType.SourceGroundedReview, item.CurrentQualityState.EvidenceType);
+        Assert.Contains(item.QualityReviews, candidate => candidate.EvidenceType == QualityReviewEvidenceType.SourceGroundedReview);
 
         item.UpdateContent("Changed", "Solution", ResponseMode.SelfAssessed);
 

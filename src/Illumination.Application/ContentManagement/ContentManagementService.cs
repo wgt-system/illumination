@@ -60,15 +60,15 @@ public sealed class ContentManagementService
 
         ExecuteDomain(() =>
         {
-            item.ChangePrompt(command.Prompt);
-            item.ChangeReferenceSolution(command.ReferenceSolution);
-            item.ReplaceHints(ToDomainHints(command.Hints));
-            item.ChangeLowInteractionEligibility(command.LowInteractionEligible);
-            item.ChangeInteractionConfiguration(
+            item.UpdateContent(
+                command.Prompt,
+                command.ReferenceSolution,
                 ToDomain(command.ResponseMode),
+                ToDomainHints(command.Hints),
                 ToDomainChoices(command.DirectAnswerChoices),
                 ToDomainChoices(command.AssistanceAnswerChoices),
                 command.AcceptedShortAnswers);
+            item.ChangeLowInteractionEligibility(command.LowInteractionEligible);
         });
 
         await _persistence.SaveLearningItemAsync(ToSnapshot(item) with { DeckIds = snapshot.DeckIds }, cancellationToken);

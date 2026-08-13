@@ -196,10 +196,7 @@ public class LearningItemAndDeckTests
         var id = LearningItemId.From(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
         var item = LearningItem.Create(id, "Question", "Solution", InitialDueAt);
 
-        item.ChangePrompt("Changed question");
-        item.ChangeReferenceSolution("Changed solution");
-        item.ReplaceHints([new Hint("New hint")]);
-        item.ChangeInteractionConfiguration(ResponseMode.Code);
+        item.UpdateContent("Changed question", "Changed solution", ResponseMode.Code, [new Hint("New hint")]);
 
         Assert.Equal(id, item.Id);
         Assert.Equal("Changed question", item.Prompt);
