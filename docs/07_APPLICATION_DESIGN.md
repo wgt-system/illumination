@@ -69,6 +69,8 @@ The user can:
 
 The user can inspect derived learning-state summaries without changing authoritative review state.
 
+The user can inspect current content-quality state and filter Learning Items by User Flags without changing scheduling state.
+
 ### Import / Generate
 
 The user can:
@@ -274,6 +276,8 @@ For existing-content updates, the prompt generator should emit only the smallest
 
 When generating for an existing Deck, the prompt uses that Deck's stable Illumination ID and does not ask ChatGPT to recreate the Deck. When generating a new Deck, the prompt uses a Deck `localRef` and assignments may target that local reference.
 
+Prompt generation may later accept `Standard`, `Strict`, or `SourceGrounded` quality mode. These modes affect prompting only; they do not certify content or create a Quality Review.
+
 ## 11A. Malformed-JSON Repair Prompt
 
 When supplied JSON is malformed, the Application retains the parser diagnostic for display and can generate a repair prompt. The repair prompt includes:
@@ -409,6 +413,20 @@ Import preview/read models also expose operation index/type, localRef or target 
 After an accepted-subset commit, the result identifies created/updated item and Deck IDs, applied memberships, skipped/rejected operation indices, diagnostics where applicable, and an import/batch identity when import history is retained. There is no silent partial commit.
 
 Each successful accepted-subset commit retains lightweight local provenance: an Illumination import/batch ID, import timestamp, contract/version, optional external `bundleId` and `generatedFor`, and accepted-operation counts/results. Imported content does not depend on that record for normal use, and the history does not duplicate all Learning Items.
+
+## 13A. Content Quality and Curation Capabilities
+
+Application capabilities should support:
+
+- quickly adding/removing user-owned flags during Study,
+- filtering Learning Items by flags,
+- generating a quality-review prompt for an item or generated bundle,
+- receiving structured Quality Review results,
+- previewing findings, reasons, outcome, evidence type, and suggested corrections,
+- explicitly accepting a Quality Review result,
+- optionally applying a suggested correction through normal content-update semantics.
+
+Quality Review results are bound to the Learning Item content revision they reviewed. A content edit creates a new revision and leaves earlier Quality Reviews historical. `Pass`, `Warning`, and `NeedsReview` remain distinct; `NeedsReview` is visible and actionable but is not an automatic import block. Application contracts expose no Domain or EF types.
 
 ## 14. Future Vocation Integration
 

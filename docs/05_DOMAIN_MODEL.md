@@ -237,6 +237,46 @@ The user has:
 
 Items that cannot be checked automatically continue through manual assessment.
 
+## 8A. Content Quality and Curation
+
+Generated or imported content can be structurally valid without being factually reliable, unambiguous, or well formulated. Content Quality & Curation is distinct from technical validation and learner review scheduling.
+
+The same semantics apply across domains, including programming explanations, mathematics, factual/history knowledge, and language-learning content.
+
+### User Flags
+
+A Learning Item may have lightweight user-owned flags. Flags are independent of objective correctness and machine quality state. Multiple slots or colors are allowed, with user-defined meanings such as “review later”, “bad wording”, or “replace”. Applying or removing a flag is quick during Study and does not alter Review scheduling, Learning State, or content.
+
+### Quality Review
+
+A Quality Review is an immutable record concerning one Learning Item and one content revision. It contains an outcome of `Pass`, `Warning`, or `NeedsReview`, human-readable findings/reasons, optional suggested corrections, and a Review Type such as `ModelReview`, `SourceGroundedReview`, or `UserReview`.
+
+Quality Reviews do not silently mutate content. `SourceGroundedReview` is stronger evidence because it refers to sources, but it is not a mathematical guarantee of truth. No generic `Verified` state is used.
+
+### Content revision binding and current quality state
+
+Each Learning Item has a durable monotonically increasing content revision number. It increases when the Prompt, Reference Solution, or other semantically relevant content changes. Old Quality Reviews remain immutable history bound to their original revision and no longer count as assurance for the current revision. User Flags are not quality assurance and are not invalidated by content revision changes.
+
+Current quality state is derived from Quality Reviews bound to the current revision. If any current-revision review is `NeedsReview`, the state is `NeedsReview`; otherwise any `Warning` yields `Warning`; otherwise any `Pass` yields `Pass`; without a current-revision Quality Review, the item has no current quality assurance. The derived view exposes the applicable evidence type, findings, and suggested corrections.
+
+### Generation quality mode and workflow
+
+Prompt generation may later offer `Standard`, `Strict`, and `SourceGrounded` modes. These modes affect generation or review prompting only; they do not certify content or create a Quality Review.
+
+The future workflow is:
+
+```text
+Learning Item or generated bundle
+    → generate quality-review prompt
+    → external model or user performs review
+    → structured Quality Review result
+    → preview findings
+    → explicitly accept the result
+    → optionally apply a suggested correction through normal content-update semantics
+```
+
+No direct OpenAI API is required. Technical schema/domain/dependency errors may block import; quality `Warning` does not automatically block import; `NeedsReview` is highly visible but may still be consciously accepted.
+
 ## 9. Aggregate / State: Learning State
 
 Learning State represents the current review-relevant state of one Learning Item.

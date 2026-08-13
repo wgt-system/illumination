@@ -14,6 +14,26 @@ A single learning interaction in which the learner engages with one learning uni
 
 A review is historical. Once recorded, it describes what happened at that point in time.
 
+### Quality Review
+
+An immutable historical assessment of one Learning Item's content at a specific content revision. Its outcome is `Pass`, `Warning`, or `NeedsReview`; it contains human-readable findings/reasons and may include suggested corrections. A Quality Review is distinct from a learner's five-grade Learning Assessment and never silently mutates content.
+
+### Quality Review Type
+
+The evidence type of a Quality Review. At minimum: `ModelReview`, `SourceGroundedReview`, or `UserReview`. These types describe evidence, not certainty; Illumination does not use a generic `Verified` state.
+
+### User Flag
+
+A lightweight user-owned marker on a Learning Item, independent of objective correctness and machine quality state. Multiple slots or colors are allowed, with user-defined meanings such as “review later”, “bad wording”, or “replace”. Flags are quick to apply during Study and filterable later.
+
+### Content Revision
+
+A monotonically increasing durable revision number for the semantically relevant content of one Learning Item. Quality Reviews bind to the revision they reviewed. When the Prompt, Reference Solution, or other semantically relevant content changes, the revision increases; older Quality Reviews remain historical but no longer provide assurance for the current revision.
+
+### Current Quality State
+
+The derived quality status for the current content revision, calculated from Quality Reviews bound to that revision rather than stored as redundant mutable truth. If any current-revision review is `NeedsReview`, the state is `NeedsReview`; otherwise any `Warning` yields `Warning`; otherwise any `Pass` yields `Pass`; with no current-revision review there is no current quality assurance.
+
 ### Reference Solution
 
 The stored canonical answer, explanation, or example solution shown to the learner for comparison.
@@ -87,6 +107,8 @@ Suitability is represented by the explicit `lowInteractionEligible` Learning Ite
 Import of versioned machine-readable learning content, initially expected to use JSON generated externally through ChatGPT.
 
 Imported content becomes Illumination-owned after successful validation and import.
+
+Technical validation and content quality are separate. Schema, domain, and dependency errors may block import; quality warnings do not automatically block import. `NeedsReview` is highly visible but may still be consciously accepted.
 
 ### External Learning Reference
 

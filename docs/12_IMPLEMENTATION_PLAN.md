@@ -79,7 +79,17 @@ Goal:
 
 Uses the published Content Bundle 1.0 contract and explicit stable Illumination identifiers for intentional updates.
 
-### Milestone D – Interaction Variants
+### Milestone D – Content Quality and Curation
+
+Goal:
+
+- User Flags and flag filtering,
+- immutable Quality Reviews with `Pass`, `Warning`, and `NeedsReview`,
+- ModelReview, SourceGroundedReview, and UserReview evidence types,
+- content revision binding and derived current quality state,
+- quality-review prompts, findings preview, explicit acceptance, and optional correction application.
+
+### Milestone E – Interaction Variants
 
 Goal:
 
@@ -93,7 +103,7 @@ Goal:
 - optional hint influence,
 - low-interaction filtering.
 
-### Milestone E – Learning Insight
+### Milestone F – Learning Insight
 
 Goal:
 
@@ -103,7 +113,7 @@ Goal:
 - Suspended/Mastered management,
 - useful learning-progress dashboard.
 
-### Milestone F – Integration Surface
+### Milestone G – Integration Surface
 
 Only when required:
 
@@ -243,7 +253,18 @@ v0.2 does not interpret submitted response payloads. The remaining response inte
 
 The v0.3 first slice is session learning-stack semantics, grade previews, standalone Study transparency, and Content Acquisition. Content Acquisition is pulled forward so realistic Study/scheduler validation is practical without manually authoring large item sets.
 
-### v0.4.0 – Remaining Interaction Modes and Evaluation
+### v0.4.0 – Content Quality and Curation
+
+Deliver:
+
+- User Flags and flag filtering,
+- immutable Quality Reviews with current-revision binding,
+- derived current quality state,
+- Standard/Strict/SourceGrounded generation quality modes,
+- quality-review prompt and structured-result workflow,
+- explicit review acceptance and optional normal content correction.
+
+### v0.5.0 – Remaining Interaction Modes and Evaluation
 
 Deliver:
 
@@ -257,7 +278,7 @@ Deliver:
 - optional hint influence,
 - low-interaction filtering by the existing persisted `lowInteractionEligible` property.
 
-### v0.5.0 – Learning Insight
+### v0.6.0 – Learning Insight
 
 Deliver:
 
@@ -269,7 +290,7 @@ Deliver:
 - progress dashboard,
 - useful filtering/search.
 
-### v0.6.0+ – Product Refinement
+### v0.7.0+ – Product Refinement
 
 Use further `v0.y.0` releases as needed for:
 

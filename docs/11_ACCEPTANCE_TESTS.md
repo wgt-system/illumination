@@ -8,6 +8,8 @@ Scheduling acceptance tests use the deterministic semantics defined in `docs/08A
 
 The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, Study transparency, and structured Content Acquisition; v0.4 covers the remaining response interaction and evaluation work.
 
+Content Quality & Curation is the next capability slice before the remaining v0.4 interaction work. Quality state is distinct from technical import validity and learner scheduling.
+
 ## 1. Learning Item Creation
 
 ### Scenario: create a basic item
@@ -358,6 +360,70 @@ When progress is requested
 Then the view is derived from authoritative state/history
 And can distinguish at least new, due, Suspended, and Mastered material
 And later can distinguish unstable/stable material according to the selected scheduling model.
+
+## 13A. Content Quality and Curation
+
+### User flags do not alter scheduling
+
+Given a Learning Item in Study
+When the learner adds or removes a user-owned flag
+Then Review scheduling and Learning State remain unchanged
+And the flag can be used by later filtering.
+
+### Current-revision Pass
+
+Given a Quality Review with outcome `Pass` bound to the Learning Item's current content revision
+When current quality state is requested
+Then that evidence is recognized for the current revision.
+
+### Content edit invalidates current assurance
+
+Given a current-revision Quality Review
+When the Prompt, Reference Solution, or other semantically relevant content changes
+Then the content revision increases
+And the old Quality Review remains immutable history
+And it no longer counts as assurance for the current revision.
+
+### Warning is non-blocking
+
+Given a structurally and semantically valid import with a Quality Review outcome of `Warning`
+When the learner previews import
+Then the warning is visible
+And it does not automatically block import.
+
+### NeedsReview is visible
+
+Given a Quality Review outcome of `NeedsReview`
+When content is shown or imported
+Then the state and findings are highly visible
+And the learner may consciously accept the content.
+
+### Source-grounded evidence is not generic verification
+
+Given a `SourceGroundedReview`
+Then it remains identified as that Review Type
+And it is not represented as generic `Verified` certainty.
+
+### Suggested correction requires explicit action
+
+Given a Quality Review with a suggested correction
+When the review result is previewed
+Then the Learning Item is unchanged
+And content changes only after the learner explicitly applies the correction through normal update semantics.
+
+### Flags and quality state are independent
+
+Given a Learning Item with User Flags and a machine or user Quality Review
+Then flags and current quality state remain separately addressable
+And changing one does not silently change the other.
+
+### Quality review workflow
+
+Given a Learning Item or generated bundle
+When a quality-review prompt is generated and a structured result is returned
+Then findings are previewed before explicit acceptance
+And no direct LLM API is required
+And the accepted immutable result is bound to the reviewed content revision.
 
 ## 14. Vocation Boundary
 
