@@ -16,7 +16,10 @@ public sealed class ContentAcquisitionServiceTests
         var prompt = service.GenerateContentPrompt(new GenerateContentPromptCommand("C# async", 3, NewDeckName: "Async Deck")).Prompt;
         Assert.Contains("illumination.content-bundle", prompt);
         Assert.Contains("1.0", prompt);
-        Assert.Contains("Return JSON only", prompt);
+        Assert.Contains("downloadable UTF-8 JSON file", prompt);
+        Assert.Contains("illumination-content-bundle.json", prompt);
+        Assert.Contains("Do not print the full JSON inline", prompt);
+        Assert.Contains("If file creation is unavailable, return JSON only inline", prompt);
         Assert.Contains("self_assessed", prompt);
         Assert.Contains("referenceSolution", prompt);
         Assert.Contains("target-deck", prompt);

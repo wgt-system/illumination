@@ -27,6 +27,8 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
 
     public ObservableCollection<DeckView> ExistingDecks { get; } = [];
     public ObservableCollection<ContentOperationRowViewModel> Operations { get; } = [];
+    public ObservableCollection<ContentOperationRowViewModel> PrimaryOperations { get; } = [];
+    public ObservableCollection<ContentOperationRowViewModel> VisibleTechnicalOperations { get; } = [];
     public ObservableCollection<AcquisitionDiagnosticDisplay> BundleDiagnostics { get; } = [];
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
@@ -74,11 +76,27 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasImportResult))]
     private string _importResult = string.Empty;
 
+    [ObservableProperty]
+    private bool _showAllTechnicalOperations;
+
+    [ObservableProperty]
+    private bool _showImportedDetails;
+
     public bool HasExistingDecks => ExistingDecks.Count > 0;
     public bool HasGeneratedPrompt => !string.IsNullOrWhiteSpace(GeneratedPrompt);
     public bool HasRepairPrompt => !string.IsNullOrWhiteSpace(RepairPrompt);
     public bool HasImportResult => !string.IsNullOrWhiteSpace(ImportResult);
     public bool IsInteractionEnabled => !IsBusy;
+    public bool HasTechnicalOperations => TechnicalOperationCount > 0;
+    public bool HasVisibleTechnicalOperations => VisibleTechnicalOperations.Count > 0;
+    public string TechnicalOperationsToggleText => ShowAllTechnicalOperations
+        ? "Hide technical operations"
+        : $"Show all technical operations ({TechnicalOperationCount})";
+    public string ImportedDetailsToggleText => ShowImportedDetails ? "Hide imported-operation details" : "Show imported-operation details";
+    public int LearningItemOperationCount { get; private set; }
+    public int DeckOperationCount { get; private set; }
+    public int AssignmentOperationCount { get; private set; }
+    public int TechnicalOperationCount { get; private set; }
 
     public void AttachDesktopInteractions(IDesktopInteractionService desktopInteractions)
     {
@@ -161,14 +179,17 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         RestorePreviewDiagnostics();
         foreach (var operation in preview.Operations)
         {
-            Operations.Add(new ContentOperationRowViewModel(operation, SelectionChanged));
+            var row = new ContentOperationRowViewModel(operation, SelectionChanged);
+            Operations.Add(row);
+            if (row.IsPrimaryContentOperation) PrimaryOperations.Add(row);
         }
+        UpdateOperationPresentation();
 
         HasCurrentPreview = true;
         CanGenerateRepairPrompt = preview.CanGenerateRepairPrompt && !preview.IsValid;
         var selectable = preview.Operations.Count(x => x.IsSelectable);
         var invalid = preview.Operations.Count - selectable;
-        PreviewSummary = $"{selectable} valid · {invalid} invalid";
+        PreviewSummary = $"{LearningItemOperationCount} Learning Items · {DeckOperationCount} Decks · {AssignmentOperationCount} assignments · {preview.Operations.Count} total operations · {selectable} valid · {invalid} invalid";
         _reportStatus($"Bundle validated: {selectable} valid, {invalid} invalid.");
         ImportSelectedCommand.NotifyCanExecuteChanged();
     });
@@ -185,6 +206,21 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     private void ClearSelection()
     {
         foreach (var operation in Operations) operation.IsSelected = false;
+    }
+
+    [RelayCommand]
+    private void ToggleTechnicalOperations()
+    {
+        ShowAllTechnicalOperations = !ShowAllTechnicalOperations;
+        RebuildVisibleTechnicalOperations();
+        OnPropertyChanged(nameof(TechnicalOperationsToggleText));
+    }
+
+    [RelayCommand]
+    private void ToggleImportedDetails()
+    {
+        ShowImportedDetails = !ShowImportedDetails;
+        OnPropertyChanged(nameof(ImportedDetailsToggleText));
     }
 
     [RelayCommand(CanExecute = nameof(CanGenerateRepairPromptNow))]
@@ -283,6 +319,31 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         foreach (var diagnostic in _previewBundleDiagnostics) BundleDiagnostics.Add(ToDisplay(diagnostic));
     }
 
+    private void UpdateOperationPresentation()
+    {
+        LearningItemOperationCount = Operations.Count(operation => operation.OperationKind is "create_learning_item" or "update_learning_item");
+        DeckOperationCount = Operations.Count(operation => operation.OperationKind is "create_deck" or "update_deck");
+        AssignmentOperationCount = Operations.Count(operation => operation.OperationKind == "assign_item_to_decks");
+        TechnicalOperationCount = Operations.Count(operation => !operation.IsPrimaryContentOperation);
+        OnPropertyChanged(nameof(LearningItemOperationCount));
+        OnPropertyChanged(nameof(DeckOperationCount));
+        OnPropertyChanged(nameof(AssignmentOperationCount));
+        OnPropertyChanged(nameof(TechnicalOperationCount));
+        OnPropertyChanged(nameof(HasTechnicalOperations));
+        OnPropertyChanged(nameof(TechnicalOperationsToggleText));
+        RebuildVisibleTechnicalOperations();
+    }
+
+    private void RebuildVisibleTechnicalOperations()
+    {
+        VisibleTechnicalOperations.Clear();
+        foreach (var operation in Operations.Where(operation =>
+                     !operation.IsPrimaryContentOperation
+                     && (ShowAllTechnicalOperations || operation.RequiresAttention)))
+            VisibleTechnicalOperations.Add(operation);
+        OnPropertyChanged(nameof(HasVisibleTechnicalOperations));
+    }
+
     private void InvalidatePreview()
     {
         HasCurrentPreview = false;
@@ -290,10 +351,22 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         PreviewSummary = string.Empty;
         RepairPrompt = string.Empty;
         ImportResult = string.Empty;
+        ShowAllTechnicalOperations = false;
+        ShowImportedDetails = false;
         _previewBundleDiagnostics = [];
         _repairDiagnostics = [];
         BundleDiagnostics.Clear();
         Operations.Clear();
+        PrimaryOperations.Clear();
+        VisibleTechnicalOperations.Clear();
+        LearningItemOperationCount = 0;
+        DeckOperationCount = 0;
+        AssignmentOperationCount = 0;
+        TechnicalOperationCount = 0;
+        OnPropertyChanged(nameof(HasTechnicalOperations));
+        OnPropertyChanged(nameof(HasVisibleTechnicalOperations));
+        OnPropertyChanged(nameof(TechnicalOperationsToggleText));
+        OnPropertyChanged(nameof(ImportedDetailsToggleText));
         ImportSelectedCommand.NotifyCanExecuteChanged();
     }
 
@@ -310,6 +383,7 @@ public sealed partial class ContentOperationRowViewModel : ObservableObject
         _selectionChanged = selectionChanged;
         OperationIndex = preview.OperationIndex;
         OperationNumber = preview.OperationIndex + 1;
+        OperationKind = preview.OperationType;
         OperationType = FormatOperationType(preview.OperationType);
         Summary = preview.Summary;
         IsSelectable = preview.IsSelectable;
@@ -322,6 +396,7 @@ public sealed partial class ContentOperationRowViewModel : ObservableObject
 
     public int OperationIndex { get; }
     public int OperationNumber { get; }
+    public string? OperationKind { get; }
     public string OperationType { get; }
     public string Summary { get; }
     public bool IsSelectable { get; }
@@ -332,6 +407,8 @@ public sealed partial class ContentOperationRowViewModel : ObservableObject
     public bool HasDiagnostics => !string.IsNullOrWhiteSpace(Diagnostics);
     public bool HasWarnings => !string.IsNullOrWhiteSpace(Warnings);
     public bool HasDependencies => !string.IsNullOrWhiteSpace(Dependencies);
+    public bool IsPrimaryContentOperation => OperationKind is "create_learning_item" or "update_learning_item" or "create_deck" or "update_deck";
+    public bool RequiresAttention => HasDiagnostics || HasWarnings;
 
     [ObservableProperty]
     private bool _isSelected;

@@ -37,7 +37,9 @@ public sealed class ContentAcquisitionService
         var guidance = string.IsNullOrWhiteSpace(command.Guidance) ? string.Empty : $"Additional guidance: {command.Guidance}";
         return new GeneratedContentPrompt($@"You are generating Illumination learning content.
 
-Return JSON only. The root contract must be ""{Contract}"" and version must be ""{Version}"".
+Create the Content Bundle as a downloadable UTF-8 JSON file named `illumination-content-bundle.json`.
+Do not print the full JSON inline when file creation is available. If file creation is unavailable, return JSON only inline.
+The root contract must be ""{Contract}"" and version must be ""{Version}"".
 Generate exactly {command.RequestedItemCount} independent concise question or mini-task Learning Items about:
 {command.Subject}
 

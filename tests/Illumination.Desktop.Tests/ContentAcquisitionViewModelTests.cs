@@ -1,6 +1,7 @@
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Desktop;
+using System.Xml.Linq;
 using Xunit;
 
 namespace Illumination.Desktop.Tests;
@@ -59,13 +60,46 @@ public sealed class ContentAcquisitionViewModelTests
 
         await viewModel.ValidateCommand.ExecuteAsync(null);
 
-        Assert.Equal("3 valid · 1 invalid", viewModel.PreviewSummary);
+        Assert.Contains("2 Learning Items · 2 Decks · 0 assignments · 4 total operations", viewModel.PreviewSummary);
+        Assert.Contains("3 valid · 1 invalid", viewModel.PreviewSummary);
         Assert.True(viewModel.Operations[0].IsSelected);
         Assert.False(viewModel.Operations[1].IsSelectable);
         Assert.False(viewModel.Operations[1].IsSelected);
         Assert.True(viewModel.Operations[3].IsSelectable);
         Assert.True(viewModel.Operations[3].IsSelected);
         Assert.True(viewModel.Operations[3].HasWarnings);
+    }
+
+    [Fact]
+    public async Task Fifty_item_preview_separates_content_counts_and_hides_valid_technical_operations()
+    {
+        var viewModel = CreateViewModel(new FakePersistence(), out _, out _);
+        var operations = new List<string> { CreateDeck("deck", "Deck") };
+        operations.AddRange(Enumerable.Range(1, 50).Select(index => CreateItem($"item-{index}", $"Prompt {index}")));
+        operations.AddRange(Enumerable.Range(1, 50).Select(index => AssignItem($"item-{index}", "deck")));
+        viewModel.RawJson = Bundle([.. operations]);
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.Equal(50, viewModel.LearningItemOperationCount);
+        Assert.Equal(1, viewModel.DeckOperationCount);
+        Assert.Equal(50, viewModel.AssignmentOperationCount);
+        Assert.Equal(101, viewModel.Operations.Count);
+        Assert.Equal(51, viewModel.PrimaryOperations.Count);
+        Assert.Empty(viewModel.VisibleTechnicalOperations);
+        Assert.Contains("50 Learning Items", viewModel.PreviewSummary);
+        Assert.Contains("101 total operations", viewModel.PreviewSummary);
+
+        viewModel.ToggleTechnicalOperationsCommand.Execute(null);
+        Assert.Equal(50, viewModel.VisibleTechnicalOperations.Count);
+
+        viewModel.RawJson = Bundle(CreateItem("item", "Prompt"), """{"op":"assign_item_to_decks","item":{"itemLocalRef":"item"},"decks":[]}""");
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        var invalidTechnical = Assert.Single(viewModel.VisibleTechnicalOperations);
+        Assert.False(invalidTechnical.IsPrimaryContentOperation);
+        Assert.True(invalidTechnical.RequiresAttention);
+        Assert.False(invalidTechnical.IsSelectable);
     }
 
     [Fact]
@@ -125,6 +159,7 @@ public sealed class ContentAcquisitionViewModelTests
         Assert.Contains("1 Learning Items created", viewModel.ImportResult);
         Assert.Contains("1 Decks created", viewModel.ImportResult);
         Assert.Contains("1 memberships applied", viewModel.ImportResult);
+        Assert.DoesNotContain("operations", viewModel.ImportResult, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, refreshCount.Value);
         Assert.True(viewModel.HasImportResult);
         Assert.False(viewModel.HasCurrentPreview);
@@ -180,6 +215,19 @@ public sealed class ContentAcquisitionViewModelTests
         Assert.False(viewModel.HasCurrentPreview);
     }
 
+    [Fact]
+    public void Large_acquisition_text_areas_and_primary_preview_are_bounded_in_xaml()
+    {
+        var root = FindRepositoryRoot();
+        var document = XDocument.Load(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var controls = document.Descendants().ToArray();
+
+        Assert.Equal("250", BoundHeight(controls, "TextBox", "Text", "{Binding GeneratedPrompt}"));
+        Assert.Equal("300", BoundHeight(controls, "TextBox", "Text", "{Binding RawJson}"));
+        Assert.Equal("100", BoundHeight(controls, "TextBox", "Text", "{Binding RepairPrompt}"));
+        Assert.Equal("300", BoundHeight(controls, "ListBox", "ItemsSource", "{Binding PrimaryOperations}"));
+    }
+
     private static ContentAcquisitionViewModel CreateViewModel(
         FakePersistence persistence,
         out List<string> statuses,
@@ -210,8 +258,22 @@ public sealed class ContentAcquisitionViewModelTests
     private static string CreateItem(string localRef, string prompt) =>
         $"{{\"op\":\"create_learning_item\",\"localRef\":\"{localRef}\",\"item\":{{\"prompt\":\"{prompt}\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}";
 
+    private static string AssignItem(string itemLocalRef, string deckLocalRef) =>
+        $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemLocalRef\":\"{itemLocalRef}\"}},\"decks\":[{{\"deckLocalRef\":\"{deckLocalRef}\"}}]}}";
+
     private static string Bundle(params string[] operations) =>
         $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[{string.Join(',', operations)}]}}";
+
+    private static string BoundHeight(IEnumerable<XElement> controls, string name, string bindingAttribute, string binding) =>
+        controls.Single(element => element.Name.LocalName == name && (string?)element.Attribute(bindingAttribute) == binding)
+            .Attribute("Height")?.Value ?? string.Empty;
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+            if (File.Exists(Path.Combine(directory.FullName, "Illumination.slnx"))) return directory.FullName;
+        throw new DirectoryNotFoundException("Could not locate the Illumination repository root.");
+    }
 
     private sealed class Counter { public int Value { get; set; } }
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
