@@ -53,7 +53,7 @@ public sealed class ContentCurationService
         var items = await _contentPersistence.ListLearningItemsAsync(cancellationToken);
         return items
             .Where(item => requestedIds.All(id => (item.UserFlagDefinitionIds ?? []).Contains(id)))
-            .Select(ToView)
+            .Select(snapshot => ToView(ExecuteDomain(() => ToDomain(snapshot))))
             .ToArray();
     }
 
@@ -148,38 +148,16 @@ public sealed class ContentCurationService
             x.Findings, x.SuggestedCorrection, x.SupersededBy?.Value)).ToArray(),
         item.UserFlagDefinitionIds.Select(x => x.Value).ToArray());
 
-    private static CuratedLearningItemView ToView(LearningItemSnapshot snapshot) => new(
-        snapshot.Id, snapshot.Prompt, snapshot.ContentRevision, (snapshot.UserFlagDefinitionIds ?? []).ToArray(),
-        (snapshot.QualityReviews ?? []).Select(ToView).ToArray(),
-        DeriveCurrentQualityState(snapshot.QualityReviews ?? [], snapshot.ContentRevision));
+    private static CuratedLearningItemView ToView(LearningItem item) => new(
+        item.Id.Value, item.Prompt, item.ContentRevision, item.UserFlagDefinitionIds.Select(x => x.Value).ToArray(),
+        item.QualityReviews.Select(ToView).ToArray(),
+        item.CurrentQualityState is null ? null : new CurrentQualityStateView(ToCuration(item.CurrentQualityState.Outcome)));
 
-    private static CuratedLearningItemView ToView(LearningItem item) => ToView(ToSnapshot(item));
-
-    private static QualityReviewView ToView(QualityReviewSnapshot review) => new(
-        review.Id, review.LearningItemId, review.ContentRevision, ToApplicationSnapshot(review.Outcome), ToApplicationSnapshot(review.EvidenceType),
-        review.Findings, review.SuggestedCorrection, review.SupersededBy);
+    private static QualityReviewView ToView(QualityReview review) => new(
+        review.Id.Value, review.LearningItemId.Value, review.ContentRevision, ToCuration(review.Outcome), ToCuration(review.EvidenceType),
+        review.Findings, review.SuggestedCorrection, review.SupersededBy?.Value);
 
     private static UserFlagDefinitionView ToView(UserFlagDefinitionSnapshot definition) => new(definition.Id, definition.Name, definition.Meaning);
-
-    private static CurrentQualityStateView? DeriveCurrentQualityState(IReadOnlyList<QualityReviewSnapshot> reviews, int revision)
-    {
-        var current = reviews.Where(review => review.ContentRevision == revision && !review.SupersededBy.HasValue).ToArray();
-        if (current.Length == 0) return null;
-        var outcome = current.Max(review => review.Outcome switch
-        {
-            QualityReviewOutcomeSnapshot.NeedsReview => 3,
-            QualityReviewOutcomeSnapshot.Warning => 2,
-            QualityReviewOutcomeSnapshot.Pass => 1,
-            _ => throw new ArgumentOutOfRangeException(nameof(review.Outcome), review.Outcome, "Unsupported quality review outcome."),
-        });
-        return new CurrentQualityStateView(outcome switch
-        {
-            3 => CurationQualityReviewOutcome.NeedsReview,
-            2 => CurationQualityReviewOutcome.Warning,
-            1 => CurationQualityReviewOutcome.Pass,
-            _ => throw new InvalidOperationException("No quality outcome was available."),
-        });
-    }
 
     private static T ExecuteDomain<T>(Func<T> action)
     {
@@ -272,19 +250,20 @@ public sealed class ContentCurationService
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unsupported evidence type."),
     };
 
-    private static CurationQualityReviewOutcome ToApplicationSnapshot(QualityReviewOutcomeSnapshot value) => value switch
+    private static CurationQualityReviewOutcome ToCuration(QualityReviewOutcome value) => value switch
     {
-        QualityReviewOutcomeSnapshot.Pass => CurationQualityReviewOutcome.Pass,
-        QualityReviewOutcomeSnapshot.Warning => CurationQualityReviewOutcome.Warning,
-        QualityReviewOutcomeSnapshot.NeedsReview => CurationQualityReviewOutcome.NeedsReview,
+        QualityReviewOutcome.Pass => CurationQualityReviewOutcome.Pass,
+        QualityReviewOutcome.Warning => CurationQualityReviewOutcome.Warning,
+        QualityReviewOutcome.NeedsReview => CurationQualityReviewOutcome.NeedsReview,
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unsupported quality outcome."),
     };
 
-    private static CurationQualityReviewEvidenceType ToApplicationSnapshot(QualityReviewEvidenceTypeSnapshot value) => value switch
+    private static CurationQualityReviewEvidenceType ToCuration(QualityReviewEvidenceType value) => value switch
     {
-        QualityReviewEvidenceTypeSnapshot.ModelReview => CurationQualityReviewEvidenceType.ModelReview,
-        QualityReviewEvidenceTypeSnapshot.SourceGroundedReview => CurationQualityReviewEvidenceType.SourceGroundedReview,
-        QualityReviewEvidenceTypeSnapshot.UserReview => CurationQualityReviewEvidenceType.UserReview,
+        QualityReviewEvidenceType.ModelReview => CurationQualityReviewEvidenceType.ModelReview,
+        QualityReviewEvidenceType.SourceGroundedReview => CurationQualityReviewEvidenceType.SourceGroundedReview,
+        QualityReviewEvidenceType.UserReview => CurationQualityReviewEvidenceType.UserReview,
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unsupported evidence type."),
     };
+
 }
