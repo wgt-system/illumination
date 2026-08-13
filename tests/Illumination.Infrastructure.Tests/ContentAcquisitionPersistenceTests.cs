@@ -1,5 +1,6 @@
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Study;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Illumination.Infrastructure.Persistence;
@@ -38,6 +39,70 @@ public sealed class ContentAcquisitionPersistenceTests
     }
 
     [Fact]
+    public async Task Bulk_import_persists_exact_item_count_and_is_immediately_available_to_content_and_study()
+    {
+        const int itemCount = 30;
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+
+        var operations = new List<string>
+        {
+            "{\"op\":\"create_deck\",\"localRef\":\"bulk-deck\",\"deck\":{\"name\":\"Bulk Deck\"}}",
+        };
+        operations.AddRange(Enumerable.Range(1, itemCount).Select(index =>
+            $"{{\"op\":\"create_learning_item\",\"localRef\":\"item-{index}\",\"item\":{{\"prompt\":\"Bulk Prompt {index}\",\"referenceSolution\":\"Bulk Solution {index}\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}"));
+        operations.AddRange(Enumerable.Range(1, itemCount).Select(index =>
+            $"{{\"op\":\"assign_item_to_decks\",\"item\":{{\"itemLocalRef\":\"item-{index}\"}},\"decks\":[{{\"deckLocalRef\":\"bulk-deck\"}}]}}"));
+        var bundle = Bundle([.. operations]);
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+        var preview = await acquisition.PreviewContentBundleAsync(bundle);
+        Assert.True(preview.IsValid, string.Join(" | ", preview.Diagnostics.Concat(preview.Operations.SelectMany(x => x.Diagnostics)).Select(x => x.Code + ":" + x.Message)));
+
+        var result = await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(bundle, Enumerable.Range(0, operations.Count).ToArray()));
+
+        await using (var verify = await factory.CreateDbContextAsync())
+        {
+            Assert.Equal(itemCount, await verify.LearningItems.CountAsync());
+            Assert.Single(await verify.Decks.ToArrayAsync());
+            Assert.Equal(itemCount, await verify.DeckLearningItems.CountAsync());
+        }
+
+        var timeProvider = new FixedTimeProvider(Now);
+        var content = new ContentManagementService(new EfCoreContentPersistence(factory), timeProvider);
+        Assert.Equal(itemCount, (await content.ListLearningItemsAsync()).Count);
+        var deck = Assert.Single(await content.ListDecksAsync());
+        Assert.Equal(itemCount, deck.LearningItemIds.Count);
+
+        var study = new StudySessionService(new EfCoreStudySessionPersistence(factory), timeProvider, new IdentityOrdering());
+        var session = await study.StartStudySessionAsync(new StartStudySessionCommand([deck.Id], AllNew: true));
+        Assert.Equal(itemCount, session.Queue.Count);
+        Assert.StartsWith("Bulk Prompt ", (await study.GetNextStudySessionItemAsync(session.Id))!.Prompt, StringComparison.Ordinal);
+        Assert.Equal(itemCount, result.CreatedLearningItemIds.Count);
+        Assert.Equal(itemCount, result.AppliedMembershipCount);
+    }
+
+    [Fact]
+    public async Task Malformed_bundle_cannot_mutate_real_sqlite_persistence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+
+        var preview = await acquisition.PreviewContentBundleAsync("{ malformed");
+        Assert.False(preview.IsValid);
+        await Assert.ThrowsAsync<ContentAcquisitionValidationException>(() => acquisition.CommitContentBundleAsync(new CommitContentBundleCommand("{ malformed", [])));
+
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.LearningItems.ToArrayAsync());
+        Assert.Empty(await verify.Decks.ToArrayAsync());
+        Assert.Empty(await verify.ImportProvenance.ToArrayAsync());
+    }
+
+    [Fact]
     public async Task Provenance_conflict_rolls_back_all_mutations_in_the_transaction()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -63,6 +128,11 @@ public sealed class ContentAcquisitionPersistenceTests
     private static string Bundle(params string[] operations) => $"{{\"contract\":\"{ContentAcquisitionService.Contract}\",\"version\":\"1.0\",\"operations\":[{string.Join(',', operations)}]}}";
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
+    private sealed class IdentityOrdering : IStudySessionOrdering
+    {
+        public IReadOnlyList<Guid> Order(IReadOnlyList<Guid> learningItemIds) => learningItemIds.ToArray();
+    }
+
     private sealed class FixedDbContextFactory(SqliteConnection connection) : IDbContextFactory<IlluminationDbContext>
     {
         public IlluminationDbContext CreateDbContext() => new(new DbContextOptionsBuilder<IlluminationDbContext>().UseSqlite(connection).Options);

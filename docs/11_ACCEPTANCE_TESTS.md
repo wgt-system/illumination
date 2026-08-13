@@ -217,6 +217,14 @@ When the bundle is imported
 Then valid Illumination-owned content is created according to the contract
 And an explicit import result is returned.
 
+### Realistic bulk bundle
+
+Given a valid bundle with N Learning Item creates, one Deck create, and N assignment operations
+When the bundle is previewed and the selected operations are imported into SQLite
+Then exactly N Learning Items are persisted
+And the Deck contains exactly N memberships
+And the imported content is immediately available through Content Management and Study.
+
 
 ### Explicit update identity
 
@@ -352,6 +360,12 @@ Then the result identifies created/updated item and Deck IDs, applied membership
 
 Given an accepted subset commits successfully
 Then lightweight local provenance retains import/batch ID, timestamp, contract/version, optional bundle metadata, and operation counts/results.
+
+### Import requires current preview
+
+Given a selected subset has been imported successfully
+When the learner attempts Import Selected again without a new validation preview
+Then no second commit occurs.
 
 ## 13. Progress Views
 
