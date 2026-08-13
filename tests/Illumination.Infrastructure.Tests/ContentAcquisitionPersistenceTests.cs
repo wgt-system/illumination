@@ -1,6 +1,8 @@
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Application.Study;
+using Illumination.Domain.Identity;
+using Illumination.Domain.Learning;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Illumination.Infrastructure.Persistence;
@@ -118,6 +120,43 @@ public sealed class ContentAcquisitionPersistenceTests
         Assert.Single(await verify.LearningItems.ToArrayAsync());
         Assert.Single(await verify.ImportProvenance.ToArrayAsync());
         Assert.DoesNotContain(await verify.LearningItems.ToArrayAsync(), item => item.Prompt == "Second");
+    }
+
+    [Fact]
+    public async Task Acquisition_persists_the_domain_revision_for_multiple_updates_return_to_original_and_noop()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var factory = new FixedDbContextFactory(connection);
+        var itemId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await using (var setup = await factory.CreateDbContextAsync())
+        {
+            await setup.Database.MigrateAsync();
+            setup.LearningItems.Add(DomainPersistenceMapper.ToRecord(LearningItem.Create(LearningItemId.From(itemId), "Original", "Solution", Now)));
+            await setup.SaveChangesAsync();
+        }
+
+        var acquisition = new ContentAcquisitionService(new EfCoreContentAcquisitionPersistence(factory), new FixedTimeProvider(Now));
+        await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle(
+            $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Changed one\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}",
+            $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Changed two\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}"), [0, 1]));
+        Assert.Equal(3, await ReadRevisionAsync(factory, itemId));
+
+        await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle(
+            $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Changed three\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}",
+            $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Original\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}"), [0, 1]));
+        Assert.Equal(5, await ReadRevisionAsync(factory, itemId));
+        await using (var verify = await factory.CreateDbContextAsync()) Assert.Equal("Original", (await verify.LearningItems.SingleAsync()).Prompt);
+
+        await acquisition.CommitContentBundleAsync(new CommitContentBundleCommand(Bundle(
+            $"{{\"op\":\"update_learning_item\",\"itemId\":\"{itemId}\",\"significance\":\"minor\",\"item\":{{\"prompt\":\"Original\",\"referenceSolution\":\"Solution\",\"responseMode\":\"self_assessed\",\"lowInteractionEligible\":false}}}}"), [0]));
+        Assert.Equal(5, await ReadRevisionAsync(factory, itemId));
+    }
+
+    private static async Task<int> ReadRevisionAsync(FixedDbContextFactory factory, Guid itemId)
+    {
+        await using var context = await factory.CreateDbContextAsync();
+        return await context.LearningItems.Where(x => x.LearningItemId == itemId).Select(x => x.ContentRevision).SingleAsync();
     }
 
     private static ContentAcquisitionCommitSnapshot CommitSnapshot(Guid batchId, Guid itemId, string prompt) => new(
