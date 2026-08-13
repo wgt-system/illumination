@@ -98,6 +98,97 @@ public sealed class ContentCurationServiceTests
         Assert.Empty(store.SavedItems);
     }
 
+    [Fact]
+    public async Task Generates_mode_specific_prompt_for_existing_item()
+    {
+        var itemId = Guid.NewGuid();
+        var service = new QualityReviewExchangeService(
+            new FakePersistence { Items = { [itemId] = Item(itemId) } },
+            new FakePersistence());
+
+        var prompt = await service.GeneratePromptAsync(new GenerateQualityReviewPromptCommand([itemId], QualityReviewPromptMode.SourceGrounded));
+
+        Assert.Contains(itemId.ToString("D"), prompt.Prompt);
+        Assert.Contains("ContentRevision: 1", prompt.Prompt);
+        Assert.Contains("source/evidence information", prompt.Prompt);
+        Assert.Contains("illumination.quality-review-result", prompt.Prompt);
+    }
+
+    [Fact]
+    public async Task Preview_keeps_mixed_validity_distinguishable_without_persistence()
+    {
+        var validId = Guid.NewGuid();
+        var invalidId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [validId] = Item(validId), [invalidId] = Item(invalidId) } };
+        var service = new QualityReviewExchangeService(store, store);
+        var raw = Bundle(Result(validId, 1, "pass", "model_review", "Clear."), Result(invalidId, 1, "unsupported", "model_review", "Bad outcome."));
+
+        var preview = await service.PreviewAsync(raw);
+
+        Assert.False(preview.IsValid);
+        Assert.Equal(2, preview.Results.Count);
+        Assert.True(preview.Results[0].IsValid);
+        Assert.False(preview.Results[1].IsValid);
+        Assert.Empty(store.SavedItems);
+    }
+
+    [Fact]
+    public async Task Stale_result_is_rejected_without_saving()
+    {
+        var itemId = Guid.NewGuid();
+        var current = Item(itemId) with { ContentRevision = 2 };
+        var store = new FakePersistence { Items = { [itemId] = current } };
+        var service = new QualityReviewExchangeService(store, store);
+        var raw = Bundle(Result(itemId, 1, "warning", "model_review", "Stale."));
+
+        var preview = await service.PreviewAsync(raw);
+        await Assert.ThrowsAsync<QualityReviewExchangeValidationException>(() => service.AcceptSelectedAsync(new AcceptQualityReviewResultsCommand(raw, [0])));
+
+        Assert.False(preview.IsValid);
+        Assert.Contains(preview.Results[0].Diagnostics, x => x.Code == "target.revision.stale");
+        Assert.Empty(store.SavedItems);
+    }
+
+    [Fact]
+    public async Task Accepts_selected_result_without_applying_suggested_correction()
+    {
+        var itemId = Guid.NewGuid();
+        var store = new FakePersistence { Items = { [itemId] = Item(itemId) } };
+        var service = new QualityReviewExchangeService(store, store);
+        var raw = Bundle(Result(itemId, 1, "warning", "source_grounded_review", "Needs a source.", "Rewrite it."));
+
+        var accepted = await service.AcceptSelectedAsync(new AcceptQualityReviewResultsCommand(raw, [0]));
+
+        var item = Assert.Single(accepted.AcceptedItems);
+        Assert.Equal("Prompt", item.Prompt);
+        Assert.Equal(1, item.ContentRevision);
+        Assert.Equal("Rewrite it.", Assert.Single(item.QualityReviews).SuggestedCorrection);
+        Assert.Single(store.SavedItems);
+    }
+
+    [Fact]
+    public async Task Exchange_public_contracts_expose_no_domain_types()
+    {
+        var contracts = new[]
+        {
+            typeof(QualityReviewExchangeService), typeof(QualityReviewPromptMode),
+            typeof(GenerateQualityReviewPromptCommand), typeof(GeneratedQualityReviewPrompt),
+            typeof(QualityReviewExchangePreview), typeof(QualityReviewResultPreview),
+            typeof(AcceptQualityReviewResultsCommand), typeof(QualityReviewExchangeAcceptanceResult),
+        };
+
+        Assert.DoesNotContain(PublicContractTypes(contracts), type => type.FullName?.StartsWith("Illumination.Domain.", StringComparison.Ordinal) == true);
+    }
+
+    private static string Bundle(params string[] results) =>
+        $"{{\"contract\":\"illumination.quality-review-result\",\"version\":\"1.0\",\"results\":[{string.Join(',', results)}]}}";
+
+    private static string Result(Guid itemId, int revision, string outcome, string evidenceType, string findings, string? suggestedCorrection = null)
+    {
+        var correction = suggestedCorrection is null ? string.Empty : $",\"suggestedCorrection\":\"{suggestedCorrection}\"";
+        return $"{{\"learningItemId\":\"{itemId:D}\",\"contentRevision\":{revision},\"outcome\":\"{outcome}\",\"evidenceType\":\"{evidenceType}\",\"findings\":\"{findings}\"{correction}}}";
+    }
+
     private static LearningItemSnapshot Item(Guid id) => new(
         id, "Prompt", "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false,
         LearningItemLifecycle.Active, true, DueAt, 5.0, 0.5, false, [], 1, [], []);

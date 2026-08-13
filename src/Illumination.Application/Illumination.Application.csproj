@@ -9,5 +9,6 @@
     <ProjectReference Include="..\Illumination.Domain\Illumination.Domain.csproj" />
     <PackageReference Include="JsonSchema.Net" Version="7.4.0" />
     <EmbeddedResource Include="..\..\schemas\illumination-content-bundle-1.0.schema.json" Link="Schemas\illumination-content-bundle-1.0.schema.json" />
+    <EmbeddedResource Include="..\..\schemas\illumination-quality-review-result-1.0.schema.json" Link="Schemas\illumination-quality-review-result-1.0.schema.json" />
   </ItemGroup>
 </Project>
