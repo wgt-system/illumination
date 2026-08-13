@@ -98,19 +98,24 @@ public sealed class ContentCurationServiceTests
         Assert.Empty(store.SavedItems);
     }
 
-    [Fact]
-    public async Task Generates_mode_specific_prompt_for_existing_item()
+    [Theory]
+    [InlineData(QualityReviewPromptMode.Standard, "model_review")]
+    [InlineData(QualityReviewPromptMode.Strict, "model_review")]
+    [InlineData(QualityReviewPromptMode.SourceGrounded, "source_grounded_review")]
+    public async Task Generates_mode_specific_prompt_with_required_evidence_type(QualityReviewPromptMode mode, string evidenceType)
     {
         var itemId = Guid.NewGuid();
         var service = new QualityReviewExchangeService(
             new FakePersistence { Items = { [itemId] = Item(itemId) } },
             new FakePersistence());
 
-        var prompt = await service.GeneratePromptAsync(new GenerateQualityReviewPromptCommand([itemId], QualityReviewPromptMode.SourceGrounded));
+        var prompt = await service.GeneratePromptAsync(new GenerateQualityReviewPromptCommand([itemId], mode));
 
         Assert.Contains(itemId.ToString("D"), prompt.Prompt);
         Assert.Contains("ContentRevision: 1", prompt.Prompt);
-        Assert.Contains("source/evidence information", prompt.Prompt);
+        Assert.Contains($"emit evidenceType \"{evidenceType}\"", prompt.Prompt);
+        Assert.DoesNotContain("emit evidenceType \"user_review\"", prompt.Prompt);
+        if (mode == QualityReviewPromptMode.SourceGrounded) Assert.Contains("source/evidence information", prompt.Prompt);
         Assert.Contains("illumination.quality-review-result", prompt.Prompt);
     }
 

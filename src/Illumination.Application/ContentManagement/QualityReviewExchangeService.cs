@@ -37,13 +37,16 @@ public sealed class QualityReviewExchangeService
             QualityReviewPromptMode.SourceGrounded => "Review rigorously and provide source/evidence information in findings for every material factual claim. Source-grounded evidence is not a generic Verified state.",
             _ => throw new ArgumentOutOfRangeException(nameof(command.Mode), command.Mode, "Unsupported quality review prompt mode."),
         };
+        var requiredEvidenceType = command.Mode == QualityReviewPromptMode.SourceGrounded
+            ? "source_grounded_review"
+            : "model_review";
         var guidance = string.IsNullOrWhiteSpace(command.AdditionalGuidance) ? string.Empty : $"Additional guidance: {command.AdditionalGuidance}";
         var items = string.Join(Environment.NewLine + Environment.NewLine, selected.Select(item => $"Learning Item ID: {item.Id:D}\nContentRevision: {item.ContentRevision}\nPrompt: {item.Prompt}\nReference Solution: {item.ReferenceSolution}"));
         var prompt = string.Join(Environment.NewLine, new[]
         {
             "You are reviewing existing Illumination Learning Items. This is a review exchange only; do not modify content.",
             string.Empty,
-            $"Return JSON only using contract \"{Contract}\" version \"{Version}\". Return one result for each supplied item. Preserve the exact learningItemId and contentRevision. Use outcome pass, warning, or needs_review; use evidenceType model_review, source_grounded_review, or user_review. Include human-readable findings and optionally suggestedCorrection. Do not use a generic Verified state.",
+            $"Return JSON only using contract \"{Contract}\" version \"{Version}\". Return one result for each supplied item. Preserve the exact learningItemId and contentRevision. Use outcome pass, warning, or needs_review; emit evidenceType \"{requiredEvidenceType}\" for every result. Include human-readable findings and optionally suggestedCorrection. Do not use a generic Verified state.",
             string.Empty,
             $"Mode guidance: {modeGuidance}",
             guidance,
