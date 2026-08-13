@@ -250,7 +250,7 @@ Deliver:
   - malformed-JSON repair prompt,
   - import results and lightweight provenance.
 
-v0.2 does not interpret submitted response payloads. The remaining response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering are v0.4 behavior.
+v0.2 does not interpret submitted response payloads. v0.3 adds session refinement, Study transparency, and Content Acquisition. v0.4 is Content Quality & Curation. Response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering belong to v0.5.
 
 The v0.3 first slice is session learning-stack semantics, grade previews, standalone Study transparency, and Content Acquisition. Content Acquisition is pulled forward so realistic Study/scheduler validation is practical without manually authoring large item sets.
 
@@ -269,15 +269,15 @@ Deliver:
 
 Deliver:
 
-- SelfAssessed interaction refinement,
-- Selection,
-- ShortText,
-- Code,
-- Manual/Assisted evaluation,
-- accepted short-answer comparison,
-- hints and assistance/reveal workflows,
-- optional hint influence,
-- low-interaction filtering by the existing persisted `lowInteractionEligible` property.
+- `SelfAssessed`, `Selection`, `ShortText`, and `Code` end-to-end interaction workflows over the existing authored response fields,
+- Manual and Assisted evaluation with advisory correctness and grade suggestions,
+- exact multi-choice set comparison and conservative accepted-short-answer comparison,
+- progressive hint and explicit assistance-answer-choice reveal workflows,
+- optional `ConsiderAssistance` suggestion influence without changing the final learner-selected grade,
+- durable v0.5 interaction facts on Review,
+- optional low-interaction filtering by the existing persisted `lowInteractionEligible` property.
+
+v0.5 does not introduce arbitrary code execution, fuzzy or semantic answer checking, direct LLM/API integration, Content Bundle 1.0 changes, or scheduler redesign.
 
 ### v0.6.0 – Learning Insight
 

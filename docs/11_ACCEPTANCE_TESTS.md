@@ -6,7 +6,7 @@ Behavioral acceptance baseline.
 
 Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, Study transparency, and structured Content Acquisition; v0.4 covers the remaining response interaction and evaluation work.
+The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, Study transparency, and structured Content Acquisition; v0.4 covers Content Quality & Curation; v0.5 covers response interaction and evaluation workflows.
 
 Content Quality & Curation is the next capability slice before the remaining v0.4 interaction work. Quality state is distinct from technical import validity and learner scheduling.
 
@@ -69,14 +69,14 @@ And Learning State is updated according to the scheduling model.
 
 Every completed Review changes a new Learning Item to `IsNew = false`.
 
-## 4. Direct Multiple Choice (v0.3)
+## 4. Direct Multiple Choice (v0.5)
 
 Given an item authored with direct answer choices
 When the learner selects an answer
 Then Illumination can determine automatic correctness when the item supports it
 And the learner can still complete the configured final assessment flow.
 
-## 5. Answer Choices as Assistance (v0.3)
+## 5. Answer Choices as Assistance (v0.5)
 
 Given a normal question with optional assistance choices
 When the learner first attempts free recall
@@ -85,7 +85,7 @@ Then the item remains the same Learning Item
 And revealing those choices is recorded as assistance if the configured history requires it
 And they are not treated as if the item had originally required direct multiple choice.
 
-## 6. Hint Behavior (v0.3)
+## 6. Hint Behavior (v0.5)
 
 ### Default hint policy
 
@@ -102,7 +102,7 @@ Then the configured evaluation/scheduling policy may use that fact.
 
 When enabled, hint use lowers the automatic suggested assessment by at most one grade, without forcing the learner's final grade.
 
-## 7. Automatic Evaluation (v0.3)
+## 7. Automatic Evaluation (v0.5)
 
 ### Disabled
 
@@ -198,7 +198,7 @@ Given a Mastered item
 When the learner unmarks Mastered
 Then it becomes immediately due while retaining its Review history and retained scheduling state.
 
-## 11. Low-Interaction Session (v0.3)
+## 11. Low-Interaction Session (v0.5)
 
 Given a study scope containing suitable and unsuitable items
 When the learner starts a low-interaction session
@@ -545,7 +545,7 @@ Given a v0.2 Review has no submitted response payload
 When the Review is completed
 Then no artificial response text is required.
 
-Actual text/code interaction workflows are deferred to v0.3, including normalized short-text matching and code execution.
+Actual text/code interaction workflows are v0.5, including conservative normalized short-text matching; arbitrary code execution remains out of scope.
 
 ## 19. Five-Grade Behavior
 
@@ -635,7 +635,7 @@ When the learner Unmarks Mastered
 Then its prior Review history and retained scheduling state remain
 And it becomes immediately due.
 
-## 21. Assisted Evaluation (v0.3)
+## 21. Assisted Evaluation (v0.5)
 
 Given automatic evaluation is enabled
 And a machine-checkable response is incorrect
@@ -646,14 +646,36 @@ Given the response is correct
 Then Illumination suggests `Gut`
 And the learner may override the suggestion.
 
-## 22. Low-Interaction Study Filtering (v0.3)
+Given Assisted evaluation is enabled for a `SelfAssessed` or `Code` item
+Then no automatic correctness is produced
+And the learner chooses the final grade manually.
+
+Given Assisted evaluation is enabled for a `Selection` item
+When the selected choice-ID set exactly equals the authored correct-choice-ID set
+Then correctness is true and the suggested grade is `Gut`
+When the sets differ
+Then correctness is false and the suggested grade is `Schwer`
+And choice order does not affect correctness.
+
+Given Assisted evaluation is enabled for a `ShortText` item
+When the response is compared with `acceptedShortAnswers`
+Then comparison trims surrounding whitespace, uses Unicode normalization Form C, and uses ordinal case-insensitive equality
+And punctuation and internal whitespace are not altered
+And fuzzy or semantic matching is not used.
+
+Given a correct Assisted result with `ConsiderAssistance` enabled
+And at least one hint or assistance answer choice was revealed
+Then the suggested grade is `Unsicher` instead of `Gut`
+And the learner may choose any final grade.
+
+## 22. Low-Interaction Study Filtering (v0.5)
 
 Given a Study Session scope contains items with different explicit `lowInteractionEligible` values
-When v0.3 low-interaction filtering is requested
+When v0.5 low-interaction filtering is requested
 Then only eligible items may participate if otherwise eligible
 And items that are not eligible are excluded.
 
-The existing persisted `lowInteractionEligible` property is the filtering input. Low-interaction filtering does not create separate Learning State or Review history.
+The existing authored `lowInteractionEligible` property is the filtering input. It is not inferred from ResponseMode. Filtering occurs before queue prioritization and new-item limiting, does not transform ResponseMode, and does not create separate Learning State or Review history.
 
 ## 23. Study Queue
 
@@ -699,20 +721,33 @@ Then no content is imported
 And the parser error is shown
 And Illumination can generate a repair prompt.
 
-## 28. Automatic Checking Scope
+## 28. v0.5 Interaction Mode Semantics
 
 Given a direct selection item
 When Assisted evaluation is enabled
-Then Illumination can determine exact correctness.
+Then Illumination can determine exact correctness only when the selected choice-ID set equals the authored correct-choice-ID set
+And at least one authored correct choice is required
+And unmarked `correct` values are treated as not correct.
 
 Given a short-text item with explicit accepted answers
 When Assisted evaluation is enabled
-Then Illumination compares normalized input against those accepted answers.
+Then Illumination compares conservatively after trimming surrounding whitespace and applying Unicode normalization Form C
+And uses ordinal case-insensitive equality against each accepted answer
+And does not ignore punctuation or alter internal whitespace.
 
-Given a code-response item
-When V1 is used
-Then Illumination does not execute or compile the submitted code
-And the learner may compare against the Reference Solution and self-assess.
+Given a `Code` response
+Then the captured response is shown alongside the Reference Solution
+And Illumination does not execute or compile it
+And Assisted evaluation falls back to manual assessment.
+
+Given a `SelfAssessed` response
+Then no machine-checkable response is required
+And the learner may reveal hints progressively and then the Reference Solution
+And the learner chooses the final five-grade assessment.
+
+Given a Review with an applicable response
+Then historical facts may retain the submitted response, nullable automatic correctness, suggested assessment, hint count, assistance-choice reveal, and Reference Solution reveal
+And those facts remain separate from mutable Learning Item content and Learning State.
 
 ## 29. V1 Import Operation Safety
 

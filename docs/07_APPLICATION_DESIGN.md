@@ -34,7 +34,7 @@ The user can:
 - add/remove/reorder hints,
 - configure direct answer choices where appropriate,
 - configure answer choices that may be revealed as assistance,
-- configure the existing response form (`SelfAssessed`, `Selection`, `ShortText`, or `Code`); evaluation behavior is v0.3,
+- configure the existing response form (`SelfAssessed`, `Selection`, `ShortText`, or `Code`); evaluation behavior is v0.5,
 - suspend an item and Reactivate a Suspended item,
 - mark/unmark an item as Mastered.
 
@@ -55,13 +55,13 @@ The user can:
 
 - begin a study session for an allowed scope,
 - receive one Learning Item at a time,
-- answer mentally/verbal-only where supported (v0.3),
-- enter a short response where supported (v0.3),
-- select direct answer choices where supported (v0.3),
-- request zero or more hints (v0.3),
-- reveal optional answer-choice assistance (v0.3),
-- reveal the Reference Solution (v0.3),
-- receive automatic correctness feedback when enabled and available (v0.3),
+- answer mentally/verbal-only where supported (v0.5),
+- enter a short response where supported (v0.5),
+- select direct answer choices where supported (v0.5),
+- request zero or more hints (v0.5),
+- reveal optional answer-choice assistance (v0.5),
+- reveal the Reference Solution (v0.5),
+- receive automatic correctness feedback when enabled and available (v0.5),
 - submit one of five final learning assessments,
 - immediately continue to the next selected item.
 
@@ -102,7 +102,7 @@ The Study Session owns a temporary session learning stack rather than a second L
 
 The durable Learning State retains difficulty, retained stability, future normal due state, and whether reinforcement remains required across sessions. The exact position in the current stack is Study Session state; the Study Session does not create a second Learning State.
 
-Low-interaction filtering is deferred to v0.3. Broader future Study Session scopes remain possible.
+Low-interaction filtering is a v0.5 Study Session option. Broader future Study Session scopes remain possible.
 
 The ordered assessment direction is already fixed:
 
@@ -127,7 +127,7 @@ The Application layer must also expose enough session transparency for a present
 
 For v0.2, Review completion records the final five-grade assessment and may retain an optional submitted response payload as opaque historical content. It does not interpret or automatically evaluate that payload.
 
-Actual response interaction workflows are v0.3. They may need transient state such as:
+Actual response interaction workflows are v0.5. They may need transient state such as:
 
 - which hints have been revealed,
 - whether answer choices were revealed as assistance,
@@ -138,7 +138,7 @@ Actual response interaction workflows are v0.3. They may need transient state su
 
 This transient UI/application state must not be mistaken for durable Learning State.
 
-## 6. Manual and Automatic Evaluation (v0.3)
+## 6. Manual and Assisted Evaluation (v0.5)
 
 Illumination supports two broad evaluation policies:
 
@@ -148,33 +148,33 @@ The learner always chooses the final five-grade assessment.
 
 Automatic checking may be disabled entirely.
 
-### Automatic assistance
+### Assisted evaluation
 
 Where an item can be checked automatically, the application may present a correctness result and use it as an aid to the review flow.
 
-In Assisted mode, the V1 default suggestion is `Schwer` for an incorrect machine-checkable response and `Gut` for a correct one. The learner may override the suggestion.
+In Assisted mode, Selection and ShortText produce `Schwer` for an incorrect response and `Gut` for a correct response. With the optional `ConsiderAssistance` session setting, a correct response after hint or assistance-choice reveal produces `Unsicher` instead. The learner may override any suggestion; the scheduler consumes only the confirmed final grade. SelfAssessed and Code fall back to manual assessment.
 
 The application provides a global default evaluation mode and a per-session override.
 
 Some item forms cannot be reliably checked automatically and therefore always require learner judgment.
 
-## 7. Hint Policy (v0.3)
+## 7. Hint and Assistance Policy (v0.5)
 
 Default:
 
 - any available hint may be requested,
-- multiple hints may be revealed progressively,
+- hints are revealed at most once per current Learning Item appearance and in authored order,
 - hint use does not automatically penalize the final assessment or scheduling.
 
 Optional behavior:
 
-- the user may enable a policy where hint usage influences evaluation/scheduling.
+- the learner may enable the per-session `ConsiderAssistance` setting.
 
 Default hint influence is off globally.
 
-The learner may override hint influence when starting a Study Session.
+`assistanceAnswerChoices` are optional help and remain distinct from Selection `directAnswerChoices`. They are revealed only explicitly. Revealing assistance does not change ResponseMode. Reference Solution reveal is explicit and is not itself treated as hint usage.
 
-When enabled and at least one hint is used, the automatically suggested assessment is lowered by at most one grade. Hint use never forces the learner's final grade.
+When `ConsiderAssistance` is enabled and a correct Assisted result used at least one hint or assistance answer choice, the suggested assessment is `Unsicher` instead of `Gut`. Incorrect still suggests `Schwer`. This changes only the suggestion and never constrains or rewrites the learner's final grade.
 
 ## 7A. Low-Interaction Eligibility
 
@@ -185,7 +185,7 @@ It may be set manually, through structured import, or from an application-propos
 The persisted property is explicit; it is not permanently inferred from item type.
 
 Low-interaction / bed mode only filters the Study Session pool. It has no separate scheduling state or learning progress.
-The explicit persisted property already exists; v0.3 adds Study Session filtering by that property.
+The explicit persisted property already exists; v0.5 adds optional Study Session filtering by that property.
 
 ## 8. Lifecycle Actions
 
@@ -487,14 +487,14 @@ Application design cannot yet finalize:
 - persistence/synchronization behavior,
 - authentication/user model if server-backed operation is chosen.
 
-## Automatic Evaluation (v0.3)
+## Automatic Evaluation (v0.5)
 
 Illumination supports:
 
 - `Manual`: no automatic correctness is required; final assessment is fully manual.
 - `Assisted`: machine-checkable answers may be evaluated and a grade suggested.
 
-v0.3 default suggestions:
+v0.5 default suggestions:
 
 - incorrect → `Schwer`,
 - correct → `Gut`.
@@ -506,12 +506,12 @@ Configuration:
 - one global default,
 - one per-Study-Session override.
 
-v0.3 machine-checkable behavior:
+v0.5 machine-checkable behavior:
 
 - direct selection answers: exact option correctness,
 - short text answers: normalized text comparison against explicitly stored accepted answers,
-- code answers: no execution/compilation in V1; compare against Reference Solution and self-assess,
-- no semantic LLM-based correctness guessing in V1.
+- code answers: capture and show alongside the Reference Solution; no execution/compilation or automatic checking without a future explicit checker,
+- no fuzzy, semantic, or LLM-based correctness guessing.
 
 ## Low-Interaction Mode
 

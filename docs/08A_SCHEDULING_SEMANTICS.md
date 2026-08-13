@@ -287,7 +287,7 @@ UnmarkMastered applies only to `Mastered`:
 - makes the item immediately due,
 - lets the next Review determine continued scheduling.
 
-## 11. Automatic Evaluation (v0.3)
+## 11. Automatic Evaluation (v0.5)
 
 Two modes exist:
 
@@ -297,28 +297,29 @@ The learner always chooses the assessment grade.
 
 ### Assisted
 
-For machine-checkable items:
+For machine-checkable items in v0.5:
 
 - incorrect → default suggestion `Schwer`,
 - correct → default suggestion `Gut`.
 
-The learner may override the suggestion.
+The learner may override the suggestion. `Selection` and `ShortText` are machine-checkable; `SelfAssessed` and `Code` fall back to manual assessment.
 
 Automatic correctness is distinct from Learning Assessment.
 
-## 12. Hint Influence (v0.3)
+## 12. Hint and Assistance Influence (v0.5)
 
 Default:
 
 - hint usage has no assessment or scheduling penalty.
 
-Optional per-session override:
+Optional per-session setting `ConsiderAssistance`:
 
-- if hint influence is enabled and at least one hint was used, the automatically suggested assessment is lowered by at most one grade.
+- if a correct Assisted result used at least one hint or assistance-answer-choice reveal, the suggestion is `Unsicher` instead of `Gut`.
+- an incorrect result still suggests `Schwer`.
 
 Hint use never forces the final learner-selected grade.
 
-Multiple hints do not stack repeated penalties.
+Assistance usage has no effect by default, and multiple reveals do not stack repeated penalties.
 
 ## 13. Session Ordering
 

@@ -35,7 +35,7 @@ Prompt:
 - Revealing a hint and revealing the reference solution are distinct actions.
 - The rating labels and scheduling calculation are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
-## 3. Scenario: Multiple-Choice Review (v0.3)
+## 3. Scenario: Multiple-Choice Review (v0.5)
 
 ### Goal
 
@@ -54,7 +54,7 @@ Review an item through a low-friction explicit response.
 
 Automatic correctness may suggest a grade; the learner chooses the final Learning Assessment.
 
-## 4. Scenario: Very Short Text Answer (v0.3)
+## 4. Scenario: Very Short Text Answer (v0.5)
 
 ### Goal
 
@@ -79,7 +79,7 @@ Prompt:
 
 Short text input must remain appropriate to the low-friction learning model. Long-form written answers are not assumed.
 
-## 5. Scenario: Small Coding Task (v0.3)
+## 5. Scenario: Small Coding Task (v0.5)
 
 ### Goal
 
@@ -105,7 +105,7 @@ Prompt:
 
 The reference solution is exemplary rather than necessarily the only valid implementation.
 
-## 6. Scenario: Low-Interaction Session (v0.3)
+## 6. Scenario: Low-Interaction Session (v0.5)
 
 ### Goal
 
@@ -125,7 +125,7 @@ Review suitable material with minimal physical interaction.
 
 Illumination needs some way to determine whether a learning item is suitable for this mode.
 
-Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is deferred to v0.3; it is not part of the initial v0.2 Study Session scope.
+Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is a v0.5 Study Session option; it is not inferred from ResponseMode.
 
 ## 7. Scenario: Difficult Item Reappears Quickly
 
@@ -366,4 +366,4 @@ These scenarios establish the following domain pressures:
 - external references without shared ownership,
 - derived progress views.
 
-The initial five-grade scale and deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. The v0.2 scope is Study Sessions, Review history, Learning State, scheduling, relearning and queueing, with optional opaque submitted-response retention. v0.3 covers response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.
+The initial five-grade scale and deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. The v0.2 scope is Study Sessions, Review history, Learning State, scheduling, relearning and queueing, with optional opaque submitted-response retention. v0.3 covers session refinement, Study transparency, and Content Acquisition. v0.5 covers response interaction workflows, automatic correctness and grade suggestions, hint influence, and low-interaction filtering.

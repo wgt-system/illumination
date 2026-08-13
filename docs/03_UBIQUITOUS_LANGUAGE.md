@@ -100,7 +100,7 @@ A learning mode in which suitable items can be reviewed with minimal typing and 
 
 This includes mental or verbal recall, simple selection, rapid hint reveal, solution reveal, and quick assessment.
 
-Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is deferred to v0.3.
+Suitability is represented by the explicit `lowInteractionEligible` Learning Item property. Low-interaction filtering is a v0.5 Study Session option.
 
 ### Structured Import
 
@@ -159,7 +159,7 @@ Existing Learning Item response forms include:
 - `ShortText`,
 - `Code`.
 
-The v0.3 scope is the end-to-end workflow for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX.
+The v0.5 scope is the end-to-end workflow for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX. The forms themselves and their authored content fields already exist in the Learning Item model.
 
 Answer choices may be either:
 
@@ -188,7 +188,7 @@ An automatically detectable correct answer may inform a learning assessment.
 
 The final assessment may still represent difficulty, recall quality, or required assistance.
 
-Automatic correctness may inform a suggested grade in v0.3, while the learner chooses the final assessment.
+Automatic correctness may inform a suggested grade in v0.5, while the learner chooses the final assessment.
 
 ### Learning Progress != Analytics Dashboard
 
@@ -202,7 +202,7 @@ The reference solution is stored learning content.
 
 A learner response is what happened during a review.
 
-In v0.2, a Review may retain an optional submitted response payload as opaque historical content. Interpretation, automatic evaluation, normalization, and execution belong to v0.3.
+In v0.2, a Review may retain an optional submitted response payload as opaque historical content. v0.5 may retain the submitted response when applicable, nullable automatic correctness, a suggested assessment when produced, hint and assistance reveal facts, and Reference Solution reveal. Interpretation and deterministic checking belong to v0.5; arbitrary code execution and fuzzy/semantic checking do not.
 
 ### Independent Application != Every-Platform Native Client
 

@@ -88,7 +88,7 @@ A Learning Item may use one of the following existing response forms:
 
 These are interaction forms, not separate aggregate types.
 
-The v0.3 scope covers the end-to-end workflows for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX.
+The v0.5 scope covers the end-to-end workflows for these forms, including interaction handling, assistance/reveal behavior, automatic evaluation, normalization/checking, and code-response UX.
 
 ## 3. Value / Entity: Reference Solution
 
@@ -120,7 +120,7 @@ Default behavior:
 
 > The learner may request as many available hints as desired without automatic penalty.
 
-The exact penalty or scheduling consequence, when enabled, is not yet defined.
+When explicitly enabled through the v0.5 `ConsiderAssistance` session setting, a correct Assisted result after hint or assistance-choice reveal suggests `Unsicher` instead of `Gut`; incorrect still suggests `Schwer`. The learner's final assessment remains unconstrained.
 
 ## 5. Optional Answer Choices
 
@@ -155,10 +155,13 @@ Potentially relevant interaction facts include:
 - hints requested,
 - whether answer choices were revealed as assistance,
 - optional submitted response payload when retained,
-- automatically detected correctness when available in v0.3,
+- nullable automatically detected correctness when available in v0.5,
+- suggested assessment when automatic checking produced one,
+- number of hints revealed,
+- whether assistance answer choices were revealed,
 - whether the reference solution was revealed.
 
-In v0.2, an optional submitted response payload is opaque historical content; v0.3 defines response interaction workflows and any interpretation or evaluation.
+In v0.2, an optional submitted response payload is opaque historical content. In v0.5, the submitted response and the listed interaction facts may be retained as immutable Review history; they remain separate from mutable Learning Item content and Learning State.
 
 ### Invariants
 
@@ -207,7 +210,7 @@ Immediate, confident recall. The item graduates from the current session learnin
 
 Neither is reached automatically through assessment grades.
 
-## 8. Automatic Evaluation Policy (v0.3)
+## 8. Automatic Evaluation Policy (v0.5)
 
 Automatic answer evaluation is optional.
 
@@ -221,10 +224,11 @@ No automatic correctness judgment is required. The learner always chooses the fi
 
 When the response is machine-checkable, Illumination may determine correctness and suggest a grade.
 
-Default v0.3 suggestion:
+The v0.5 policy is:
 
-- incorrect → `Schwer`,
-- correct → `Gut`.
+- incorrect machine-checkable response → `Schwer`,
+- correct machine-checkable response → `Gut`,
+- with `ConsiderAssistance` enabled and assistance used for a correct response → `Unsicher` instead of `Gut`.
 
 The learner can change the suggested grade before completing the Review.
 
@@ -235,7 +239,17 @@ The user has:
 - a global default evaluation mode,
 - a per-Study-Session override.
 
-Items that cannot be checked automatically continue through manual assessment.
+`SelfAssessed` and `Code` continue through manual assessment. `Selection` and `ShortText` are machine-checkable in v0.5.
+
+### Response mode semantics
+
+`SelfAssessed` requires no machine-checkable response. The learner may reveal progressively ordered hints and then the Reference Solution; the learner always chooses the final five-grade Learning Assessment.
+
+For `Selection`, `directAnswerChoices` are the authored response mechanism. One or more choices may be correct. Correctness requires the selected choice-ID set to equal the authored correct-choice-ID set exactly; order is irrelevant, at least one correct choice is required, and an unmarked `correct` value means not correct.
+
+For `ShortText`, Assisted evaluation trims surrounding whitespace, applies Unicode normalization Form C, and compares using ordinal case-insensitive equality against `acceptedShortAnswers`. Internal whitespace and punctuation are not altered, and matching is not fuzzy or semantic. Multiple accepted answers are intentional alternatives.
+
+For `Code`, the small response is captured and shown alongside the Reference Solution. v0.5 introduces no arbitrary execution or sandbox; without a future explicit checker, Code uses manual assessment even in Assisted mode.
 
 ## 8A. Content Quality and Curation
 
@@ -392,7 +406,7 @@ A Learning Item may be explicitly deleted with confirmation. Explicit Learning I
 
 Review history is otherwise retained completely and without a product-level retention limit.
 
-In v0.2, a Review may retain an optional submitted response payload without interpreting it. Actual text/code interaction workflows, normalized matching, and code execution are v0.3 concerns.
+In v0.2, a Review may retain an optional submitted response payload without interpreting it. Actual text/code interaction workflows and conservative normalized matching are v0.5 concerns; arbitrary code execution remains out of scope.
 
 ## 12. Study Session
 
@@ -447,7 +461,7 @@ A Study Session is retained as lightweight history including:
 - mode,
 - associated Review identities.
 
-The Study Session does not own a separate copy of Learning State. Low-interaction filtering is deferred to v0.3.
+The Study Session does not own a separate copy of Learning State. Low-interaction filtering is a v0.5 option and is applied before normal queue prioritization and new-item limiting.
 
 ## 13. Content Import
 
