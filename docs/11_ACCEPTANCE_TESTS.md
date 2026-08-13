@@ -390,6 +390,16 @@ Given a Quality Review with outcome `Pass` bound to the Learning Item's current 
 When current quality state is requested
 Then that evidence is recognized for the current revision.
 
+### Content revision semantics
+
+Given a new Learning Item
+Then its ContentRevision is `1`
+When one successful logical update changes one or more quality-relevant fields (Prompt, Reference Solution, Hints, response mode, answer choices, or accepted short answers)
+Then ContentRevision increases exactly once
+When an update changes no quality-relevant content
+Then ContentRevision does not increase
+And changing scheduling state, lifecycle, Deck membership, User Flags, or `lowInteractionEligible` does not increase it.
+
 ### Content edit invalidates current assurance
 
 Given a current-revision Quality Review
@@ -397,6 +407,19 @@ When the Prompt, Reference Solution, or other semantically relevant content chan
 Then the content revision increases
 And the old Quality Review remains immutable history
 And it no longer counts as assurance for the current revision.
+
+### Explicit Quality Review supersession
+
+Given multiple Quality Reviews for one Learning Item and current content revision
+When an accepted Quality Review explicitly supersedes selected older reviews
+Then the superseded reviews remain immutable history
+And only non-superseded reviews contribute to Current Quality State
+And Review Type does not cause automatic supersession.
+
+### Current quality precedence
+
+Given non-superseded current-revision Quality Reviews with different outcomes
+Then Current Quality State precedence is `NeedsReview`, then `Warning`, then `Pass`, then no assurance.
 
 ### Warning is non-blocking
 
@@ -430,6 +453,13 @@ And content changes only after the learner explicitly applies the correction thr
 Given a Learning Item with User Flags and a machine or user Quality Review
 Then flags and current quality state remain separately addressable
 And changing one does not silently change the other.
+
+### User-defined multiple flags
+
+Given user-defined flag definitions
+When a learner applies multiple flags to one Learning Item
+Then all selected flags remain independently addressable
+And their meanings are user-owned rather than fixed by Illumination.
 
 ### Quality review workflow
 

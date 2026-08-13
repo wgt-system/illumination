@@ -84,9 +84,10 @@ Uses the published Content Bundle 1.0 contract and explicit stable Illumination 
 Goal:
 
 - User Flags and flag filtering,
+- user-defined flag definitions with multiple flags per Learning Item, independent of scheduling, content revision, and quality assurance,
 - immutable Quality Reviews with `Pass`, `Warning`, and `NeedsReview`,
 - ModelReview, SourceGroundedReview, and UserReview evidence types,
-- content revision binding and derived current quality state,
+- ContentRevision starting at `1`, exact change-sensitive increments, explicit review supersession, and derived current quality state with deterministic precedence,
 - quality-review prompts, findings preview, explicit acceptance, and optional correction application.
 
 ### Milestone E – Interaction Variants

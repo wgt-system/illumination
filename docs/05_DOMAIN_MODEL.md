@@ -245,19 +245,19 @@ The same semantics apply across domains, including programming explanations, mat
 
 ### User Flags
 
-A Learning Item may have lightweight user-owned flags. Flags are independent of objective correctness and machine quality state. Multiple slots or colors are allowed, with user-defined meanings such as “review later”, “bad wording”, or “replace”. Applying or removing a flag is quick during Study and does not alter Review scheduling, Learning State, or content.
+A Learning Item may have multiple lightweight user-owned flags. Flag definitions are user-defined rather than a fixed number of hard-coded flags, and their meanings belong to the user; examples include “review later”, “bad wording”, or “replace”. Applying or removing a flag is quick during Study and does not alter Review scheduling, Learning State, content revision, or quality assurance.
 
 ### Quality Review
 
-A Quality Review is an immutable record concerning one Learning Item and one content revision. It contains an outcome of `Pass`, `Warning`, or `NeedsReview`, human-readable findings/reasons, optional suggested corrections, and a Review Type such as `ModelReview`, `SourceGroundedReview`, or `UserReview`.
+A Quality Review is an immutable record concerning one Learning Item and one content revision. It contains an outcome of `Pass`, `Warning`, or `NeedsReview`, human-readable findings/reasons, optional suggested corrections, and a Review Type such as `ModelReview`, `SourceGroundedReview`, or `UserReview`. When a result is explicitly accepted, it may name older Quality Reviews for the same Learning Item and content revision that it supersedes. Supersession is explicit, never automatic based on Review Type, and does not remove the superseded historical records.
 
 Quality Reviews do not silently mutate content. `SourceGroundedReview` is stronger evidence because it refers to sources, but it is not a mathematical guarantee of truth. No generic `Verified` state is used.
 
 ### Content revision binding and current quality state
 
-Each Learning Item has a durable monotonically increasing content revision number. It increases when the Prompt, Reference Solution, or other semantically relevant content changes. Old Quality Reviews remain immutable history bound to their original revision and no longer count as assurance for the current revision. User Flags are not quality assurance and are not invalidated by content revision changes.
+Each new Learning Item starts with content revision `1`. The durable revision increases exactly once for each successful logical update in which quality-relevant content actually changes: Prompt, Reference Solution, Hints, response mode, answer choices, or accepted short answers. A no-op update does not increment it. Scheduling state, lifecycle, Deck membership, User Flags, and `lowInteractionEligible` do not themselves change the revision. `minor` versus `semantic` import significance remains a scheduling distinction; either may increment the revision when content changes. Old Quality Reviews remain immutable history bound to their original revision and no longer count as assurance for the current revision. User Flags are not quality assurance and are not invalidated by content revision changes.
 
-Current quality state is derived from Quality Reviews bound to the current revision. If any current-revision review is `NeedsReview`, the state is `NeedsReview`; otherwise any `Warning` yields `Warning`; otherwise any `Pass` yields `Pass`; without a current-revision Quality Review, the item has no current quality assurance. The derived view exposes the applicable evidence type, findings, and suggested corrections.
+Current quality state is derived only from non-superseded Quality Reviews bound to the current revision. Its precedence is `NeedsReview`, then `Warning`, then `Pass`; without an applicable current-revision Quality Review, the item has no current quality assurance. The derived view exposes the applicable evidence type, findings, and suggested corrections.
 
 ### Generation quality mode and workflow
 
@@ -496,7 +496,7 @@ An assignment may reference an existing stable ID or a valid create operation se
 
 Creating an item or Deck assigns a new Illumination-owned stable identity. A bundle `localRef` is import-local and never becomes permanent identity. Creating content starts normal new Learning State and invents no Review history. Explicit assignment changes membership only and never duplicates Learning State or resets scheduling/history.
 
-A `minor` item update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` item update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Historical Reviews remain valid records of the previous content.
+A `minor` item update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` item update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Either significance increments ContentRevision exactly once when quality-relevant content changes; a no-op update does not. Historical Quality Reviews remain valid records of the previous content revision, but do not assure the new revision.
 
 Deck updates may rename supported Deck metadata but do not change membership unless an explicit assignment operation does so.
 

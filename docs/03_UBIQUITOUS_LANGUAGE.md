@@ -16,7 +16,7 @@ A review is historical. Once recorded, it describes what happened at that point 
 
 ### Quality Review
 
-An immutable historical assessment of one Learning Item's content at a specific content revision. Its outcome is `Pass`, `Warning`, or `NeedsReview`; it contains human-readable findings/reasons and may include suggested corrections. A Quality Review is distinct from a learner's five-grade Learning Assessment and never silently mutates content.
+An immutable historical assessment of one Learning Item's content at a specific content revision. Its outcome is `Pass`, `Warning`, or `NeedsReview`; it contains human-readable findings/reasons and may include suggested corrections. An accepted Quality Review may explicitly supersede older Quality Reviews for the same Learning Item and content revision. Supersession is never automatic based on Review Type; superseded reviews remain historical. A Quality Review is distinct from a learner's five-grade Learning Assessment and never silently mutates content.
 
 ### Quality Review Type
 
@@ -24,15 +24,15 @@ The evidence type of a Quality Review. At minimum: `ModelReview`, `SourceGrounde
 
 ### User Flag
 
-A lightweight user-owned marker on a Learning Item, independent of objective correctness and machine quality state. Multiple slots or colors are allowed, with user-defined meanings such as “review later”, “bad wording”, or “replace”. Flags are quick to apply during Study and filterable later.
+A lightweight user-owned marker on a Learning Item, independent of objective correctness and machine quality state. Flag definitions are user-defined rather than a fixed set of hard-coded flags; a Learning Item may have multiple flags. Meanings belong to the user, such as “review later”, “bad wording”, or “replace”. Flags are quick to apply during Study and filterable later.
 
 ### Content Revision
 
-A monotonically increasing durable revision number for the semantically relevant content of one Learning Item. Quality Reviews bind to the revision they reviewed. When the Prompt, Reference Solution, or other semantically relevant content changes, the revision increases; older Quality Reviews remain historical but no longer provide assurance for the current revision.
+A durable revision number for the quality-relevant content of one Learning Item. New Learning Items start at revision `1`. The revision increases exactly once per successful logical update when Prompt, Reference Solution, Hints, response mode, answer choices, or accepted short answers actually change. A no-op update does not increment it. Scheduling state, lifecycle, Deck membership, User Flags, and `lowInteractionEligible` do not themselves change the revision. `minor` versus `semantic` import significance remains a scheduling distinction; either may increment the revision when quality-relevant content changes. Quality Reviews bind to the revision they reviewed; when the revision changes, older reviews remain historical but no longer provide assurance for the current revision.
 
 ### Current Quality State
 
-The derived quality status for the current content revision, calculated from Quality Reviews bound to that revision rather than stored as redundant mutable truth. If any current-revision review is `NeedsReview`, the state is `NeedsReview`; otherwise any `Warning` yields `Warning`; otherwise any `Pass` yields `Pass`; with no current-revision review there is no current quality assurance.
+The derived quality status for the current content revision, calculated only from non-superseded Quality Reviews bound to that revision rather than stored as redundant mutable truth. Precedence is `NeedsReview`, then `Warning`, then `Pass`; with no applicable review there is no current quality assurance.
 
 ### Reference Solution
 

@@ -360,7 +360,7 @@ An assignment is valid only when each referenced item or Deck either already exi
 
 `assign_item_to_decks` adds explicit membership without duplicating Learning State or resetting scheduling/history.
 
-For `update_learning_item`, only an explicit stable `itemId` authorizes mutation. A `minor` update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Historical Reviews describe the previous content and are not deleted.
+For `update_learning_item`, only an explicit stable `itemId` authorizes mutation. New items start at ContentRevision `1`. A successful logical update increments ContentRevision exactly once if Prompt, Reference Solution, Hints, response mode, answer choices, or accepted short answers actually change; a no-op update does not. Scheduling state, lifecycle, memberships, User Flags, and `lowInteractionEligible` do not themselves increment it. A `minor` update changes content while preserving Review history, current Learning State, lifecycle, and memberships. A `semantic` update changes content while preserving immutable Review history, lifecycle, and memberships, then resets current scheduling to new defaults (`IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required) and makes the item immediately due at update time. Either significance may increment ContentRevision when quality-relevant content changes. Historical Quality Reviews describe the previous revision and are not deleted.
 
 `update_deck` may rename or update supported Deck metadata; it does not change membership unless explicit assignment operations do so.
 
@@ -426,7 +426,7 @@ Application capabilities should support:
 - explicitly accepting a Quality Review result,
 - optionally applying a suggested correction through normal content-update semantics.
 
-Quality Review results are bound to the Learning Item content revision they reviewed. A content edit creates a new revision and leaves earlier Quality Reviews historical. `Pass`, `Warning`, and `NeedsReview` remain distinct; `NeedsReview` is visible and actionable but is not an automatic import block. Application contracts expose no Domain or EF types.
+Quality Review results are bound to the Learning Item content revision they reviewed. An accepted result may explicitly supersede older reviews for the same item and revision; supersession is never inferred from Review Type, and superseded reviews remain historical. A content edit that changes quality-relevant content creates exactly one new revision; a no-op or non-content update does not. Current quality state is derived only from non-superseded reviews for the current revision, with precedence `NeedsReview` → `Warning` → `Pass` → no assurance. `NeedsReview` is visible and actionable but is not an automatic import block. Application contracts expose no Domain or EF types.
 
 ## 14. Future Vocation Integration
 
