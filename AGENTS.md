@@ -23,6 +23,12 @@ Before proposing or implementing changes:
 3. identify explicit decisions and explicitly open questions,
 4. do not infer product behavior from analogies such as Anki unless the documentation states it.
 
+## WGT System Architecture
+
+The system-level architecture source of truth is `wgt-system/architecture`. Before introducing cross-context integration, synchronization or replication, generic relay/storage infrastructure, shared infrastructure, or another system-wide capability, consult its Capability Catalog and Integration Policy.
+
+Generic durable opaque cross-device delivery is owned by Conveyance. Wiiii Got This owns device/platform integration and presentation. Illumination remains authoritative for Learning-domain semantics and for future Illumination-specific publication, command, authority, merge, conflict, and reconciliation semantics. If an existing generic capability is conceptually correct but insufficient, return the requirement to the System Architecture Control Plane rather than creating a competing subsystem. Runtime code must not depend on the architecture repository.
+
 ## Product boundaries
 
 Illumination owns:

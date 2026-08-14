@@ -273,7 +273,7 @@ Illumination owns all authoritative data required for its learning domain, inclu
 
 Authoritative learning data is local-first and is not intended to be stored remotely merely for convenience.
 
-SQLite with EF Core is the accepted local persistence baseline. Optional server, Docker, or relay infrastructure may later support connectivity or synchronization without changing Illumination's domain ownership. Illumination owns future domain-specific synchronization and merge semantics; generic WGT infrastructure may own transport, relay, retry, and encryption concerns.
+SQLite with EF Core is the accepted local persistence baseline. Optional server, Docker, or Conveyance-backed delivery infrastructure may later support connectivity or synchronization without changing Illumination's domain ownership. Illumination must first define future domain-specific publication, change, command, authority, merge, conflict, and reconciliation semantics; generic durable opaque delivery belongs to Conveyance and does not transfer that ownership. No concrete synchronization mechanism is selected.
 
 ## 17. Explicitly Outside the Domain
 

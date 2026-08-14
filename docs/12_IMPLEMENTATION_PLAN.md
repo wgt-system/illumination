@@ -193,7 +193,7 @@ Proceed with the v0.1.0 vertical slices in order, keeping the accepted contracts
 - SQLite
 - executable capability runtime with Wiiii Got This as the primary end-user presentation
 - no mandatory remote server
-- optional server/Docker/relay infrastructure for connectivity or synchronization only
+- optional server/Docker/Conveyance-backed delivery infrastructure for connectivity or future synchronization only
 
 Implementation planning should use this baseline unless a later ADR explicitly supersedes it.
 

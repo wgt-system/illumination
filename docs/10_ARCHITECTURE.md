@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary end-user presentation on Windows and iPhone. An Avalonia host may remain optional for standalone administration and development. Core local operation requires no server; optional server, Docker, or relay infrastructure may support connectivity or synchronization.
+Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary end-user presentation on Windows and iPhone. An Avalonia host may remain optional for standalone administration and development. Core local operation requires no server; optional server, Docker, or Conveyance-backed delivery infrastructure may support connectivity or future synchronization.
 
 ## 1. Architectural Goal
 
@@ -139,7 +139,7 @@ Future multi-device access must not silently move authoritative personal learnin
 
 A personal server exists but is not required for core Illumination operation and is not the authoritative learning-data store.
 
-It may later provide optional infrastructure such as connectivity/relay, opt-in encrypted synchronization support, opt-in backup, or deployment of integration components.
+It may later provide optional infrastructure such as connectivity, opt-in backup, or deployment of integration components. Generic durable opaque cross-device delivery belongs to Conveyance; any Illumination-specific synchronization payload and semantics remain Illumination-owned.
 
 Any remote persistence of readable learning data requires a new explicit product/architecture decision.
 
@@ -223,7 +223,7 @@ Wiiii Got This may later expose Illumination capabilities on other devices, incl
 
 Because authoritative learning data is local, multi-device access requires an explicit future access/synchronization design.
 
-Possible design directions include direct access to a running Illumination instance, device-to-device replication, or end-to-end encrypted relay/synchronization in which remote infrastructure cannot interpret the learning payload.
+Possible design directions include direct access to a running Illumination instance, device-to-device replication, or opaque protected delivery through an accepted Conveyance mode in which remote infrastructure cannot interpret the learning payload. These are possibilities only; no concrete mechanism is selected.
 
 No synchronization mechanism is selected yet.
 
@@ -277,7 +277,7 @@ A Wiiii Got This adapter/host may expose explicit versioned contracts without ma
 
 Docker, server, or relay infrastructure is optional and must not become mandatory for core local operation.
 
-Optional future remote relay/synchronization infrastructure is a separate concern.
+Optional future delivery/synchronization infrastructure is a separate concern. Conveyance owns generic durable opaque cross-device delivery; Illumination owns the learning-domain meaning of any future synchronized changes.
 
 ## Local Backup Direction
 
@@ -307,5 +307,6 @@ Requirements for that later design:
 - Illumination remains owner of learning semantics,
 - remote readable storage is not assumed,
 - device-local operation after synchronization is a goal,
-- Illumination owns future domain-specific synchronization and merge semantics,
-- generic Wiiii Got This infrastructure may own transport, relay, retry, and encryption concerns.
+- Illumination must first define future domain-specific publication, change, command, authority, merge, conflict, and reconciliation semantics,
+- an accepted Conveyance delivery mode may transport the resulting opaque information only after those semantics are defined,
+- Current Object is not a bidirectional learning-synchronization solution by default.

@@ -60,7 +60,7 @@ Illumination is local-first.
 
 Authoritative learning content, Review history, scheduling state, Decks, Study Sessions, and import history remain local to the user's device.
 
-A remote server is not required for core local operation. Optional server, Docker, or relay infrastructure may support connectivity and synchronization, but remote readable persistence is not assumed. Illumination owns future domain-specific synchronization and merge semantics; generic WGT infrastructure may own transport, relay, retry, and encryption concerns.
+A remote server is not required for core local operation. Optional server, Docker, or Conveyance-backed delivery infrastructure may support connectivity or future synchronization, but remote readable persistence is not assumed. Illumination must first define future domain-specific publication, change, command, authority, merge, conflict, and reconciliation semantics; generic delivery does not transfer that ownership. No concrete bidirectional synchronization mechanism is selected.
 
 ## Specification documents
 

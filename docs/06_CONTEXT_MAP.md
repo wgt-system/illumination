@@ -202,6 +202,8 @@ Wiiii Got This is the primary end-user presentation on Windows and iPhone. The e
 
 Illumination may be hosted locally in-process by Wiiii Got This, but only through explicit Illumination-owned application or published-contract boundaries. No speculative synchronization API is selected here.
 
+Generic durable opaque cross-device delivery belongs to the separate Conveyance bounded context. Conveyance does not own Illumination learning objects, publication, command, authority, merge, conflict, or reconciliation semantics. If a future Illumination requirement needs delivery semantics that Conveyance does not provide, the requirement returns to the System Architecture Control Plane rather than creating a local relay.
+
 ## 12. Physical Infrastructure
 
 Bounded-context separation does not require separate physical machines or database servers.
