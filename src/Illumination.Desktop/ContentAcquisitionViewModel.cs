@@ -121,6 +121,15 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     public int AssignmentOperationCount { get; private set; }
     public int TechnicalOperationCount { get; private set; }
 
+    public async Task LoadBundleFromDropAsync(IReadOnlyList<string> paths)
+    {
+        if (paths.Count != 1) { _reportStatus("Drop exactly one Content Bundle JSON file."); return; }
+        var path = paths[0];
+        if (!string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase)) { _reportStatus("Only .json Content Bundle files can be dropped."); return; }
+        try { RawJson = await File.ReadAllTextAsync(path); await ValidateCommand.ExecuteAsync(null); }
+        catch (Exception exception) { _reportStatus($"Could not load the dropped JSON file: {exception.Message}"); }
+    }
+
     public void AttachDesktopInteractions(IDesktopInteractionService desktopInteractions)
     {
         _desktopInteractions = desktopInteractions ?? throw new ArgumentNullException(nameof(desktopInteractions));
