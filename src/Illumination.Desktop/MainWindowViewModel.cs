@@ -39,6 +39,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<LearningItemView> AvailableDeckItems { get; } = [];
     public ObservableCollection<StudyAssessmentPreviewDisplay> AssessmentPreviews { get; } = [];
     public ObservableCollection<StudyQueueEntryDisplay> UpcomingStudyItems { get; } = [];
+    public ObservableCollection<string> RevealedHints { get; } = [];
+    public ObservableCollection<StudyChoiceDisplay> CurrentDirectChoices { get; } = [];
+    public ObservableCollection<StudyChoiceDisplay> CurrentAssistanceChoices { get; } = [];
+    public IReadOnlyList<StudyEvaluationModeOption> EvaluationModeOptions { get; } =
+    [new("Use global default", null), new("Manual", StudyEvaluationMode.Manual), new("Assisted", StudyEvaluationMode.Assisted)];
+    public IReadOnlyList<StudyEvaluationMode> EvaluationModes { get; } = [StudyEvaluationMode.Manual, StudyEvaluationMode.Assisted];
     public ContentAcquisitionViewModel ContentAcquisition { get; }
     public ContentCurationViewModel ContentCuration { get; }
 
@@ -63,8 +69,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(StartSessionCommand))]
     private DeckView? _selectedStudyDeck;
 
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasCurrentStudyItem)), NotifyCanExecuteChangedFor(nameof(RevealSolutionCommand)), NotifyCanExecuteChangedFor(nameof(GradeNochmalCommand)), NotifyCanExecuteChangedFor(nameof(GradeSchwerCommand)), NotifyCanExecuteChangedFor(nameof(GradeUnsicherCommand)), NotifyCanExecuteChangedFor(nameof(GradeGutCommand)), NotifyCanExecuteChangedFor(nameof(GradeLeichtCommand))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasCurrentStudyItem)), NotifyPropertyChangedFor(nameof(IsSelectionMode)), NotifyPropertyChangedFor(nameof(IsShortTextMode)), NotifyPropertyChangedFor(nameof(IsCodeMode)), NotifyPropertyChangedFor(nameof(IsSelfAssessedMode)), NotifyCanExecuteChangedFor(nameof(RevealSolutionCommand)), NotifyCanExecuteChangedFor(nameof(SubmitResponseCommand)), NotifyCanExecuteChangedFor(nameof(GradeNochmalCommand)), NotifyCanExecuteChangedFor(nameof(GradeSchwerCommand)), NotifyCanExecuteChangedFor(nameof(GradeUnsicherCommand)), NotifyCanExecuteChangedFor(nameof(GradeGutCommand)), NotifyCanExecuteChangedFor(nameof(GradeLeichtCommand))]
     private StudySessionItemView? _currentStudyItem;
+
+    [ObservableProperty] private StudyEvaluationModeOption _selectedEvaluationModeOption = new("Use global default", null);
+    [ObservableProperty] private StudyEvaluationMode _globalEvaluationMode = StudyEvaluationMode.Manual;
+    [ObservableProperty] private bool _considerAssistance;
+    [ObservableProperty] private bool _lowInteractionOnly;
+    [ObservableProperty] private StudyEvaluationMode _activeEvaluationMode = StudyEvaluationMode.Manual;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RevealAssistanceCommand))] private bool _assistanceAnswerChoicesRevealed;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RevealSolutionCommand))] private bool _isReferenceSolutionRevealed;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SubmitResponseCommand))] private string _shortTextResponse = string.Empty;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SubmitResponseCommand))] private string _codeResponse = string.Empty;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SubmitResponseCommand)), NotifyCanExecuteChangedFor(nameof(GradeNochmalCommand)), NotifyCanExecuteChangedFor(nameof(GradeSchwerCommand)), NotifyCanExecuteChangedFor(nameof(GradeUnsicherCommand)), NotifyCanExecuteChangedFor(nameof(GradeGutCommand)), NotifyCanExecuteChangedFor(nameof(GradeLeichtCommand))] private bool _responseSubmitted;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasAutomaticResult))] private bool? _automaticCorrectness;
+    [ObservableProperty] private StudyLearningAssessment? _suggestedAssessment;
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RevealSolutionCommand))]
     private bool _isSolutionRevealed;
@@ -83,12 +102,33 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool HasCurrentStudyItem => CurrentStudyItem is not null;
     public bool HasActiveSession => SessionIsActive;
+    public bool IsSelfAssessedMode => CurrentStudyItem?.ResponseMode == LearningItemResponseMode.SelfAssessed;
+    public bool IsSelectionMode => CurrentStudyItem?.ResponseMode == LearningItemResponseMode.Selection;
+    public bool IsShortTextMode => CurrentStudyItem?.ResponseMode == LearningItemResponseMode.ShortText;
+    public bool IsCodeMode => CurrentStudyItem?.ResponseMode == LearningItemResponseMode.Code;
+    public bool HasAutomaticResult => AutomaticCorrectness.HasValue;
 
-    public Task InitializeAsync() => RefreshContentAsync();
+    public async Task InitializeAsync()
+    {
+        GlobalEvaluationMode = await _study.GetDefaultEvaluationModeAsync();
+        await RefreshContentAsync();
+    }
 
     partial void OnSelectedDeckChanged(DeckView? value) => RebuildDeckMembershipLists();
 
-    partial void OnCurrentStudyItemChanged(StudySessionItemView? value) => ContentCuration.SetStudyItem(value?.Id);
+    partial void OnCurrentStudyItemChanged(StudySessionItemView? value)
+    {
+        ContentCuration.SetStudyItem(value?.Id);
+        ResetInteractionState(value);
+    }
+
+    partial void OnGlobalEvaluationModeChanged(StudyEvaluationMode value) => _ = PersistGlobalEvaluationModeAsync(value);
+
+    private async Task PersistGlobalEvaluationModeAsync(StudyEvaluationMode mode)
+    {
+        try { await _study.SetDefaultEvaluationModeAsync(mode); StatusMessage = $"Global evaluation default: {mode}."; }
+        catch (Exception exception) { StatusMessage = exception.Message; }
+    }
 
     [RelayCommand(CanExecute = nameof(CanCreateDeck))]
     private async Task CreateDeckAsync() => await RunAsync(async () =>
@@ -153,9 +193,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (SelectedStudyDeck is null) return;
         await RunAsync(async () =>
         {
-            var session = await _study.StartStudySessionAsync(new StartStudySessionCommand([SelectedStudyDeck.Id]));
+            var session = await _study.StartStudySessionAsync(new StartStudySessionCommand(
+                [SelectedStudyDeck.Id],
+                EvaluationMode: SelectedEvaluationModeOption.Mode,
+                ConsiderAssistance: ConsiderAssistance,
+                LowInteractionOnly: LowInteractionOnly));
             _activeSessionId = session.Id;
             SessionIsActive = true;
+            ActiveEvaluationMode = session.EvaluationMode;
             IsSolutionRevealed = false;
             await RefreshStudyTransparencyAsync();
             StatusMessage = CurrentStudyItem is null
@@ -167,12 +212,51 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool CanStartSession() => SelectedStudyDeck is not null && !SessionIsActive;
 
     [RelayCommand(CanExecute = nameof(CanRevealSolution))]
-    private void RevealSolution() => IsSolutionRevealed = true;
+    private async Task RevealSolutionAsync()
+    {
+        if (_activeSessionId is null) return;
+        await RunAsync(async () =>
+        {
+            await _study.RevealReferenceSolutionAsync(_activeSessionId.Value);
+            IsSolutionRevealed = true;
+            IsReferenceSolutionRevealed = true;
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRevealHint))]
+    private async Task RevealHintAsync() => await RunInteractionAsync(() => _study.RevealNextHintAsync(_activeSessionId!.Value));
+
+    [RelayCommand(CanExecute = nameof(CanRevealAssistance))]
+    private async Task RevealAssistanceAsync() => await RunInteractionAsync(() => _study.RevealAssistanceAnswerChoicesAsync(_activeSessionId!.Value));
+
+    [RelayCommand(CanExecute = nameof(CanSubmitResponse))]
+    private async Task SubmitResponseAsync()
+    {
+        if (_activeSessionId is null || CurrentStudyItem is null) return;
+        await RunAsync(async () =>
+        {
+            var selected = CurrentDirectChoices.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+            var result = await _study.SubmitResponseAsync(new SubmitStudyResponseCommand(
+                _activeSessionId.Value, CurrentStudyItem.Id,
+                IsSelectionMode ? selected : null,
+                IsShortTextMode ? ShortTextResponse : null,
+                IsCodeMode ? CodeResponse : null));
+            ResponseSubmitted = true;
+            AutomaticCorrectness = result.AutomaticCorrectness;
+            SuggestedAssessment = result.SuggestedAssessment;
+            StatusMessage = result.AutomaticCorrectness is { } correct
+                ? $"Response evaluated: {(correct ? "correct" : "incorrect")}. Choose the final grade."
+                : "Response recorded. Choose the final grade.";
+        });
+    }
 
     [RelayCommand]
     private Task ToggleStudyFlagAsync(Guid flagId) => ContentCuration.ToggleFlagCommand.ExecuteAsync(flagId);
 
     private bool CanRevealSolution() => HasCurrentStudyItem && !IsSolutionRevealed;
+    private bool CanRevealHint() => SessionIsActive && HasCurrentStudyItem && CurrentStudyItem!.Hints is { Count: > 0 } && RevealedHints.Count < CurrentStudyItem.Hints.Count;
+    private bool CanRevealAssistance() => SessionIsActive && HasCurrentStudyItem && !AssistanceAnswerChoicesRevealed && CurrentStudyItem!.AssistanceAnswerChoices is { Count: > 0 };
+    private bool CanSubmitResponse() => SessionIsActive && HasCurrentStudyItem && !IsSelfAssessedMode && !ResponseSubmitted;
 
     [RelayCommand(CanExecute = nameof(CanGrade))] private Task GradeNochmalAsync() => SubmitGradeAsync(StudyLearningAssessment.Nochmal);
     [RelayCommand(CanExecute = nameof(CanGrade))] private Task GradeSchwerAsync() => SubmitGradeAsync(StudyLearningAssessment.Schwer);
@@ -180,7 +264,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanGrade))] private Task GradeGutAsync() => SubmitGradeAsync(StudyLearningAssessment.Gut);
     [RelayCommand(CanExecute = nameof(CanGrade))] private Task GradeLeichtAsync() => SubmitGradeAsync(StudyLearningAssessment.Leicht);
 
-    private bool CanGrade() => SessionIsActive && CurrentStudyItem is not null;
+    private bool CanGrade() => SessionIsActive && CurrentStudyItem is not null && (IsSelfAssessedMode || ResponseSubmitted);
 
     [RelayCommand(CanExecute = nameof(CanCompleteSession))]
     private async Task CompleteSessionAsync()
@@ -282,10 +366,45 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ClearStudyPresentation()
     {
         CurrentStudyItem = null;
+        ResetInteractionState(null);
         RemainingQueueEntryCount = 0;
         CurrentItemRequiresReinforcement = false;
         AssessmentPreviews.Clear();
         UpcomingStudyItems.Clear();
+    }
+
+    private void ResetInteractionState(StudySessionItemView? item)
+    {
+        RevealedHints.Clear();
+        CurrentDirectChoices.Clear();
+        CurrentAssistanceChoices.Clear();
+        if (item is not null)
+        {
+            foreach (var choice in item.DirectAnswerChoices ?? []) CurrentDirectChoices.Add(new StudyChoiceDisplay(choice.Id, choice.Text));
+        }
+        AssistanceAnswerChoicesRevealed = false;
+        IsSolutionRevealed = false;
+        IsReferenceSolutionRevealed = false;
+        ShortTextResponse = string.Empty;
+        CodeResponse = string.Empty;
+        ResponseSubmitted = false;
+        AutomaticCorrectness = null;
+        SuggestedAssessment = null;
+        RevealHintCommand.NotifyCanExecuteChanged();
+        RevealAssistanceCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task RunInteractionAsync(Func<Task<StudyInteractionStateView>> operation)
+    {
+        await RunAsync(async () =>
+        {
+            var state = await operation();
+            RevealedHints.Clear();
+            foreach (var hint in state.RevealedHintTexts) RevealedHints.Add(hint);
+            AssistanceAnswerChoicesRevealed = state.AssistanceAnswerChoicesRevealed;
+            CurrentAssistanceChoices.Clear();
+            foreach (var choice in state.RevealedAssistanceAnswerChoices ?? []) CurrentAssistanceChoices.Add(new StudyChoiceDisplay(choice.Id, choice.Text));
+        });
     }
 
     private async Task RunAsync(Func<Task> action)

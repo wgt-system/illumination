@@ -188,7 +188,7 @@
           </StackPanel>
         </TabItem.Header>
         <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14,4,4,4">
-          <Grid ColumnDefinitions="Auto,280,Auto,Auto,*,Auto" ColumnSpacing="8">
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,280,Auto,Auto,*,Auto" ColumnSpacing="8" RowSpacing="6">
             <TextBlock Text="Deck" VerticalAlignment="Center" Classes="secondary" />
             <ComboBox Grid.Column="1" ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedStudyDeck}">
               <ComboBox.ItemTemplate>
@@ -198,6 +198,16 @@
             <Button Grid.Column="2" Content="Start" Command="{Binding StartSessionCommand}" />
             <Button Grid.Column="3" Content="Complete" Command="{Binding CompleteSessionCommand}" />
             <TextBlock Grid.Column="5" Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" Classes="secondary" />
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="Evaluation" VerticalAlignment="Center" Classes="secondary" />
+              <ComboBox ItemsSource="{Binding EvaluationModeOptions}" SelectedItem="{Binding SelectedEvaluationModeOption}" Width="170">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:StudyEvaluationModeOption"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="Global default" VerticalAlignment="Center" Classes="secondary" />
+              <ComboBox ItemsSource="{Binding EvaluationModes}" SelectedItem="{Binding GlobalEvaluationMode}" Width="110" />
+              <CheckBox Content="Consider assistance" IsChecked="{Binding ConsiderAssistance}" />
+              <CheckBox Content="Low-interaction only" IsChecked="{Binding LowInteractionOnly}" />
+            </StackPanel>
           </Grid>
 
           <Grid Grid.Row="1" ColumnDefinitions="*,240" ColumnSpacing="12">
@@ -214,7 +224,33 @@
                   <StackPanel VerticalAlignment="Center" Spacing="16" Margin="10,8">
                     <TextBlock Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Select a Deck and start a session.'}"
                                TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
+                    <ItemsControl IsVisible="{Binding IsSelectionMode}" ItemsSource="{Binding CurrentDirectChoices}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="desktop:StudyChoiceDisplay"><CheckBox Content="{Binding Text}" IsChecked="{Binding IsSelected}" Margin="12,2" /></DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBox IsVisible="{Binding IsShortTextMode}" Text="{Binding ShortTextResponse}" Watermark="Short response" />
+                    <TextBox IsVisible="{Binding IsCodeMode}" Text="{Binding CodeResponse}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="110" Watermark="Code response (not executed)" />
+                    <Button IsVisible="{Binding IsSelectionMode}" Content="Submit choices" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
+                    <Button IsVisible="{Binding IsShortTextMode}" Content="Submit response" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
+                    <Button IsVisible="{Binding IsCodeMode}" Content="Submit code response" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
+                    <StackPanel IsVisible="{Binding IsSelfAssessedMode}" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                      <Button Content="Reveal next hint" Command="{Binding RevealHintCommand}" />
+                      <Button Content="Reveal assistance choices" Command="{Binding RevealAssistanceCommand}" />
+                    </StackPanel>
+                    <ItemsControl IsVisible="{Binding AssistanceAnswerChoicesRevealed}" ItemsSource="{Binding CurrentAssistanceChoices}">
+                      <ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:StudyChoiceDisplay"><TextBlock Text="{Binding Text}" Classes="secondary" Margin="12,1" /></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl IsVisible="{Binding HasCurrentStudyItem}" ItemsSource="{Binding RevealedHints}">
+                      <ItemsControl.ItemTemplate><DataTemplate><Border Background="#12000000" Padding="8" Margin="4"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></Border></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <Button Content="Show solution" Command="{Binding RevealSolutionCommand}" HorizontalAlignment="Center" />
+                    <StackPanel IsVisible="{Binding HasAutomaticResult}" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                      <TextBlock Text="Automatic result:" Classes="secondary" />
+                      <TextBlock Text="{Binding AutomaticCorrectness}" FontWeight="SemiBold" />
+                      <TextBlock Text="Suggested grade:" Classes="secondary" />
+                      <TextBlock Text="{Binding SuggestedAssessment}" FontWeight="SemiBold" />
+                    </StackPanel>
                     <Border IsVisible="{Binding IsSolutionRevealed}" Background="#16000000" CornerRadius="5" Padding="16">
                       <StackPanel Spacing="5">
                         <TextBlock Text="Solution" Classes="secondary" />

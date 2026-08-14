@@ -86,6 +86,47 @@ public sealed class StudyPresentationTests
         Assert.Equal("Study Session completed.", viewModel.StatusMessage);
     }
 
+    [Fact]
+    public async Task ViewModel_exposes_assisted_selection_response_and_advisory_suggestion()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync(TestContext.Current.CancellationToken)) await setup.Database.MigrateAsync(TestContext.Current.CancellationToken);
+        var timeProvider = new FixedTimeProvider(Now);
+        var contentPersistence = new EfCoreContentPersistence(factory);
+        var content = new ContentManagementService(contentPersistence, timeProvider);
+        var study = new StudySessionService(new EfCoreStudySessionPersistence(factory), timeProvider, new IdentityOrdering());
+        await content.CreateLearningItemAsync(new CreateLearningItemCommand(
+            "Choose", "The first choice", LearningItemResponseMode.Selection,
+            DirectAnswerChoices: [new AnswerChoiceInput("First", true, "first-id"), new AnswerChoiceInput("Second", false, "second-id")],
+            LowInteractionEligible: true), TestContext.Current.CancellationToken);
+        var deck = await content.CreateDeckAsync(new CreateDeckCommand("Selection deck"), TestContext.Current.CancellationToken);
+        var item = Assert.Single(await content.ListLearningItemsAsync(TestContext.Current.CancellationToken));
+        await content.AddLearningItemToDeckAsync(deck.Id, item.Id, TestContext.Current.CancellationToken);
+        var vm = new MainWindowViewModel(content, study, new ContentAcquisitionService(new FakeAcquisitionPersistence(), timeProvider), new ContentCurationService(contentPersistence, contentPersistence), new QualityReviewExchangeService(contentPersistence, contentPersistence), timeProvider)
+        {
+            SelectedEvaluationModeOption = new StudyEvaluationModeOption("Assisted", StudyEvaluationMode.Assisted),
+            LowInteractionOnly = true,
+            SelectedStudyDeck = deck,
+        };
+        await vm.InitializeAsync();
+        await vm.StartSessionCommand.ExecuteAsync(null);
+
+        Assert.Equal(StudyEvaluationMode.Assisted, vm.ActiveEvaluationMode);
+        Assert.True(vm.IsSelectionMode);
+        Assert.True(vm.CurrentStudyItem!.LowInteractionEligible);
+        Assert.Equal(["first-id", "second-id"], vm.CurrentDirectChoices.Select(x => x.Id));
+        vm.CurrentDirectChoices.Single(x => x.Id == "first-id").IsSelected = true;
+        await vm.SubmitResponseCommand.ExecuteAsync(null);
+
+        Assert.True(vm.ResponseSubmitted);
+        Assert.True(vm.AutomaticCorrectness);
+        Assert.Equal(StudyLearningAssessment.Gut, vm.SuggestedAssessment);
+        await vm.GradeSchwerCommand.ExecuteAsync(null);
+        Assert.False(vm.ResponseSubmitted);
+    }
+
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
