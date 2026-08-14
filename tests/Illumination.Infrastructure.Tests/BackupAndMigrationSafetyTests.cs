@@ -124,6 +124,40 @@ public sealed class BackupAndMigrationSafetyTests
         Assert.True(HasTable(fixture.DatabasePath, "QualityReviews"));
     }
 
+    [Fact]
+    public async Task Released_v04_database_is_backed_up_and_receives_v05_neutral_defaults_and_legacy_choice_ids()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var fixture = new DatabaseFixture();
+        const string itemId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        const string reviewId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+        const string sessionId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+        await using (var oldContext = new IlluminationDbContext(fixture.CreateOptions()))
+        {
+            await oldContext.Database.MigrateAsync("20260813164131_PersistV04ContentQuality", cancellationToken);
+            await oldContext.Database.OpenConnectionAsync(cancellationToken);
+            await using var command = oldContext.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "INSERT INTO LearningItems (LearningItemId, Prompt, ReferenceSolutionContent, ResponseMode, LowInteractionEligible, LifecycleState, IsNew, DueAt, Difficulty, StabilityDays, IsInShortTermRelearning, ContentRevision) VALUES ($item, 'v0.4 prompt', 'v0.4 solution', 'Selection', 0, 'Active', 1, '2030-01-02T03:04:05.0000000+00:00', 5.0, 0.5, 0, 1); INSERT INTO AnswerChoices (LearningItemId, Role, Position, Text, IsCorrect) VALUES ($item, 'Direct', 0, 'A', 1), ($item, 'Direct', 1, 'B', 0), ($item, 'Assistance', 0, 'Help A', 0), ($item, 'Assistance', 1, 'Help B', 0); INSERT INTO Reviews (ReviewId, LearningItemId, CompletedAt, Assessment, SubmittedResponse) VALUES ($review, $item, '2030-01-02T03:04:05.0000000+00:00', 'Gut', 'A'); INSERT INTO StudySessions (StudySessionId, StartedAt, CompletedAt) VALUES ($session, '2030-01-02T03:04:05.0000000+00:00', NULL); INSERT INTO StudySessionQueue (StudySessionId, Position, LearningItemId) VALUES ($session, 0, $item); INSERT INTO StudySessionReviews (StudySessionId, Position, ReviewId) VALUES ($session, 0, $review);";
+            command.Parameters.Add(new SqliteParameter("$item", Guid.Parse(itemId)));
+            command.Parameters.Add(new SqliteParameter("$review", Guid.Parse(reviewId)));
+            command.Parameters.Add(new SqliteParameter("$session", Guid.Parse(sessionId)));
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await new SqliteMigrationCoordinator(fixture.CreateOptions(), new LocalSqliteBackupService(fixture.BackupDirectory, 1, fixture.TimeProvider)).MigrateAsync(cancellationToken);
+
+        var backup = Assert.Single(Directory.GetFiles(fixture.BackupDirectory, "illumination-backup-*.sqlite"));
+        Assert.Equal("4", ReadScalar(backup, "SELECT COUNT(*) FROM AnswerChoices"));
+        Assert.False(HasColumn(backup, "AnswerChoices", "ChoiceId"));
+        Assert.Equal("legacy-direct-0", ReadScalar(fixture.DatabasePath, "SELECT ChoiceId FROM AnswerChoices WHERE Role = 'Direct' AND Position = 0"));
+        Assert.Equal("legacy-direct-1", ReadScalar(fixture.DatabasePath, "SELECT ChoiceId FROM AnswerChoices WHERE Role = 'Direct' AND Position = 1"));
+        Assert.Equal("legacy-assistance-0", ReadScalar(fixture.DatabasePath, "SELECT ChoiceId FROM AnswerChoices WHERE Role = 'Assistance' AND Position = 0"));
+        Assert.Equal("Manual", ReadScalar(fixture.DatabasePath, "SELECT EvaluationMode FROM StudySessions"));
+        Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT CAST(ConsiderAssistance AS INTEGER) FROM StudySessions"));
+        Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT HintCount FROM Reviews"));
+        Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT CAST(ReferenceSolutionRevealed AS INTEGER) FROM Reviews"));
+    }
+
     private static bool HasTable(string databasePath, string tableName)
     {
         using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
@@ -141,6 +175,17 @@ public sealed class BackupAndMigrationSafetyTests
         using var command = connection.CreateCommand();
         command.CommandText = sql;
         return Convert.ToString(command.ExecuteScalar())!;
+    }
+
+    private static bool HasColumn(string databasePath, string tableName, string columnName)
+    {
+        using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT EXISTS (SELECT 1 FROM pragma_table_info($table) WHERE name = $column)";
+        command.Parameters.AddWithValue("$table", tableName);
+        command.Parameters.AddWithValue("$column", columnName);
+        return Convert.ToInt32(command.ExecuteScalar()) == 1;
     }
 
     private sealed class ThrowingBackupService : ILocalSqliteBackupService

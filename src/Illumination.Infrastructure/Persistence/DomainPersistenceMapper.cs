@@ -50,11 +50,11 @@ public static class DomainPersistenceMapper
     {
         var choices = record.AnswerChoices.OrderBy(x => x.Role).ThenBy(x => x.Position);
         return LearningItem.Restore(
-            LearningItemId.From(record.LearningItemId), record.Prompt, record.ReferenceSolutionContent,
+        LearningItemId.From(record.LearningItemId), record.Prompt, record.ReferenceSolutionContent,
             record.DueAt, record.IsNew, record.ResponseMode,
             record.Hints.OrderBy(x => x.Position).Select(x => new Hint(x.Text)),
-            choices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect, $"choice-{x.Position}")),
-            choices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect, $"assistance-{x.Position}")),
+            choices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.ChoiceId)),
+            choices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.ChoiceId)),
             record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value),
             record.LowInteractionEligible, record.LifecycleState, record.Difficulty, record.StabilityDays,
             record.IsInShortTermRelearning, record.ContentRevision,
@@ -87,6 +87,6 @@ public static class DomainPersistenceMapper
 
     private static AnswerChoiceRecord ToChoice(Guid itemId, AnswerChoiceRole role, int position, AnswerChoice choice) => new()
     {
-        LearningItemId = itemId, Role = role, Position = position, Text = choice.Text, IsCorrect = choice.IsCorrect,
+            LearningItemId = itemId, Role = role, Position = position, ChoiceId = string.IsNullOrWhiteSpace(choice.Id) ? null : choice.Id, Text = choice.Text, IsCorrect = choice.IsCorrect,
     };
 }

@@ -51,6 +51,36 @@ public sealed class StudySessionPersistenceTests
     }
 
     [Fact]
+    public async Task V05_review_interaction_facts_and_session_settings_round_trip()
+    {
+        using var fixture = new DatabaseFixture();
+        await fixture.MigrateLatestAsync();
+        var itemId = Guid.NewGuid();
+        var deckId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        await fixture.SeedItemAndDeckAsync(itemId, deckId);
+        var persistence = fixture.CreatePersistence();
+        var started = new StudySessionSnapshot(sessionId, fixture.Now, null, [deckId], [itemId], [], StudyEvaluationMode.Assisted, true, true);
+        await persistence.SaveStartedStudySessionAsync(started);
+        var review = new StudyReviewSnapshot(reviewId, itemId, fixture.Now, StudyLearningAssessment.Gut, "answer", true, StudyLearningAssessment.Unsicher, 2, true, true);
+        await persistence.CommitReviewAsync(fixture.CreateSnapshot(itemId, deckId, false, fixture.Now.AddDays(1), 5.5, 1.5, false), review, started with { Queue = [], ReviewIds = [reviewId] });
+
+        var recreated = fixture.CreatePersistence();
+        var session = await recreated.FindStudySessionAsync(sessionId);
+        await using var context = fixture.CreateContext();
+        var storedReview = await context.Reviews.SingleAsync(x => x.ReviewId == reviewId);
+        Assert.Equal(StudyEvaluationMode.Assisted, session!.EvaluationMode);
+        Assert.True(session.ConsiderAssistance);
+        Assert.True(session.LowInteractionOnly);
+        Assert.True(storedReview.AutomaticCorrectness);
+        Assert.Equal(LearningAssessment.Unsicher, storedReview.SuggestedAssessment);
+        Assert.Equal(2, storedReview.HintCount);
+        Assert.True(storedReview.AssistanceAnswerChoicesRevealed);
+        Assert.True(storedReview.ReferenceSolutionRevealed);
+    }
+
+    [Fact]
     public async Task CommitReview_is_atomic_when_the_session_does_not_exist()
     {
         using var fixture = new DatabaseFixture();

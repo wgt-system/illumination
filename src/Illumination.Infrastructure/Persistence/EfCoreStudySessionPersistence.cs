@@ -115,8 +115,8 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
     private static StudyLearningItemSnapshot ToSnapshot(LearningItemRecord record) => new(
         record.LearningItemId, record.Prompt, record.ReferenceSolutionContent, ToApplication(record.ResponseMode),
         record.Hints.OrderBy(x => x.Position).Select(x => new HintSnapshot(x.Text)).ToArray(),
-        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, $"choice-{x.Position}")).ToArray(),
-        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, $"assistance-{x.Position}")).ToArray(),
+        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.ChoiceId ?? string.Empty)).ToArray(),
+        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.ChoiceId ?? string.Empty)).ToArray(),
         record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value).ToArray(), record.LowInteractionEligible,
         ToApplication(record.LifecycleState), record.IsNew, record.DueAt, record.Difficulty, record.StabilityDays,
         record.IsInShortTermRelearning, record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());
@@ -128,13 +128,17 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
         record.StudySessionId, record.StartedAt, record.CompletedAt,
         record.SelectedDecks.OrderBy(x => x.DeckId).Select(x => x.DeckId).ToArray(),
         record.Queue.OrderBy(x => x.Position).Select(x => x.LearningItemId).ToArray(),
-        record.Reviews.OrderBy(x => x.Position).Select(x => x.ReviewId).ToArray());
+        record.Reviews.OrderBy(x => x.Position).Select(x => x.ReviewId).ToArray(),
+        (StudyEvaluationMode)record.EvaluationMode, record.ConsiderAssistance, record.LowInteractionOnly);
 
     private static StudySessionRecord ToRecord(StudySessionSnapshot snapshot)
     {
         var record = new StudySessionRecord
         {
             StudySessionId = snapshot.Id, StartedAt = snapshot.StartedAt, CompletedAt = snapshot.CompletedAt,
+            EvaluationMode = (StudyEvaluationMode)snapshot.EvaluationMode,
+            ConsiderAssistance = snapshot.ConsiderAssistance,
+            LowInteractionOnly = snapshot.LowInteractionOnly,
         };
         record.SelectedDecks.AddRange(snapshot.SelectedDeckIds.Distinct().Select(id => new StudySessionDeckRecord { StudySessionId = snapshot.Id, DeckId = id }));
         record.Queue.AddRange(snapshot.Queue.Select((id, position) => new StudySessionQueueRecord { StudySessionId = snapshot.Id, Position = position, LearningItemId = id }));
@@ -146,6 +150,11 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
     {
         ReviewId = snapshot.Id, LearningItemId = snapshot.LearningItemId, CompletedAt = snapshot.CompletedAt,
         Assessment = ToDomain(snapshot.Assessment), SubmittedResponse = snapshot.SubmittedResponse,
+        AutomaticCorrectness = snapshot.AutomaticCorrectness,
+        SuggestedAssessment = snapshot.SuggestedAssessment is { } suggested ? ToDomain(suggested) : null,
+        HintCount = snapshot.HintCount,
+        AssistanceAnswerChoicesRevealed = snapshot.AssistanceAnswerChoicesRevealed,
+        ReferenceSolutionRevealed = snapshot.ReferenceSolutionRevealed,
     };
 
     private static StudyLearningAssessment ToApplication(LearningAssessment assessment) => assessment switch

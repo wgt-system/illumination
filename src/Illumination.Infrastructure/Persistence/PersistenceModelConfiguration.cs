@@ -59,7 +59,8 @@ internal static class PersistenceModelConfiguration
     private static void ConfigureChoice(EntityTypeBuilder<AnswerChoiceRecord> entity)
     {
         entity.ToTable("AnswerChoices"); entity.HasKey(x => new { x.LearningItemId, x.Role, x.Position });
-        entity.Property(x => x.LearningItemId).HasColumnName("LearningItemId"); entity.Property(x => x.Role).HasColumnName("Role").HasConversion<string>(); entity.Property(x => x.Position).HasColumnName("Position"); entity.Property(x => x.Text).HasColumnName("Text").IsRequired(); entity.Property(x => x.IsCorrect).HasColumnName("IsCorrect").IsRequired();
+        entity.Property(x => x.LearningItemId).HasColumnName("LearningItemId"); entity.Property(x => x.Role).HasColumnName("Role").HasConversion<string>(); entity.Property(x => x.Position).HasColumnName("Position"); entity.Property(x => x.ChoiceId).HasColumnName("ChoiceId"); entity.Property(x => x.Text).HasColumnName("Text").IsRequired(); entity.Property(x => x.IsCorrect).HasColumnName("IsCorrect").IsRequired();
+        entity.HasIndex(x => new { x.LearningItemId, x.Role, x.ChoiceId }).IsUnique();
     }
 
     private static void ConfigureShortAnswer(EntityTypeBuilder<AcceptedShortAnswerRecord> entity)
@@ -91,6 +92,11 @@ internal static class PersistenceModelConfiguration
             value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)).IsRequired();
         entity.Property(x => x.Assessment).HasColumnName("Assessment").HasConversion<string>().IsRequired();
         entity.Property(x => x.SubmittedResponse).HasColumnName("SubmittedResponse");
+        entity.Property(x => x.AutomaticCorrectness).HasColumnName("AutomaticCorrectness");
+        entity.Property(x => x.SuggestedAssessment).HasColumnName("SuggestedAssessment").HasConversion<string>();
+        entity.Property(x => x.HintCount).HasColumnName("HintCount").IsRequired();
+        entity.Property(x => x.AssistanceAnswerChoicesRevealed).HasColumnName("AssistanceAnswerChoicesRevealed").IsRequired();
+        entity.Property(x => x.ReferenceSolutionRevealed).HasColumnName("ReferenceSolutionRevealed").IsRequired();
         entity.HasOne(x => x.LearningItem).WithMany().HasForeignKey(x => x.LearningItemId).OnDelete(DeleteBehavior.Cascade);
         entity.HasIndex(x => x.LearningItemId).HasDatabaseName("IX_Reviews_LearningItemId");
     }
@@ -106,6 +112,9 @@ internal static class PersistenceModelConfiguration
         entity.Property(x => x.CompletedAt).HasColumnName("CompletedAt").HasConversion(
             value => value.HasValue ? value.Value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) : null,
             value => value == null ? null : DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+        entity.Property(x => x.EvaluationMode).HasColumnName("EvaluationMode").HasConversion<string>().IsRequired();
+        entity.Property(x => x.ConsiderAssistance).HasColumnName("ConsiderAssistance").IsRequired();
+        entity.Property(x => x.LowInteractionOnly).HasColumnName("LowInteractionOnly").IsRequired();
         entity.HasMany(x => x.SelectedDecks).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
         entity.HasMany(x => x.Queue).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
         entity.HasMany(x => x.Reviews).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);

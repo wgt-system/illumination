@@ -92,6 +92,25 @@ public class ContentManagementPersistenceTests
         Assert.Empty(await verify.LearningItems.ToListAsync());
     }
 
+    [Fact]
+    public async Task Authored_answer_choice_ids_round_trip_without_reordering()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync()) await setup.Database.MigrateAsync();
+
+        var service = new ContentManagementService(new EfCoreContentPersistence(factory), new FixedTimeProvider(new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero)));
+        var created = await service.CreateLearningItemAsync(new CreateLearningItemCommand(
+            "Prompt", "Solution", LearningItemResponseMode.Selection,
+            DirectAnswerChoices: [new AnswerChoiceInput("First", Id: "authored-first"), new AnswerChoiceInput("Second", true, "authored-second")],
+            AssistanceAnswerChoices: [new AnswerChoiceInput("Help one", Id: "authored-help-one"), new AnswerChoiceInput("Help two", Id: "authored-help-two")]));
+
+        var reloaded = await service.GetLearningItemAsync(created.Id);
+        Assert.Equal(["authored-first", "authored-second"], reloaded.DirectAnswerChoices.Select(x => x.Id));
+        Assert.Equal(["authored-help-one", "authored-help-two"], reloaded.AssistanceAnswerChoices.Select(x => x.Id));
+    }
+
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;

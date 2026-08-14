@@ -1,3 +1,4 @@
+using Illumination.Application.Study;
 using Illumination.Domain.Decks;
 using Illumination.Domain.Identity;
 using Illumination.Domain.Learning;
@@ -77,6 +78,7 @@ public sealed class AnswerChoiceRecord
     public Guid LearningItemId { get; set; }
     public AnswerChoiceRole Role { get; set; }
     public int Position { get; set; }
+    public string? ChoiceId { get; set; }
     public string Text { get; set; } = null!;
     public bool IsCorrect { get; set; }
     public LearningItemRecord LearningItem { get; set; } = null!;
@@ -112,6 +114,11 @@ public sealed class ReviewRecord
     public DateTimeOffset CompletedAt { get; set; }
     public LearningAssessment Assessment { get; set; }
     public string? SubmittedResponse { get; set; }
+    public bool? AutomaticCorrectness { get; set; }
+    public LearningAssessment? SuggestedAssessment { get; set; }
+    public int HintCount { get; set; }
+    public bool AssistanceAnswerChoicesRevealed { get; set; }
+    public bool ReferenceSolutionRevealed { get; set; }
     public LearningItemRecord LearningItem { get; set; } = null!;
     public List<StudySessionReviewRecord> StudySessionAssociations { get; } = [];
 }
@@ -121,6 +128,9 @@ public sealed class StudySessionRecord
     public Guid StudySessionId { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    public StudyEvaluationMode EvaluationMode { get; set; }
+    public bool ConsiderAssistance { get; set; }
+    public bool LowInteractionOnly { get; set; }
     public List<StudySessionDeckRecord> SelectedDecks { get; } = [];
     public List<StudySessionQueueRecord> Queue { get; } = [];
     public List<StudySessionReviewRecord> Reviews { get; } = [];
