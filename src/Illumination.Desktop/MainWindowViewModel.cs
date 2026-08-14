@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
 using Illumination.Application.Study;
 
 namespace Illumination.Desktop;
@@ -11,6 +12,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly ContentManagementService _content;
     private readonly StudySessionService _study;
+    private readonly LearningInsightService? _insightService;
     private readonly TimeProvider _timeProvider;
     private Guid? _activeSessionId;
 
@@ -20,25 +22,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ContentAcquisitionService acquisition,
         ContentCurationService curation,
         QualityReviewExchangeService qualityExchange,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        LearningInsightService? insights = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _study = study ?? throw new ArgumentNullException(nameof(study));
+        _insightService = insights;
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         ContentAcquisition = new ContentAcquisitionViewModel(
             acquisition,
             () => RefreshContentAsync(),
             message => StatusMessage = message);
         ContentCuration = new ContentCurationViewModel(curation, qualityExchange, message => StatusMessage = message);
+        Insights = new LearningInsightsViewModel(insights, GenerateFollowUpAsync);
     }
 
     public string Title => "Illumination";
-    public enum DesktopPage { Study, Decks, Library, Import }
+    public enum DesktopPage { Study, Insights, Decks, Library, Import }
 
     [ObservableProperty]
     private DesktopPage _selectedPage = DesktopPage.Study;
 
     public bool IsStudyPage => SelectedPage == DesktopPage.Study;
+    public bool IsInsightsPage => SelectedPage == DesktopPage.Insights;
     public bool IsDecksPage => SelectedPage == DesktopPage.Decks;
     public bool IsLibraryPage => SelectedPage == DesktopPage.Library;
     public bool IsImportPage => SelectedPage == DesktopPage.Import;
@@ -46,12 +52,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedPageChanged(DesktopPage value)
     {
         OnPropertyChanged(nameof(IsStudyPage));
+        OnPropertyChanged(nameof(IsInsightsPage));
         OnPropertyChanged(nameof(IsDecksPage));
         OnPropertyChanged(nameof(IsLibraryPage));
         OnPropertyChanged(nameof(IsImportPage));
     }
 
     [RelayCommand] private void NavigateStudy() => SelectedPage = DesktopPage.Study;
+    [RelayCommand] private void NavigateInsights() => SelectedPage = DesktopPage.Insights;
     [RelayCommand] private void NavigateDecks() => SelectedPage = DesktopPage.Decks;
     [RelayCommand] private void NavigateLibrary() => SelectedPage = DesktopPage.Library;
     [RelayCommand] private void NavigateImport() => SelectedPage = DesktopPage.Import;
@@ -70,6 +78,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IReadOnlyList<StudyEvaluationMode> EvaluationModes { get; } = [StudyEvaluationMode.Manual, StudyEvaluationMode.Assisted];
     public ContentAcquisitionViewModel ContentAcquisition { get; }
     public ContentCurationViewModel ContentCuration { get; }
+    public LearningInsightsViewModel Insights { get; }
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(CreateDeckCommand))]
     private string _newDeckName = string.Empty;
@@ -141,6 +150,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         GlobalEvaluationMode = await _study.GetDefaultEvaluationModeAsync();
         await RefreshContentAsync();
+    }
+
+    private async Task GenerateFollowUpAsync(DeckInsight deck)
+    {
+        if (_insightService is null) return;
+        var context = await _insightService.GetDeckLearningContextAsync(deck.Id);
+        ContentAcquisition.ConfigureFollowUp(context, Insights.ProgressionMode, Insights.SelectedResponseModes);
+        SelectedPage = DesktopPage.Import;
+        StatusMessage = $"Follow-up generation prepared from '{deck.Name}'.";
     }
 
     partial void OnSelectedDeckChanged(DeckView? value)
@@ -385,6 +403,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Replace(LearningItems, items);
         ContentAcquisition.UpdateDecks(decks);
         await ContentCuration.RefreshAsync(items);
+        await Insights.RefreshAsync();
         SelectedDeck = Decks.FirstOrDefault(x => x.Id == selectedDeckId) ?? Decks.FirstOrDefault();
         SelectedStudyDeck = Decks.FirstOrDefault(x => x.Id == selectedStudyDeckId) ?? Decks.FirstOrDefault();
         SelectedDeckPresentation = DeckPresentationItems.FirstOrDefault(x => x.Id == SelectedDeck?.Id) ?? DeckPresentationItems.FirstOrDefault();

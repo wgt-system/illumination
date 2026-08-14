@@ -1,5 +1,7 @@
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
+using Illumination.Application.Study;
 using Illumination.Desktop;
 using System.Xml.Linq;
 using Xunit;
@@ -9,6 +11,21 @@ namespace Illumination.Desktop.Tests;
 public sealed class ContentAcquisitionViewModelTests
 {
     private static readonly DateTimeOffset Now = new(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+    [Fact]
+    public async Task Follow_up_context_is_handed_to_the_existing_generation_prompt()
+    {
+        var viewModel = CreateViewModel(new FakePersistence(), out _, out _);
+        viewModel.Subject = "English to Indonesian";
+        viewModel.NewDeckName = "Indo #2";
+        viewModel.ConfigureFollowUp(new DeckLearningContext(Guid.NewGuid(), "Indo #1", []));
+        viewModel.ProgressionMode = FollowUpProgressionMode.Advance;
+
+        await viewModel.GeneratePromptCommand.ExecuteAsync(null);
+
+        Assert.Contains("Indo #1", viewModel.GeneratedPrompt);
+        Assert.Contains("Advance / Harder", viewModel.GeneratedPrompt);
+    }
 
     [Fact]
     public async Task Generates_prompts_for_new_and_existing_Deck_targets()

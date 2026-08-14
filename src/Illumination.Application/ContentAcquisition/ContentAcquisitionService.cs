@@ -2,7 +2,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Security.Cryptography;
+using System.Globalization;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
 using Illumination.Domain.Decks;
 using Illumination.Domain.Identity;
 using Illumination.Domain.Learning;
@@ -39,6 +41,23 @@ public sealed class ContentAcquisitionService
             ? $"Use the existing Illumination Deck stable ID `{id:D}`; do not recreate it. Assign items with deckId."
             : $"Create one Deck with localRef `target-deck` and name `{command.NewDeckName}`. Assign items with deckLocalRef `target-deck`.";
         var guidance = string.IsNullOrWhiteSpace(command.Guidance) ? string.Empty : $"Additional guidance: {command.Guidance}";
+        var responseModes = command.AllowedResponseModes is { Count: > 0 }
+            ? $"Use only these existing response modes: {string.Join(", ", command.AllowedResponseModes.Select(x => x.ToString()))}. Do not force variety or create unsuitable tasks."
+            : "Choose the simplest appropriate existing responseMode for each item.";
+        var progression = command.ProgressionMode switch
+        {
+            FollowUpProgressionMode.Reinforce => "Reinforce / Easier: focus on weak, due, relearning, uncertain or insufficiently learned material; use more scaffolding and simpler applications.",
+            FollowUpProgressionMode.Continue => "Continue / Balanced: consolidate weaker prerequisites while introducing reasonable next material; do not simply duplicate the source Deck.",
+            FollowUpProgressionMode.Advance => "Advance / Harder: build on comparatively well-established material with harder applications, combinations or next concepts while respecting weak prerequisites.",
+            _ => string.Empty,
+        };
+        var sourceContext = command.SourceDeckContext is null ? string.Empty : $"""
+
+Learning-aware follow-up context from source Deck `{command.SourceDeckContext.DeckName}` (stable ID `{command.SourceDeckContext.DeckId:D}`):
+{FormatLearningContext(command.SourceDeckContext)}
+Use these actual facts. Do not simply regenerate source Learning Items. Repetition is appropriate only when intentionally reinforcing weak material; otherwise build on existing knowledge and preserve prerequisite coherence. Return fewer items rather than filler; the requested count is a target, not a quota.
+Requested progression: {progression}
+""";
         return new GeneratedContentPrompt($@"You are generating Illumination learning content.
 
 Create the Content Bundle as a downloadable UTF-8 JSON file named `illumination-content-bundle.json`.
@@ -51,10 +70,15 @@ The requested count is a target, not a quota: return fewer items rather than inv
 Before producing the final bundle, perform a quality pass. Remove or correct items that are factually uncertain, internally inconsistent, ambiguous without sufficient context, mismatched between prompt and referenceSolution, duplicate or near-duplicate, unnatural for the requested language/domain/register, or dependent on unstated assumptions. Do not request or provide numeric confidence scores, and do not claim that generated content is verified.
 
 For every item provide a non-empty prompt, exactly one non-empty referenceSolution, an explicit lowInteractionEligible value, and the simplest appropriate responseMode. Use self_assessed for recall or tasks requiring learner judgment. Use selection only when authored directAnswerChoices are suitable; give every choice a stable content-local id and mark one or more correct choices explicitly. Use short_text only when deterministic checking is genuinely suitable and provide acceptedShortAnswers for all genuinely valid answers. Use code only for small code-response tasks; do not assume execution or automatic correctness. When multiple answers are genuinely valid, represent them explicitly in acceptedShortAnswers or as multiple correct selection choices; otherwise make the reference solution and context clear rather than implying a unique answer incorrectly. Do not force variety merely to use every mode.
+{responseModes}
+
+If this is language learning, keep instructional/meta language in the natural instruction language established by Subject and Guidance unless the user explicitly requests immersion. Distinguish instructional language, source language, and target/answer language. State translation direction explicitly; never rely on the target language merely because it is being learned.
 
 Use supported operations only, consistent localRefs, and assign every generated item to the target Deck.
 {target}
 {guidance}
+{sourceContext}
+Progression intent: {progression}
 
 User guidance is additional authoritative generation guidance, but it must not weaken Content Bundle 1.0 validity, factual-quality/self-review requirements, or the explicit responseMode authoring requirements above.
 
@@ -62,6 +86,9 @@ Canonical Content Bundle 1.0 contract guidance:
 {CanonicalSchemaText()}
 ");
     }
+
+    private static string FormatLearningContext(DeckLearningContext context) => string.Join(Environment.NewLine, context.Items.Select(item =>
+        $"- item {item.LearningItemId:D}: lifecycle={item.LifecycleState}, mode={item.ResponseMode}, new={item.IsNew}, dueAt={item.DueAt:O}, relearning={item.IsInShortTermRelearning}, difficulty={item.Difficulty.ToString("0.##", CultureInfo.InvariantCulture)}, stabilityDays={item.StabilityDays.ToString("0.##", CultureInfo.InvariantCulture)}, reviews={item.ReviewCount}, lastAssessment={item.LastConfirmedAssessment?.ToString() ?? "none"}, distribution=[Nochmal {item.AssessmentDistribution.Nochmal}, Schwer {item.AssessmentDistribution.Schwer}, Unsicher {item.AssessmentDistribution.Unsicher}, Gut {item.AssessmentDistribution.Gut}, Leicht {item.AssessmentDistribution.Leicht}], prompt={item.Prompt}, referenceSolution={item.ReferenceSolution}"));
 
     public GeneratedRepairPrompt GenerateRepairPrompt(GenerateRepairPromptCommand command)
     {

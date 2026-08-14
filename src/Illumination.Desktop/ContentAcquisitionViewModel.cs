@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
 
 namespace Illumination.Desktop;
 
@@ -14,6 +15,7 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     private IDesktopInteractionService? _desktopInteractions;
     private IReadOnlyList<ContentBundleDiagnostic> _previewBundleDiagnostics = [];
     private IReadOnlyList<ContentBundleDiagnostic> _repairDiagnostics = [];
+    private DeckLearningContext? _sourceDeckContext;
 
     public ContentAcquisitionViewModel(
         ContentAcquisitionService service,
@@ -32,6 +34,8 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     public ObservableCollection<QualityReviewResultRowViewModel> QualityReviewResults { get; } = [];
     public ObservableCollection<QualityReviewDiagnosticDisplay> QualityReviewDiagnostics { get; } = [];
     public IReadOnlyList<QualityReviewPromptMode> QualityReviewModes { get; } = Enum.GetValues<QualityReviewPromptMode>();
+    public IReadOnlyList<LearningItemResponseMode> ResponseModeOptions { get; } = Enum.GetValues<LearningItemResponseMode>();
+    public IReadOnlyList<FollowUpProgressionMode> ProgressionModes { get; } = Enum.GetValues<FollowUpProgressionMode>();
     public IReadOnlyList<PreImportQualityReviewPromptItem> QualityReviewPromptItems { get; private set; } = [];
     public ObservableCollection<AcquisitionDiagnosticDisplay> BundleDiagnostics { get; } = [];
 
@@ -55,6 +59,27 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
 
     [ObservableProperty]
     private string _guidance = string.Empty;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private FollowUpProgressionMode? _progressionMode;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private bool _restrictResponseModes;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private bool _selfAssessedEnabled;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private bool _selectionEnabled;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private bool _shortTextEnabled;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GeneratePromptCommand))]
+    private bool _codeEnabled;
+
+    public bool HasSourceDeckContext => _sourceDeckContext is not null;
+    public string SourceDeckName => _sourceDeckContext?.DeckName ?? string.Empty;
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasGeneratedPrompt)), NotifyCanExecuteChangedFor(nameof(CopyPromptCommand))]
     private string _generatedPrompt = string.Empty;
@@ -151,6 +176,20 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
         GeneratePromptCommand.NotifyCanExecuteChanged();
     }
 
+    public void ConfigureFollowUp(DeckLearningContext context, FollowUpProgressionMode progression = FollowUpProgressionMode.Continue, IReadOnlyList<LearningItemResponseMode>? responseModes = null)
+    {
+        _sourceDeckContext = context ?? throw new ArgumentNullException(nameof(context));
+        OnPropertyChanged(nameof(HasSourceDeckContext));
+        OnPropertyChanged(nameof(SourceDeckName));
+        Guidance = string.Empty;
+        ProgressionMode = progression;
+        RestrictResponseModes = responseModes is { Count: > 0 };
+        SelfAssessedEnabled = responseModes?.Contains(LearningItemResponseMode.SelfAssessed) == true;
+        SelectionEnabled = responseModes?.Contains(LearningItemResponseMode.Selection) == true;
+        ShortTextEnabled = responseModes?.Contains(LearningItemResponseMode.ShortText) == true;
+        CodeEnabled = responseModes?.Contains(LearningItemResponseMode.Code) == true;
+    }
+
     partial void OnUseNewDeckChanged(bool value)
     {
         if (value) UseExistingDeck = false;
@@ -173,7 +212,10 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
             RequestedItemCount,
             NewDeckName: UseNewDeck ? NewDeckName : null,
             ExistingDeckId: UseExistingDeck ? SelectedExistingDeck?.Id : null,
-            Guidance: Guidance);
+            Guidance: Guidance,
+            SourceDeckContext: _sourceDeckContext,
+            ProgressionMode: ProgressionMode,
+            AllowedResponseModes: RestrictResponseModes ? SelectedResponseModes() : null);
         GeneratedPrompt = _service.GenerateContentPrompt(command).Prompt;
         _reportStatus("Prompt generated.");
         return Task.CompletedTask;
@@ -182,8 +224,18 @@ public sealed partial class ContentAcquisitionViewModel : ObservableObject
     private bool CanGeneratePrompt() => !IsBusy
         && !string.IsNullOrWhiteSpace(Subject)
         && RequestedItemCount > 0
+        && (!RestrictResponseModes || SelectedResponseModes().Count > 0)
         && ((UseNewDeck && !string.IsNullOrWhiteSpace(NewDeckName))
             || (UseExistingDeck && SelectedExistingDeck is not null));
+
+    private IReadOnlyList<LearningItemResponseMode> SelectedResponseModes() =>
+        new[]
+        {
+            (Enabled: SelfAssessedEnabled, Mode: LearningItemResponseMode.SelfAssessed),
+            (Enabled: SelectionEnabled, Mode: LearningItemResponseMode.Selection),
+            (Enabled: ShortTextEnabled, Mode: LearningItemResponseMode.ShortText),
+            (Enabled: CodeEnabled, Mode: LearningItemResponseMode.Code),
+        }.Where(x => x.Enabled).Select(x => x.Mode).ToArray();
 
     [RelayCommand(CanExecute = nameof(CanCopyPrompt))]
     private async Task CopyPromptAsync() => await CopyAsync(GeneratedPrompt, "Prompt copied.");

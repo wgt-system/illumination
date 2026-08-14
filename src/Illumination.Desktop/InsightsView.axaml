@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:desktop="using:Illumination.Desktop" xmlns:insight="using:Illumination.Application.Insights" x:Class="Illumination.Desktop.InsightsView" x:DataType="desktop:MainWindowViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel DataContext="{Binding Insights}" Spacing="14" Margin="14,4,8,12">
+      <TextBlock Text="Learning Insights" Classes="page-title" />
+      <TextBlock Text="Authoritative local learning facts. No mastery score is inferred." Classes="secondary" />
+      <TextBlock Text="{Binding Status}" Foreground="#D14B42" />
+      <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="8">
+        <Border Classes="surface"><StackPanel><TextBlock Text="Active" Classes="secondary"/><TextBlock Text="{Binding Overview.ActiveCount}" FontSize="22"/></StackPanel></Border>
+        <Border Grid.Column="1" Classes="surface"><StackPanel><TextBlock Text="Suspended" Classes="secondary"/><TextBlock Text="{Binding Overview.SuspendedCount}" FontSize="22"/></StackPanel></Border>
+        <Border Grid.Column="2" Classes="surface"><StackPanel><TextBlock Text="Mastered" Classes="secondary"/><TextBlock Text="{Binding Overview.MasteredCount}" FontSize="22"/></StackPanel></Border>
+        <Border Grid.Column="3" Classes="surface"><StackPanel><TextBlock Text="New" Classes="secondary"/><TextBlock Text="{Binding Overview.NewItemCount}" FontSize="22"/></StackPanel></Border>
+        <Border Grid.Column="4" Classes="surface"><StackPanel><TextBlock Text="Due now" Classes="secondary"/><TextBlock Text="{Binding Overview.DueNowCount}" FontSize="22"/></StackPanel></Border>
+        <Border Grid.Column="5" Classes="surface"><StackPanel><TextBlock Text="Relearning" Classes="secondary"/><TextBlock Text="{Binding Overview.ShortTermRelearningCount}" FontSize="22"/></StackPanel></Border>
+      </Grid>
+      <Border Classes="surface">
+        <WrapPanel Orientation="Horizontal" ItemHeight="28" ItemWidth="190">
+          <TextBlock Text="{Binding Overview.TotalLearningItems, StringFormat='Items: {0}'}" />
+          <TextBlock Text="{Binding Overview.TotalCompletedReviewCount, StringFormat='Reviews: {0}'}" />
+          <TextBlock Text="{Binding Overview.ReviewsLast7Days, StringFormat='Last 7 days: {0}'}" />
+          <TextBlock Text="{Binding Overview.ReviewsLast30Days, StringFormat='Last 30 days: {0}'}" />
+          <TextBlock Text="{Binding Overview.MostRecentReviewAt, StringFormat='Most recent: {0:g}'}" />
+        </WrapPanel>
+      </Border>
+      <Grid ColumnDefinitions="300,*" ColumnSpacing="14">
+        <Border Classes="surface">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Deck progress" Classes="section-title" />
+            <ListBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedDeck}" MinHeight="180">
+            <ListBox.ItemTemplate><DataTemplate x:DataType="insight:DeckInsight"><StackPanel Margin="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding CurrentItemCount, StringFormat='Items: {0}'}" Classes="secondary"/><TextBlock Text="{Binding TotalReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <Button Content="Generate follow-up Deck" Command="{Binding GenerateFollowUpCommand}" />
+            <TextBlock Text="Follow-up progression" Classes="secondary" />
+            <ComboBox ItemsSource="{Binding ProgressionModes}" SelectedItem="{Binding ProgressionMode}" />
+            <TextBlock Text="Optional task types" Classes="secondary" />
+            <CheckBox Content="Recall / card" IsChecked="{Binding SelfAssessedEnabled}" />
+            <CheckBox Content="Choice / quiz" IsChecked="{Binding SelectionEnabled}" />
+            <CheckBox Content="Short answer / cloze" IsChecked="{Binding ShortTextEnabled}" />
+            <CheckBox Content="Coding" IsChecked="{Binding CodeEnabled}" />
+          </StackPanel>
+        </Border>
+        <StackPanel Grid.Column="1" Spacing="10">
+          <Border Classes="surface">
+            <StackPanel Spacing="5">
+              <TextBlock Text="{Binding SelectedDeck.Name}" Classes="section-title" />
+              <TextBlock Text="{Binding SelectedDeck.CurrentItemCount, StringFormat='Items: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.ActiveCount, StringFormat='Active: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.SuspendedCount, StringFormat='Suspended: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.MasteredCount, StringFormat='Mastered: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.NewCount, StringFormat='New: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.DueNowCount, StringFormat='Due: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.RelearningCount, StringFormat='Relearning: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.TotalReviewCount, StringFormat='Reviews: {0}'}" />
+              <TextBlock Text="{Binding SelectedDeck.AssessmentDistribution, Converter={x:Static desktop:InsightDistributionConverter.Instance}}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="surface">
+            <StackPanel Spacing="7">
+              <TextBlock Text="Items" Classes="section-title" />
+              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+                <TextBox Text="{Binding PromptSearch}" Watermark="Search prompt" />
+                <CheckBox Grid.Column="1" Content="New" IsChecked="{Binding NewOnly}" />
+                <CheckBox Grid.Column="2" Content="Due" IsChecked="{Binding DueNowOnly}" />
+                <CheckBox Grid.Column="3" Content="Relearning" IsChecked="{Binding RelearningOnly}" />
+                <ComboBox Grid.Column="4" ItemsSource="{Binding LifecycleOptions}" SelectedItem="{Binding Lifecycle}" Width="120" />
+              </Grid>
+              <ListBox ItemsSource="{Binding Items}" MaxHeight="320">
+                <ListBox.ItemTemplate><DataTemplate x:DataType="insight:LearningItemInsight"><Grid ColumnDefinitions="*,Auto" Margin="2,4"><StackPanel><TextBlock Text="{Binding Prompt}" TextWrapping="Wrap"/><TextBlock Text="{Binding ResponseMode}" Classes="secondary"/><TextBlock Text="{Binding Difficulty, StringFormat='Difficulty: {0:0.##}'}" Classes="secondary"/><TextBlock Text="{Binding StabilityDays, StringFormat='Stability: {0:0.##} days'}" Classes="secondary"/><TextBlock Text="{Binding ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary"/><TextBlock Text="{Binding LastConfirmedAssessment, StringFormat='Last assessment: {0}'}" Classes="secondary"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding LifecycleState}" VerticalAlignment="Top"/></Grid></DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+        <Border Classes="surface"><StackPanel Spacing="6"><TextBlock Text="Recent Reviews" Classes="section-title"/><ItemsControl ItemsSource="{Binding Reviews}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="insight:ReviewHistoryEntry"><StackPanel><TextBlock Text="{Binding Prompt}" TextWrapping="Wrap"/><TextBlock Text="{Binding Assessment}" Classes="secondary"/><TextBlock Text="{Binding CompletedAt}" Classes="secondary"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+        <Border Grid.Column="1" Classes="surface"><StackPanel Spacing="6"><TextBlock Text="Study Sessions" Classes="section-title"/><ItemsControl ItemsSource="{Binding Sessions}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="insight:StudySessionHistoryEntry"><StackPanel><TextBlock Text="{Binding EvaluationMode}"/><TextBlock Text="{Binding StartedAt}" Classes="secondary"/><TextBlock Text="{Binding ReviewCount}" Classes="secondary"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

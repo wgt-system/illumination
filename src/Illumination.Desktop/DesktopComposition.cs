@@ -1,6 +1,7 @@
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 using Illumination.Application.Study;
+using Illumination.Application.Insights;
 using Illumination.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,6 +35,7 @@ internal static class DesktopComposition
         var contentPersistence = new EfCoreContentPersistence(contextFactory);
         var curation = new ContentCurationService(contentPersistence, contentPersistence);
         var qualityExchange = new QualityReviewExchangeService(contentPersistence, contentPersistence);
+        var insights = new LearningInsightService(new EfCoreLearningInsightPersistence(contextFactory), timeProvider);
         var acquisition = new ContentAcquisitionService(
             new EfCoreContentAcquisitionPersistence(contextFactory),
             timeProvider);
@@ -42,7 +44,7 @@ internal static class DesktopComposition
             timeProvider,
             new RandomStudySessionOrdering(),
             new EfCoreStudyEvaluationPreferencePersistence(contextFactory));
-        var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider);
+        var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
         await viewModel.InitializeAsync();
         return viewModel;
     }

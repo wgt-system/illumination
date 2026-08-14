@@ -328,3 +328,8 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 Wiiii Got This may provide the primary end-user presentation; a complete separate Illumination end-user UI is not required.
 
 Vocation and Wiiii Got This integrations are not prerequisites for `v1.0.0`; they evolve through separate published-contract milestones when their semantics are needed.
+
+The v0.6 Desktop slice exposes the existing Learning Insight read models and hands a
+selected source Deck's derived `DeckLearningContext` to the existing Content
+Acquisition prompt workflow. It does not introduce a mastery score, mutate the source
+Deck, or change Content Bundle 1.0.

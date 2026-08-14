@@ -19,6 +19,7 @@
         <StackPanel Spacing="3"><TextBlock Text="Illumination" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="Learn clearly" Classes="secondary"/></StackPanel>
         <StackPanel Grid.Row="1" Spacing="3">
           <ToggleButton Classes="nav" Content="Study" IsChecked="{Binding IsStudyPage}" Command="{Binding NavigateStudyCommand}"/>
+          <ToggleButton Classes="nav" Content="Insights" IsChecked="{Binding IsInsightsPage}" Command="{Binding NavigateInsightsCommand}"/>
           <ToggleButton Classes="nav" Content="Decks" IsChecked="{Binding IsDecksPage}" Command="{Binding NavigateDecksCommand}"/>
           <ToggleButton Classes="nav" Content="Library" IsChecked="{Binding IsLibraryPage}" Command="{Binding NavigateLibraryCommand}"/>
           <ToggleButton Classes="nav" Content="Import" IsChecked="{Binding IsImportPage}" Command="{Binding NavigateImportCommand}"/>
@@ -28,6 +29,7 @@
     </Border>
     <Grid Grid.Column="1" Row="0">
       <desktop:StudyView IsVisible="{Binding IsStudyPage}"/>
+      <desktop:InsightsView IsVisible="{Binding IsInsightsPage}"/>
       <desktop:DecksView IsVisible="{Binding IsDecksPage}"/>
       <desktop:LibraryView IsVisible="{Binding IsLibraryPage}"/>
       <desktop:ImportView IsVisible="{Binding IsImportPage}"/>

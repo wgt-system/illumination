@@ -286,3 +286,8 @@ No read model may become an alternate source of truth for:
 - Deck membership.
 
 Read models are disposable/rebuildable in principle unless a later architecture explicitly chooses otherwise.
+
+The Desktop consumes this same capability for its Insights destination. A selected
+Deck may be handed to Content Acquisition as `DeckLearningContext` for learning-aware
+follow-up generation. This handoff is read-only context; the source Deck is not a
+mutation or copy target, and Content Bundle 1.0 remains unchanged.

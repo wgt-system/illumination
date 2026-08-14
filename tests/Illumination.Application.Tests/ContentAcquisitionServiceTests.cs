@@ -1,6 +1,8 @@
 using System.Reflection;
 using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
+using Illumination.Application.Study;
 using Xunit;
 
 namespace Illumination.Application.Tests;
@@ -8,6 +10,42 @@ namespace Illumination.Application.Tests;
 public sealed class ContentAcquisitionServiceTests
 {
     private static readonly DateTimeOffset Now = new(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+    [Fact]
+    public void Follow_up_prompt_contains_source_facts_progression_and_response_restriction()
+    {
+        var service = new ContentAcquisitionService(new FakePersistence(), new FixedTimeProvider(Now));
+        var context = new DeckLearningContext(Guid.NewGuid(), "Indo #1", [new(
+            Guid.NewGuid(), "Translate this", "Terjemahkan ini", LearningItemResponseMode.ShortText,
+            LearningItemLifecycle.Active, false, Now, 7.5, 4.0, true, 3, StudyLearningAssessment.Unsicher,
+            new AssessmentDistribution(1, 0, 2, 0, 0))]);
+
+        var prompt = service.GenerateContentPrompt(new GenerateContentPromptCommand(
+            "English to Indonesian", 5, NewDeckName: "Indo #2", SourceDeckContext: context,
+            ProgressionMode: FollowUpProgressionMode.Reinforce,
+            AllowedResponseModes: [LearningItemResponseMode.ShortText])).Prompt;
+
+
+        Assert.Contains("Indo #1", prompt);
+        Assert.Contains("difficulty=7.5", prompt);
+        Assert.Contains("lastAssessment=Unsicher", prompt);
+        Assert.Contains("Reinforce / Easier", prompt);
+        Assert.Contains("ShortText", prompt);
+        Assert.Contains("do not simply regenerate source Learning Items", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("instructional/meta language", prompt);
+        Assert.Contains("translation direction explicitly", prompt);
+    }
+
+    [Theory]
+    [InlineData(FollowUpProgressionMode.Reinforce, "Reinforce / Easier")]
+    [InlineData(FollowUpProgressionMode.Continue, "Continue / Balanced")]
+    [InlineData(FollowUpProgressionMode.Advance, "Advance / Harder")]
+    public void Follow_up_progression_modes_are_explicit(FollowUpProgressionMode mode, string expected)
+    {
+        var service = new ContentAcquisitionService(new FakePersistence(), new FixedTimeProvider(Now));
+        var prompt = service.GenerateContentPrompt(new GenerateContentPromptCommand("Topic", 1, NewDeckName: "Next", ProgressionMode: mode)).Prompt;
+        Assert.Contains(expected, prompt);
+    }
 
     [Fact]
     public void Prompt_generation_contains_contract_quality_and_response_mode_guidance()

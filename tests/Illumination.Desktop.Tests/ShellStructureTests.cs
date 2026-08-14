@@ -12,6 +12,8 @@ public sealed class ShellStructureTests
         Assert.DoesNotContain("<TabControl", shell);
         Assert.Contains("IsVisible=\"{Binding IsStudyPage}\"", shell);
         Assert.Contains("<desktop:StudyView", shell);
+        Assert.Contains("IsVisible=\"{Binding IsInsightsPage}\"", shell);
+        Assert.Contains("<desktop:InsightsView", shell);
         Assert.Contains("<desktop:DecksView", shell);
         Assert.Contains("<desktop:LibraryView", shell);
         Assert.Contains("<desktop:ImportView", shell);

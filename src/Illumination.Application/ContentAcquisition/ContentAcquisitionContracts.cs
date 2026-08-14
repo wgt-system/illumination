@@ -1,10 +1,21 @@
 using Illumination.Application.ContentManagement;
+using Illumination.Application.Insights;
 
 namespace Illumination.Application.ContentAcquisition;
 
 public enum ContentUpdateSignificance { Minor, Semantic }
 
-public sealed record GenerateContentPromptCommand(string Subject, int RequestedItemCount, string? NewDeckName = null, Guid? ExistingDeckId = null, string? Guidance = null);
+public enum FollowUpProgressionMode { Reinforce, Continue, Advance }
+
+public sealed record GenerateContentPromptCommand(
+    string Subject,
+    int RequestedItemCount,
+    string? NewDeckName = null,
+    Guid? ExistingDeckId = null,
+    string? Guidance = null,
+    DeckLearningContext? SourceDeckContext = null,
+    FollowUpProgressionMode? ProgressionMode = null,
+    IReadOnlyList<LearningItemResponseMode>? AllowedResponseModes = null);
 public sealed record GeneratedContentPrompt(string Prompt);
 public sealed record ContentBundleDiagnostic(string Code, string Message, int? OperationIndex = null);
 public sealed record ContentBundleOperationPreview(int OperationIndex, string? OperationType, string? LocalRef, Guid? TargetId, string Summary, bool IsValid, IReadOnlyList<ContentBundleDiagnostic> Diagnostics, IReadOnlyList<string> Warnings, IReadOnlyList<string> Dependencies, bool IsSelectable);

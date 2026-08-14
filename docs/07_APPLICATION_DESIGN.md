@@ -533,3 +533,17 @@ It may be:
 The persisted value is explicit.
 
 Low-interaction / bed mode only filters the Study Session pool. It has no separate Learning State, scheduler, or Review history.
+
+## Learning Insight and Follow-up Generation (v0.6)
+
+The Desktop Insights destination consumes the existing derived Learning Insight read
+capability. It presents authoritative lifecycle, scheduling, Review, Deck membership,
+and five-grade facts without introducing a mastery percentage or another analytics
+source of truth.
+
+Content generation may receive a typed `DeckLearningContext` for a selected source
+Deck. The context is prompt input only: it does not copy or mutate the source Deck,
+and the normal Content Bundle 1.0 external ChatGPT/import workflow remains unchanged.
+Follow-up generation may express Reinforce/Easier, Continue/Balanced, or Advance/Harder
+intent and may restrict generation to existing ResponseModes. These are prompt
+instructions, not persisted scores or new Content Bundle response modes.
