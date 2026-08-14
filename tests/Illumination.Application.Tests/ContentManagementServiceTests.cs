@@ -66,6 +66,46 @@ public class ContentManagementServiceTests
     }
 
     [Fact]
+    public async Task Lifecycle_transitions_preserve_retained_schedule_and_create_no_review()
+    {
+        var id = Guid.NewGuid();
+        var store = new InMemoryContentPersistence();
+        store.Seed(new LearningItemSnapshot(id, "Prompt", "Solution", LearningItemResponseMode.SelfAssessed, [], [], [], [], false,
+            LearningItemLifecycle.Active, false, Now.AddDays(-2), 8.5, 6.25, true, [], 1,
+            [new QualityReviewSnapshot(Guid.NewGuid(), id, 1, QualityReviewOutcomeSnapshot.Warning, QualityReviewEvidenceTypeSnapshot.UserReview, "finding", null, null)]));
+        var service = CreateService(store);
+
+        await service.SuspendLearningItemAsync(id);
+        var suspended = await service.GetLearningItemAsync(id);
+        Assert.Equal(LearningItemLifecycle.Suspended, suspended.Lifecycle);
+        Assert.Equal(8.5, (await store.FindLearningItemAsync(id))!.Difficulty);
+        Assert.Equal(6.25, (await store.FindLearningItemAsync(id))!.StabilityDays);
+        Assert.Single((await store.FindLearningItemAsync(id))!.QualityReviews!);
+
+        await service.ReactivateLearningItemAsync(id);
+        var active = await service.GetLearningItemAsync(id);
+        Assert.Equal(LearningItemLifecycle.Active, active.Lifecycle);
+        Assert.Equal(Now, active.DueAt);
+        Assert.Single((await store.FindLearningItemAsync(id))!.QualityReviews!);
+    }
+
+    [Fact]
+    public async Task Invalid_lifecycle_transitions_are_rejected_without_persistence()
+    {
+        var store = new InMemoryContentPersistence();
+        var service = CreateService(store);
+        var item = await service.CreateLearningItemAsync(new CreateLearningItemCommand("Prompt", "Solution"));
+
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.ReactivateLearningItemAsync(item.Id));
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.UnmarkLearningItemMasteredAsync(item.Id));
+        await service.SuspendLearningItemAsync(item.Id);
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.UnmarkLearningItemMasteredAsync(item.Id));
+        await service.ReactivateLearningItemAsync(item.Id);
+        await service.MarkLearningItemMasteredAsync(item.Id);
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.ReactivateLearningItemAsync(item.Id));
+    }
+
+    [Fact]
     public async Task Ordinary_content_update_preserves_complete_learning_state()
     {
         var id = Guid.NewGuid();

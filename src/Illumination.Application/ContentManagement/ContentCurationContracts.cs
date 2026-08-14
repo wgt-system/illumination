@@ -33,6 +33,7 @@ public sealed record CurrentQualityStateView(CurationQualityReviewOutcome Outcom
 public sealed record CuratedLearningItemView(
     Guid Id,
     string Prompt,
+    LearningItemLifecycle Lifecycle,
     int ContentRevision,
     IReadOnlyList<Guid> UserFlagDefinitionIds,
     IReadOnlyList<QualityReviewView> QualityReviews,

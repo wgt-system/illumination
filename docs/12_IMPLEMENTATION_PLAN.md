@@ -286,7 +286,7 @@ v0.5 does not introduce arbitrary code execution, fuzzy or semantic answer check
 Deliver:
 
 - Deck summaries,
-- due/new/stable views,
+- due/new/relearning views,
 - Suspended/Mastered management,
 - Study Session history,
 - Review history,

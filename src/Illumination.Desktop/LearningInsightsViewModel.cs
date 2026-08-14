@@ -11,12 +11,16 @@ namespace Illumination.Desktop;
 public sealed partial class LearningInsightsViewModel : ObservableObject
 {
     private readonly LearningInsightService? _service;
+    private readonly ContentManagementService? _content;
+    private readonly Func<Task>? _refreshAll;
     private readonly Func<DeckInsight, Task> _generateFollowUp;
 
-    public LearningInsightsViewModel(LearningInsightService? service, Func<DeckInsight, Task> generateFollowUp)
+    public LearningInsightsViewModel(LearningInsightService? service, Func<DeckInsight, Task> generateFollowUp, ContentManagementService? content = null, Func<Task>? refreshAll = null)
     {
         _service = service;
         _generateFollowUp = generateFollowUp;
+        _content = content;
+        _refreshAll = refreshAll;
     }
 
     public ObservableCollection<DeckInsight> Decks { get; } = [];
@@ -30,6 +34,7 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
     [ObservableProperty] private DeckInsight? _selectedDeck;
     [ObservableProperty] private string _promptSearch = string.Empty;
     [ObservableProperty] private LearningItemLifecycle? _lifecycle;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SuspendCommand)), NotifyCanExecuteChangedFor(nameof(MarkMasteredCommand)), NotifyCanExecuteChangedFor(nameof(ReactivateCommand)), NotifyCanExecuteChangedFor(nameof(UnmarkMasteredCommand))] private LearningItemInsight? _selectedItem;
     [ObservableProperty] private bool _newOnly;
     [ObservableProperty] private bool _dueNowOnly;
     [ObservableProperty] private bool _relearningOnly;
@@ -79,6 +84,43 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
         (CodeEnabled, LearningItemResponseMode.Code),
     }.Where(x => x.Item1).Select(x => x.Item2).ToArray();
 
+    public bool CanSuspendAction => SelectedItem?.LifecycleState == LearningItemLifecycle.Active;
+    public bool CanMarkMasteredAction => SelectedItem?.LifecycleState == LearningItemLifecycle.Active;
+    public bool CanReactivateAction => SelectedItem?.LifecycleState == LearningItemLifecycle.Suspended;
+    public bool CanUnmarkMasteredAction => SelectedItem?.LifecycleState == LearningItemLifecycle.Mastered;
+
+    private bool CanSuspend() => CanSuspendAction;
+    private bool CanMarkMastered() => CanMarkMasteredAction;
+    private bool CanReactivate() => CanReactivateAction;
+    private bool CanUnmarkMastered() => CanUnmarkMasteredAction;
+
+    partial void OnSelectedItemChanged(LearningItemInsight? value)
+    {
+        OnPropertyChanged(nameof(CanSuspendAction));
+        OnPropertyChanged(nameof(CanMarkMasteredAction));
+        OnPropertyChanged(nameof(CanReactivateAction));
+        OnPropertyChanged(nameof(CanUnmarkMasteredAction));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSuspend))]
+    private Task SuspendAsync() => ChangeLifecycleAsync(item => _content!.SuspendLearningItemAsync(item.LearningItemId), "Learning Item suspended.");
+
+    [RelayCommand(CanExecute = nameof(CanReactivate))]
+    private Task ReactivateAsync() => ChangeLifecycleAsync(item => _content!.ReactivateLearningItemAsync(item.LearningItemId), "Learning Item reactivated and due now.");
+
+    [RelayCommand(CanExecute = nameof(CanMarkMastered))]
+    private Task MarkMasteredAsync() => ChangeLifecycleAsync(item => _content!.MarkLearningItemMasteredAsync(item.LearningItemId), "Learning Item marked as mastered.");
+
+    [RelayCommand(CanExecute = nameof(CanUnmarkMastered))]
+    private Task UnmarkMasteredAsync() => ChangeLifecycleAsync(item => _content!.UnmarkLearningItemMasteredAsync(item.LearningItemId), "Learning Item returned to active and due now.");
+
+    private async Task ChangeLifecycleAsync(Func<LearningItemInsight, Task> action, string message)
+    {
+        if (_content is null || SelectedItem is null) return;
+        try { await action(SelectedItem); await (_refreshAll?.Invoke() ?? RefreshAsync()); Status = message; }
+        catch (Exception exception) { Status = exception.Message; }
+    }
+
     private async Task RefreshItemsAsync()
     {
         if (_service is null) return;
@@ -92,6 +134,7 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
                 DueNowOnly,
                 RelearningOnly));
             Replace(Items, items);
+            SelectedItem = Items.FirstOrDefault(x => x.LearningItemId == SelectedItem?.LearningItemId);
         }
         catch (Exception exception) { Status = exception.Message; }
     }

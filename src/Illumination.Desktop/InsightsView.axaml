@@ -63,9 +63,15 @@
                 <CheckBox Grid.Column="3" Content="Relearning" IsChecked="{Binding RelearningOnly}" />
                 <ComboBox Grid.Column="4" ItemsSource="{Binding LifecycleOptions}" SelectedItem="{Binding Lifecycle}" Width="120" />
               </Grid>
-              <ListBox ItemsSource="{Binding Items}" MaxHeight="320">
+              <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" MaxHeight="320">
                 <ListBox.ItemTemplate><DataTemplate x:DataType="insight:LearningItemInsight"><Grid ColumnDefinitions="*,Auto" Margin="2,4"><StackPanel><TextBlock Text="{Binding Prompt}" TextWrapping="Wrap"/><TextBlock Text="{Binding ResponseMode}" Classes="secondary"/><TextBlock Text="{Binding Difficulty, StringFormat='Difficulty: {0:0.##}'}" Classes="secondary"/><TextBlock Text="{Binding StabilityDays, StringFormat='Stability: {0:0.##} days'}" Classes="secondary"/><TextBlock Text="{Binding ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary"/><TextBlock Text="{Binding LastConfirmedAssessment, StringFormat='Last assessment: {0}'}" Classes="secondary"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding LifecycleState}" VerticalAlignment="Top"/></Grid></DataTemplate></ListBox.ItemTemplate>
               </ListBox>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Suspend" Command="{Binding SuspendCommand}" IsVisible="{Binding CanSuspendAction}" />
+                <Button Content="Mark mastered" Command="{Binding MarkMasteredCommand}" IsVisible="{Binding CanMarkMasteredAction}" />
+                <Button Content="Reactivate" Command="{Binding ReactivateCommand}" IsVisible="{Binding CanReactivateAction}" />
+                <Button Content="Unmark mastered" Command="{Binding UnmarkMasteredCommand}" IsVisible="{Binding CanUnmarkMasteredAction}" />
+              </StackPanel>
             </StackPanel>
           </Border>
         </StackPanel>

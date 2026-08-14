@@ -18,6 +18,12 @@ public sealed class ShellStructureTests
         Assert.Contains("<desktop:LibraryView", shell);
         Assert.Contains("<desktop:ImportView", shell);
         Assert.True(shell.IndexOf("Study", StringComparison.Ordinal) < shell.IndexOf("Decks", StringComparison.Ordinal));
+
+        var insights = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "InsightsView.axaml"));
+        Assert.Contains("SuspendCommand", insights);
+        Assert.Contains("ReactivateCommand", insights);
+        Assert.Contains("MarkMasteredCommand", insights);
+        Assert.Contains("UnmarkMasteredCommand", insights);
     }
 
     [Fact]

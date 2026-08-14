@@ -149,7 +149,7 @@ public sealed class ContentCurationService
         item.UserFlagDefinitionIds.Select(x => x.Value).ToArray());
 
     private static CuratedLearningItemView ToView(LearningItem item) => new(
-        item.Id.Value, item.Prompt, item.ContentRevision, item.UserFlagDefinitionIds.Select(x => x.Value).ToArray(),
+        item.Id.Value, item.Prompt, ToApplication(item.LifecycleState), item.ContentRevision, item.UserFlagDefinitionIds.Select(x => x.Value).ToArray(),
         item.QualityReviews.Select(ToView).ToArray(),
         item.CurrentQualityState is null ? null : new CurrentQualityStateView(ToCuration(item.CurrentQualityState.Outcome)));
 

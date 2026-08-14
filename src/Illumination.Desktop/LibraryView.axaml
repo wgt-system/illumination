@@ -35,6 +35,13 @@
               <Button Content="Create Learning Item" Command="{Binding CreateLearningItemCommand}" HorizontalAlignment="Left" />
               <TextBlock Text="Selected item quality" FontSize="16" FontWeight="SemiBold" />
               <TextBlock Text="{Binding ContentCuration.SelectedItem.QualityState, FallbackValue='Select an item'}" />
+              <TextBlock Text="{Binding ContentCuration.SelectedItem.Lifecycle, StringFormat='Lifecycle: {0}'}" Classes="secondary" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Suspend" Command="{Binding ContentCuration.SuspendSelectedCommand}" IsVisible="{Binding ContentCuration.CanSuspendSelected}" />
+                <Button Content="Reactivate" Command="{Binding ContentCuration.ReactivateSelectedCommand}" IsVisible="{Binding ContentCuration.CanReactivateSelected}" />
+                <Button Content="Mark mastered" Command="{Binding ContentCuration.MarkMasteredSelectedCommand}" IsVisible="{Binding ContentCuration.CanMarkMasteredSelected}" />
+                <Button Content="Unmark mastered" Command="{Binding ContentCuration.UnmarkMasteredSelectedCommand}" IsVisible="{Binding ContentCuration.CanUnmarkMasteredSelected}" />
+              </StackPanel>
               <TextBlock Text="{Binding ContentCuration.SelectedItem.ContentRevision, StringFormat='ContentRevision: {0}'}" Classes="secondary" />
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <ComboBox Width="180" ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.SelectedFlag}">

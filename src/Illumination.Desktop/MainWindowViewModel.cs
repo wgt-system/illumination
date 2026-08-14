@@ -33,8 +33,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             acquisition,
             () => RefreshContentAsync(),
             message => StatusMessage = message);
-        ContentCuration = new ContentCurationViewModel(curation, qualityExchange, message => StatusMessage = message);
-        Insights = new LearningInsightsViewModel(insights, GenerateFollowUpAsync);
+        ContentCuration = new ContentCurationViewModel(curation, qualityExchange, message => StatusMessage = message, _content, () => RefreshContentAsync());
+        Insights = new LearningInsightsViewModel(insights, GenerateFollowUpAsync, _content, () => RefreshContentAsync());
     }
 
     public string Title => "Illumination";

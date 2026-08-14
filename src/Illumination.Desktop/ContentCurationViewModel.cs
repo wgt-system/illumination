@@ -10,13 +10,17 @@ public sealed partial class ContentCurationViewModel : ObservableObject
     private readonly ContentCurationService _curation;
     private readonly QualityReviewExchangeService _exchange;
     private readonly Action<string> _reportStatus;
+    private readonly ContentManagementService? _content;
+    private readonly Func<Task>? _refreshContent;
     private IDesktopInteractionService? _desktopInteractions;
 
-    public ContentCurationViewModel(ContentCurationService curation, QualityReviewExchangeService exchange, Action<string> reportStatus)
+    public ContentCurationViewModel(ContentCurationService curation, QualityReviewExchangeService exchange, Action<string> reportStatus, ContentManagementService? content = null, Func<Task>? refreshContent = null)
     {
         _curation = curation ?? throw new ArgumentNullException(nameof(curation));
         _exchange = exchange ?? throw new ArgumentNullException(nameof(exchange));
         _reportStatus = reportStatus ?? throw new ArgumentNullException(nameof(reportStatus));
+        _content = content;
+        _refreshContent = refreshContent;
     }
 
     public ObservableCollection<CuratedLearningItemRowViewModel> Items { get; } = [];
@@ -25,7 +29,7 @@ public sealed partial class ContentCurationViewModel : ObservableObject
     public ObservableCollection<CurationDiagnosticDisplay> ReviewDiagnostics { get; } = [];
     public IReadOnlyList<QualityReviewPromptMode> ReviewModes { get; } = Enum.GetValues<QualityReviewPromptMode>();
 
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GenerateReviewPromptCommand)), NotifyCanExecuteChangedFor(nameof(AddFlagCommand)), NotifyCanExecuteChangedFor(nameof(RemoveFlagCommand))]
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(GenerateReviewPromptCommand)), NotifyCanExecuteChangedFor(nameof(AddFlagCommand)), NotifyCanExecuteChangedFor(nameof(RemoveFlagCommand)), NotifyCanExecuteChangedFor(nameof(SuspendSelectedCommand)), NotifyCanExecuteChangedFor(nameof(ReactivateSelectedCommand)), NotifyCanExecuteChangedFor(nameof(MarkMasteredSelectedCommand)), NotifyCanExecuteChangedFor(nameof(UnmarkMasteredSelectedCommand))]
     private CuratedLearningItemRowViewModel? _selectedItem;
 
     [ObservableProperty]
@@ -61,6 +65,37 @@ public sealed partial class ContentCurationViewModel : ObservableObject
     public bool HasReviewPrompt => !string.IsNullOrWhiteSpace(ReviewPrompt);
     public bool HasReviewResults => ReviewResults.Count > 0;
     public ObservableCollection<UserFlagDefinitionView> StudyFlags { get; } = [];
+
+    public bool CanSuspendSelected => SelectedItem?.Lifecycle == LearningItemLifecycle.Active;
+    public bool CanReactivateSelected => SelectedItem?.Lifecycle == LearningItemLifecycle.Suspended;
+    public bool CanMarkMasteredSelected => SelectedItem?.Lifecycle == LearningItemLifecycle.Active;
+    public bool CanUnmarkMasteredSelected => SelectedItem?.Lifecycle == LearningItemLifecycle.Mastered;
+
+    partial void OnSelectedItemChanged(CuratedLearningItemRowViewModel? value)
+    {
+        OnPropertyChanged(nameof(CanSuspendSelected));
+        OnPropertyChanged(nameof(CanReactivateSelected));
+        OnPropertyChanged(nameof(CanMarkMasteredSelected));
+        OnPropertyChanged(nameof(CanUnmarkMasteredSelected));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSuspendSelected))]
+    private Task SuspendSelectedAsync() => ChangeLifecycleAsync(item => _content!.SuspendLearningItemAsync(item.Id), "Learning Item suspended.");
+
+    [RelayCommand(CanExecute = nameof(CanReactivateSelected))]
+    private Task ReactivateSelectedAsync() => ChangeLifecycleAsync(item => _content!.ReactivateLearningItemAsync(item.Id), "Learning Item reactivated and due now.");
+
+    [RelayCommand(CanExecute = nameof(CanMarkMasteredSelected))]
+    private Task MarkMasteredSelectedAsync() => ChangeLifecycleAsync(item => _content!.MarkLearningItemMasteredAsync(item.Id), "Learning Item marked as mastered.");
+
+    [RelayCommand(CanExecute = nameof(CanUnmarkMasteredSelected))]
+    private Task UnmarkMasteredSelectedAsync() => ChangeLifecycleAsync(item => _content!.UnmarkLearningItemMasteredAsync(item.Id), "Learning Item returned to active and due now.");
+
+    private async Task ChangeLifecycleAsync(Func<CuratedLearningItemRowViewModel, Task> action, string message)
+    {
+        if (_content is null || SelectedItem is null) return;
+        await RunAsync(async () => { await action(SelectedItem); if (_refreshContent is not null) await _refreshContent(); _reportStatus(message); });
+    }
 
     public void AttachDesktopInteractions(IDesktopInteractionService interactions)
     {
@@ -264,13 +299,14 @@ public sealed partial class CuratedLearningItemRowViewModel : ObservableObject
     {
         _selectionChanged = selectionChanged;
         Id = item.Id; Prompt = item.Prompt; ContentRevision = item.ContentRevision; FlagIds = item.UserFlagDefinitionIds.ToHashSet();
-        QualityState = item.CurrentQualityState?.Outcome.ToString() ?? "NoAssurance";
+        QualityState = item.CurrentQualityState?.Outcome.ToString() ?? "NoAssurance"; Lifecycle = item.Lifecycle;
         History = item.QualityReviews.Select(x => new QualityReviewHistoryRowViewModel(x)).ToArray();
     }
     public Guid Id { get; }
     public string Prompt { get; }
     public int ContentRevision { get; }
     public string QualityState { get; }
+    public LearningItemLifecycle Lifecycle { get; }
     public HashSet<Guid> FlagIds { get; }
     public IReadOnlyList<QualityReviewHistoryRowViewModel> History { get; }
     public bool HasHistory => History.Count > 0;
