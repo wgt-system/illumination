@@ -265,9 +265,9 @@ Deliver:
 - quality-review prompt and structured-result workflow,
 - explicit review acceptance and optional normal content correction.
 
-### v0.5.0 – Interaction Modes and Evaluation (implemented; release-ready pending acceptance)
+### v0.5.0 – Interaction Modes and Evaluation (released)
 
-The v0.5 implementation is present on `dev`; it is release-ready only after the integrated acceptance and hardening checks pass. The following scope is not yet claimed as released.
+The v0.5 implementation is released and covered by the integrated acceptance and hardening baseline.
 
 Deliver:
 

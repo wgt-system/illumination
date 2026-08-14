@@ -10,7 +10,7 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current release baseline
 
-Illumination v0.4.0 is the current stable release. The dev branch is release-ready for v0.5.0 pending final acceptance and release operations. v0.5 completes SelfAssessed, Selection, ShortText, and Code interaction workflows, advisory Assisted evaluation, hint/assistance behavior, low-interaction filtering, durable interaction facts, and v0.4-to-v0.5 migration safety. The optional Avalonia host exposes administration and development workflows.
+Illumination v0.5.0 is the current stable release. It completes SelfAssessed, Selection, ShortText, and Code interaction workflows, advisory Assisted evaluation, hint/assistance behavior, low-interaction filtering, durable interaction facts, and v0.4-to-v0.5 migration safety. The optional Avalonia host exposes administration and development workflows.
 
 The next planned direction after v0.5 is Learning Insight and progress-oriented views; it is not implemented or released here.
 
