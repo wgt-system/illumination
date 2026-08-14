@@ -21,7 +21,7 @@ public sealed class ContentAcquisitionViewModelTests
         await viewModel.GeneratePromptCommand.ExecuteAsync(null);
 
         Assert.Contains("Java Basics", viewModel.GeneratedPrompt);
-        Assert.Contains("exactly 10", viewModel.GeneratedPrompt);
+        Assert.Contains("Aim for 10", viewModel.GeneratedPrompt);
 
         var deckId = Guid.NewGuid();
         viewModel.UpdateDecks([new DeckView(deckId, "Existing", [])]);

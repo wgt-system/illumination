@@ -10,7 +10,7 @@ public sealed class ContentAcquisitionServiceTests
     private static readonly DateTimeOffset Now = new(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
     [Fact]
-    public void Prompt_generation_contains_the_canonical_contract_and_target_guidance()
+    public void Prompt_generation_contains_contract_quality_and_response_mode_guidance()
     {
         var service = new ContentAcquisitionService(new FakePersistence(), new FixedTimeProvider(Now));
         var prompt = service.GenerateContentPrompt(new GenerateContentPromptCommand("C# async", 3, NewDeckName: "Async Deck")).Prompt;
@@ -21,10 +21,24 @@ public sealed class ContentAcquisitionServiceTests
         Assert.Contains("Do not print the full JSON inline", prompt);
         Assert.Contains("If file creation is unavailable, return JSON only inline", prompt);
         Assert.Contains("self_assessed", prompt);
+        Assert.Contains("selection", prompt);
+        Assert.Contains("short_text", prompt);
+        Assert.Contains("code", prompt);
         Assert.Contains("referenceSolution", prompt);
         Assert.Contains("target-deck", prompt);
         Assert.Contains("C# async", prompt);
-        Assert.Contains("3", prompt);
+        Assert.Contains("Aim for 3", prompt);
+        Assert.Contains("return fewer items rather than inventing uncertain, repetitive, low-value, or filler content", prompt);
+        Assert.Contains("quality pass", prompt);
+        Assert.Contains("factually uncertain", prompt);
+        Assert.Contains("internally inconsistent", prompt);
+        Assert.Contains("ambiguous without sufficient context", prompt);
+        Assert.Contains("duplicate or near-duplicate", prompt);
+        Assert.Contains("one or more correct choices", prompt);
+        Assert.Contains("acceptedShortAnswers", prompt);
+        Assert.DoesNotContain("Generate exactly 3", prompt);
+        Assert.Contains("Do not request or provide numeric confidence scores", prompt);
+        Assert.Contains("do not claim that generated content is verified", prompt);
     }
 
     [Fact]

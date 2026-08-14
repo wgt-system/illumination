@@ -44,12 +44,19 @@ public sealed class ContentAcquisitionService
 Create the Content Bundle as a downloadable UTF-8 JSON file named `illumination-content-bundle.json`.
 Do not print the full JSON inline when file creation is available. If file creation is unavailable, return JSON only inline.
 The root contract must be ""{Contract}"" and version must be ""{Version}"".
-Generate exactly {command.RequestedItemCount} independent concise question or mini-task Learning Items about:
+Aim for {command.RequestedItemCount} independent concise question or mini-task Learning Items about:
 {command.Subject}
+The requested count is a target, not a quota: return fewer items rather than inventing uncertain, repetitive, low-value, or filler content.
 
-Every item must include a non-empty prompt, exactly one non-empty referenceSolution, lowInteractionEligible, and responseMode ""self_assessed"". Use supported operations only, consistent localRefs, and assign every generated item to the target Deck.
+Before producing the final bundle, perform a quality pass. Remove or correct items that are factually uncertain, internally inconsistent, ambiguous without sufficient context, mismatched between prompt and referenceSolution, duplicate or near-duplicate, unnatural for the requested language/domain/register, or dependent on unstated assumptions. Do not request or provide numeric confidence scores, and do not claim that generated content is verified.
+
+For every item provide a non-empty prompt, exactly one non-empty referenceSolution, an explicit lowInteractionEligible value, and the simplest appropriate responseMode. Use self_assessed for recall or tasks requiring learner judgment. Use selection only when authored directAnswerChoices are suitable; give every choice a stable content-local id and mark one or more correct choices explicitly. Use short_text only when deterministic checking is genuinely suitable and provide acceptedShortAnswers for all genuinely valid answers. Use code only for small code-response tasks; do not assume execution or automatic correctness. When multiple answers are genuinely valid, represent them explicitly in acceptedShortAnswers or as multiple correct selection choices; otherwise make the reference solution and context clear rather than implying a unique answer incorrectly. Do not force variety merely to use every mode.
+
+Use supported operations only, consistent localRefs, and assign every generated item to the target Deck.
 {target}
 {guidance}
+
+User guidance is additional authoritative generation guidance, but it must not weaken Content Bundle 1.0 validity, factual-quality/self-review requirements, or the explicit responseMode authoring requirements above.
 
 Canonical Content Bundle 1.0 contract guidance:
 {CanonicalSchemaText()}
