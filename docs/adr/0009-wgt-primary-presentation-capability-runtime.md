@@ -3,6 +3,19 @@
 - Status: Accepted
 - Date: 2026-08-09
 
+## Current Architecture Context
+
+This ADR remains historically valid for using Wiiii Got This as the primary presentation
+and capability host for Illumination. Its generic WGT transport/relay/retry/encryption
+wording reflects the architecture state at the time of the decision. Current system-wide
+capability ownership is governed by `wgt-system/architecture`: WGT owns device/platform
+integration and presentation, while Conveyance owns generic durable opaque cross-device
+delivery. `Current Object` is the only currently accepted Conveyance delivery mode and is
+not a bidirectional Learning synchronization solution by itself. Illumination retains its
+domain-specific publication, command, authority, merge, conflict, and reconciliation
+semantics; concrete Illumination synchronization semantics remain open. This note does not
+rewrite the historical Decision below.
+
 ## Context
 
 Illumination owns learning domain, application, persistence, and future domain-specific synchronization/merge semantics. Wiiii Got This owns cross-application platform concerns and is the primary end-user presentation for Illumination on Windows and iPhone.
