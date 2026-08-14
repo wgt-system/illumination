@@ -94,9 +94,20 @@ public class LearningItemAndDeckTests
             directAnswerChoices: direct,
             assistanceAnswerChoices: assistance);
 
-        Assert.Equal(direct, item.DirectAnswerChoices);
-        Assert.Equal(assistance, item.AssistanceAnswerChoices);
+        Assert.Equal(direct.Select(x => x.Text), item.DirectAnswerChoices.Select(x => x.Text));
+        Assert.Equal(assistance.Select(x => x.Text), item.AssistanceAnswerChoices.Select(x => x.Text));
         Assert.NotSame(item.DirectAnswerChoices, item.AssistanceAnswerChoices);
+    }
+
+    [Fact]
+    public void Answer_choice_ids_are_preserved_and_duplicate_ids_are_rejected()
+    {
+        var item = LearningItem.Create("Question", "Solution", InitialDueAt, ResponseMode.Selection,
+            directAnswerChoices: [new AnswerChoice("Wrong", false, "wrong"), new AnswerChoice("Right", true, "right")]);
+
+        Assert.Equal(["wrong", "right"], item.DirectAnswerChoices.Select(choice => choice.Id));
+        Assert.Throws<ArgumentException>(() => LearningItem.Create("Question", "Solution", InitialDueAt, ResponseMode.Selection,
+            directAnswerChoices: [new AnswerChoice("One", true, "same"), new AnswerChoice("Two", false, "same")]));
     }
 
     [Fact]

@@ -47,7 +47,7 @@ public sealed record LearningItemSnapshot(
 
 public sealed record HintSnapshot(string Text);
 
-public sealed record AnswerChoiceSnapshot(string Text, bool IsCorrect);
+public sealed record AnswerChoiceSnapshot(string Text, bool IsCorrect, string Id = "");
 
 public sealed record DeckSnapshot(Guid Id, string Name, IReadOnlyList<Guid> LearningItemIds);
 

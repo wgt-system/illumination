@@ -177,9 +177,9 @@ public sealed class StudySessionService
         var completedAt = _timeProvider.GetUtcNow();
         var assessment = ToDomain(command.Assessment);
         var appearance = GetAppearance(session.Id, item.Id.Value);
-        var automaticCorrectness = command.AutomaticCorrectness ?? appearance.AutomaticCorrectness;
-        var suggestedAssessment = command.SuggestedAssessment ?? appearance.SuggestedAssessment;
-        var submittedResponse = command.SubmittedResponse ?? appearance.SubmittedResponse;
+        var automaticCorrectness = appearance.AutomaticCorrectness;
+        var suggestedAssessment = appearance.SuggestedAssessment;
+        var submittedResponse = appearance.SubmittedResponse;
         var review = item.CompleteReview(completedAt, assessment, submittedResponse, automaticCorrectness, suggestedAssessment is { } suggested ? ToDomain(suggested) : null, appearance.RevealedHintCount, appearance.AssistanceRevealed, appearance.ReferenceRevealed);
         var updatedQueue = session.Queue.Skip(1).ToList();
         switch (assessment)
@@ -208,6 +208,7 @@ public sealed class StudySessionService
         var updatedItem = ToSnapshot(item, snapshot.DeckIds);
         var reviewSnapshot = new StudyReviewSnapshot(review.Id.Value, review.LearningItemId.Value, review.CompletedAt, ToApplication(review.Assessment), review.SubmittedResponse, review.AutomaticCorrectness, review.SuggestedAssessment is { } acceptedSuggestion ? ToApplication(acceptedSuggestion) : null, review.HintCount, review.AssistanceAnswerChoicesRevealed, review.ReferenceSolutionRevealed);
         await _persistence.CommitReviewAsync(updatedItem, reviewSnapshot, updatedSession, cancellationToken);
+        _appearances.Remove((session.Id, item.Id.Value));
         return new StudyReviewResult(review.Id.Value, review.LearningItemId.Value, review.CompletedAt, ToView(updatedSession));
     }
 
@@ -329,19 +330,19 @@ public sealed class StudySessionService
 
     private static StudySessionItemView ToItemView(StudyLearningItemSnapshot item) => new(
         item.Id, item.Prompt, item.ReferenceSolution, item.ResponseMode,
-        item.DirectAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"choice-{index}", choice.Text)).ToArray(),
-        item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"assistance-{index}", choice.Text)).ToArray(),
+        item.DirectAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView(ChoiceId(choice, index, "choice"), choice.Text)).ToArray(),
+        item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView(ChoiceId(choice, index, "assistance"), choice.Text)).ToArray(),
         item.Hints.Select(x => x.Text).ToArray(), item.AcceptedShortAnswers, item.LowInteractionEligible);
 
     private AppearanceState GetAppearance(Guid sessionId, Guid itemId) => _appearances.TryGetValue((sessionId, itemId), out var state) ? state : (_appearances[(sessionId, itemId)] = new AppearanceState());
 
-    private static StudyInteractionStateView ToInteractionView(Guid sessionId, Guid itemId, AppearanceState state, StudyLearningItemSnapshot item) => new(sessionId, itemId, item.Hints.Take(state.RevealedHintCount).Select(x => x.Text).ToArray(), state.AssistanceRevealed, state.ReferenceRevealed, state.SubmittedResponse, state.AssistanceRevealed ? item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView($"assistance-{index}", choice.Text)).ToArray() : null, state.ReferenceRevealed ? item.ReferenceSolution : null);
+    private static StudyInteractionStateView ToInteractionView(Guid sessionId, Guid itemId, AppearanceState state, StudyLearningItemSnapshot item) => new(sessionId, itemId, item.Hints.Take(state.RevealedHintCount).Select(x => x.Text).ToArray(), state.AssistanceRevealed, state.ReferenceRevealed, state.SubmittedResponse, state.AssistanceRevealed ? item.AssistanceAnswerChoices.Select((choice, index) => new StudyAnswerChoiceView(ChoiceId(choice, index, "assistance"), choice.Text)).ToArray() : null, state.ReferenceRevealed ? item.ReferenceSolution : null);
 
     private static (bool? Correctness, string? Response) EvaluateResponse(StudyLearningItemSnapshot item, SubmitStudyResponseCommand command)
     {
         return item.ResponseMode switch
         {
-            LearningItemResponseMode.Selection => (command.SelectedChoiceIds is not null && command.SelectedChoiceIds.Order().SequenceEqual(item.DirectAnswerChoices.Select((choice, index) => (choice.IsCorrect ? $"choice-{index}" : null)).Where(x => x is not null).Select(x => x!).Order()), string.Join(",", command.SelectedChoiceIds ?? [])),
+            LearningItemResponseMode.Selection => (command.SelectedChoiceIds is not null && command.SelectedChoiceIds.ToHashSet(StringComparer.Ordinal).SetEquals(item.DirectAnswerChoices.Select((choice, index) => (choice, index)).Where(x => x.choice.IsCorrect).Select(x => ChoiceId(x.choice, x.index, "choice"))), string.Join(",", command.SelectedChoiceIds ?? [])),
             LearningItemResponseMode.ShortText => (command.ShortTextResponse is not null && item.AcceptedShortAnswers.Any(answer => string.Equals(NormalizeShortText(answer), NormalizeShortText(command.ShortTextResponse), StringComparison.OrdinalIgnoreCase)), command.ShortTextResponse),
             LearningItemResponseMode.Code => (null, command.CodeResponse),
             _ => (null, command.ShortTextResponse ?? command.CodeResponse),
@@ -357,6 +358,8 @@ public sealed class StudySessionService
     };
 
     private static string NormalizeShortText(string value) => value.Trim().Normalize(NormalizationForm.FormC);
+
+    private static string ChoiceId(AnswerChoiceSnapshot choice, int index, string fallbackPrefix) => string.IsNullOrWhiteSpace(choice.Id) ? $"{fallbackPrefix}-{index}" : choice.Id;
 
     private static StudyLearningAssessment? SuggestAssessment(StudySessionSnapshot session, StudyLearningItemSnapshot item, bool? correctness, AppearanceState state) => session.EvaluationMode == StudyEvaluationMode.Assisted && item.ResponseMode is LearningItemResponseMode.Selection or LearningItemResponseMode.ShortText && correctness is not null ? correctness.Value && session.ConsiderAssistance && (state.RevealedHintCount > 0 || state.AssistanceRevealed) ? StudyLearningAssessment.Unsicher : correctness.Value ? StudyLearningAssessment.Gut : StudyLearningAssessment.Schwer : null;
 
@@ -375,8 +378,8 @@ public sealed class StudySessionService
     private static StudyLearningItemSnapshot ToSnapshot(LearningItem item, IReadOnlyList<Guid> deckIds) => new(
         item.Id.Value, item.Prompt, item.ReferenceSolution.Content, ToApplication(item.ResponseMode),
         item.Hints.Select(x => new HintSnapshot(x.Text)).ToArray(),
-        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
-        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
+        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
+        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
         item.AcceptedShortAnswers.ToArray(), item.LowInteractionEligible, ToApplication(item.LifecycleState),
         item.LearningState.IsNew, item.LearningState.DueAt, item.LearningState.Difficulty,
         item.LearningState.StabilityDays, item.LearningState.IsInShortTermRelearning, deckIds);
@@ -384,8 +387,8 @@ public sealed class StudySessionService
     private static LearningItem ToDomain(StudyLearningItemSnapshot snapshot) => LearningItem.Restore(
         LearningItemId.From(snapshot.Id), snapshot.Prompt, snapshot.ReferenceSolution, snapshot.DueAt,
         snapshot.IsNew, ToDomain(snapshot.ResponseMode), snapshot.Hints.Select(x => new Hint(x.Text)),
-        snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
-        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)), snapshot.AcceptedShortAnswers,
+        snapshot.DirectAnswerChoices.Select((x, index) => new AnswerChoice(x.Text, x.IsCorrect, ChoiceId(x, index, "choice"))),
+        snapshot.AssistanceAnswerChoices.Select((x, index) => new AnswerChoice(x.Text, x.IsCorrect, ChoiceId(x, index, "assistance"))), snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible, ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays,
         snapshot.IsInShortTermRelearning);
 

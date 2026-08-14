@@ -125,8 +125,8 @@ public sealed class ContentCurationService
     private static LearningItem ToDomain(LearningItemSnapshot snapshot) => LearningItem.Restore(
         LearningItemId.From(snapshot.Id), snapshot.Prompt, snapshot.ReferenceSolution, snapshot.DueAt, snapshot.IsNew,
         ToDomain(snapshot.ResponseMode), snapshot.Hints.Select(x => new Hint(x.Text)),
-        snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
-        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)), snapshot.AcceptedShortAnswers,
+        snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.Id)),
+        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.Id)), snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible, ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays,
         snapshot.IsInShortTermRelearning, snapshot.ContentRevision,
         (snapshot.QualityReviews ?? []).Select(x => QualityReview.Restore(
@@ -138,8 +138,8 @@ public sealed class ContentCurationService
     private static LearningItemSnapshot ToSnapshot(LearningItem item) => new(
         item.Id.Value, item.Prompt, item.ReferenceSolution.Content, ToApplication(item.ResponseMode),
         item.Hints.Select(x => new HintSnapshot(x.Text)).ToArray(),
-        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
-        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
+        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
+        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
         item.AcceptedShortAnswers.ToArray(), item.LowInteractionEligible, ToApplication(item.LifecycleState),
         item.LearningState.IsNew, item.LearningState.DueAt, item.LearningState.Difficulty, item.LearningState.StabilityDays,
         item.LearningState.IsInShortTermRelearning, [], item.ContentRevision,

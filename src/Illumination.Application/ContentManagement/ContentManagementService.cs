@@ -215,8 +215,8 @@ public sealed class ContentManagementService
         snapshot.IsNew,
         ToDomain(snapshot.ResponseMode),
         snapshot.Hints.Select(x => new Hint(x.Text)),
-        snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
-        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect)),
+        snapshot.DirectAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.Id)),
+        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.Id)),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
         ToDomain(snapshot.Lifecycle), snapshot.Difficulty, snapshot.StabilityDays, snapshot.IsInShortTermRelearning,
@@ -244,8 +244,8 @@ public sealed class ContentManagementService
         item.ReferenceSolution.Content,
         ToApplication(item.ResponseMode),
         item.Hints.Select(x => new HintSnapshot(x.Text)).ToArray(),
-        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
-        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
+        item.DirectAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
+        item.AssistanceAnswerChoices.Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, x.Id)).ToArray(),
         item.AcceptedShortAnswers.ToArray(),
         item.LowInteractionEligible,
         ToApplication(item.LifecycleState),
@@ -271,8 +271,8 @@ public sealed class ContentManagementService
         snapshot.ReferenceSolution,
         snapshot.Hints.Select(x => new HintView(x.Text)).ToArray(),
         snapshot.ResponseMode,
-        snapshot.DirectAnswerChoices.Select(x => new AnswerChoiceView(x.Text, x.IsCorrect)).ToArray(),
-        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoiceView(x.Text, x.IsCorrect)).ToArray(),
+        snapshot.DirectAnswerChoices.Select(x => new AnswerChoiceView(x.Text, x.IsCorrect, x.Id)).ToArray(),
+        snapshot.AssistanceAnswerChoices.Select(x => new AnswerChoiceView(x.Text, x.IsCorrect, x.Id)).ToArray(),
         snapshot.AcceptedShortAnswers,
         snapshot.LowInteractionEligible,
         snapshot.Lifecycle,
@@ -322,5 +322,5 @@ public sealed class ContentManagementService
 
     private static IEnumerable<Hint>? ToDomainHints(IReadOnlyList<HintInput>? hints) => hints?.Select(x => new Hint(x.Text));
 
-    private static IEnumerable<AnswerChoice>? ToDomainChoices(IReadOnlyList<AnswerChoiceInput>? choices) => choices?.Select(x => new AnswerChoice(x.Text, x.IsCorrect));
+    private static IEnumerable<AnswerChoice>? ToDomainChoices(IReadOnlyList<AnswerChoiceInput>? choices) => choices?.Select(x => new AnswerChoice(x.Text, x.IsCorrect, x.Id));
 }

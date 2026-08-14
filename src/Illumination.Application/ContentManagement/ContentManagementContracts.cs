@@ -17,7 +17,7 @@ public enum LearningItemLifecycle
 
 public sealed record HintInput(string Text);
 
-public sealed record AnswerChoiceInput(string Text, bool IsCorrect = false);
+public sealed record AnswerChoiceInput(string Text, bool IsCorrect = false, string? Id = null);
 
 public sealed record CreateLearningItemCommand(
     string Prompt,
@@ -60,7 +60,7 @@ public sealed record LearningItemView(
 
 public sealed record HintView(string Text);
 
-public sealed record AnswerChoiceView(string Text, bool IsCorrect);
+public sealed record AnswerChoiceView(string Text, bool IsCorrect, string Id = "");
 
 public sealed record DeckView(Guid Id, string Name, IReadOnlyList<Guid> LearningItemIds);
 

@@ -41,8 +41,8 @@ public sealed class LearningItem
         Prompt = prompt;
         ReferenceSolution = referenceSolution ?? throw new ArgumentNullException(nameof(referenceSolution));
         _hints = CopyHints(hints);
-        _directAnswerChoices = CopyAnswerChoices(directAnswerChoices);
-        _assistanceAnswerChoices = CopyAnswerChoices(assistanceAnswerChoices);
+        _directAnswerChoices = CopyAnswerChoices(directAnswerChoices, "choice");
+        _assistanceAnswerChoices = CopyAnswerChoices(assistanceAnswerChoices, "assistance");
         _acceptedShortAnswers = CopyAcceptedShortAnswers(acceptedShortAnswers);
         ValidateInteractionConfiguration(responseMode, _directAnswerChoices, _assistanceAnswerChoices, _acceptedShortAnswers);
 
@@ -203,8 +203,8 @@ public sealed class LearningItem
         DomainText.RequireNonWhitespace(prompt, nameof(prompt));
         var newReferenceSolution = new ReferenceSolution(referenceSolution);
         var newHints = CopyHints(hints);
-        var newDirectAnswerChoices = CopyAnswerChoices(directAnswerChoices);
-        var newAssistanceAnswerChoices = CopyAnswerChoices(assistanceAnswerChoices);
+        var newDirectAnswerChoices = CopyAnswerChoices(directAnswerChoices, "choice");
+        var newAssistanceAnswerChoices = CopyAnswerChoices(assistanceAnswerChoices, "assistance");
         var newAcceptedShortAnswers = CopyAcceptedShortAnswers(acceptedShortAnswers);
         ValidateInteractionConfiguration(responseMode, newDirectAnswerChoices, newAssistanceAnswerChoices, newAcceptedShortAnswers);
 
@@ -362,10 +362,16 @@ public sealed class LearningItem
             ?? [];
     }
 
-    private static List<AnswerChoice> CopyAnswerChoices(IEnumerable<AnswerChoice>? choices)
+    private static List<AnswerChoice> CopyAnswerChoices(IEnumerable<AnswerChoice>? choices, string fallbackPrefix)
     {
-        return choices?.Select(choice => choice ?? throw new ArgumentException("Answer choices must not contain null values.", nameof(choices))).ToList()
+        var copied = choices?.Select((choice, index) => choice is null
+                ? throw new ArgumentException("Answer choices must not contain null values.", nameof(choices))
+                : new AnswerChoice(choice.Text, choice.IsCorrect, string.IsNullOrWhiteSpace(choice.Id) ? $"{fallbackPrefix}-{index}" : choice.Id))
+            .ToList()
             ?? [];
+        if (copied.Select(choice => choice.Id).Distinct(StringComparer.Ordinal).Count() != copied.Count)
+            throw new ArgumentException("Answer choice IDs must be unique within one collection.", nameof(choices));
+        return copied;
     }
 
     private static List<string> CopyAcceptedShortAnswers(IEnumerable<string>? acceptedShortAnswers)

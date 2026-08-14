@@ -115,8 +115,8 @@ public sealed class EfCoreStudySessionPersistence : IStudySessionPersistence
     private static StudyLearningItemSnapshot ToSnapshot(LearningItemRecord record) => new(
         record.LearningItemId, record.Prompt, record.ReferenceSolutionContent, ToApplication(record.ResponseMode),
         record.Hints.OrderBy(x => x.Position).Select(x => new HintSnapshot(x.Text)).ToArray(),
-        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
-        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect)).ToArray(),
+        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Direct).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, $"choice-{x.Position}")).ToArray(),
+        record.AnswerChoices.Where(x => x.Role == AnswerChoiceRole.Assistance).OrderBy(x => x.Position).Select(x => new AnswerChoiceSnapshot(x.Text, x.IsCorrect, $"assistance-{x.Position}")).ToArray(),
         record.AcceptedShortAnswers.OrderBy(x => x.Position).Select(x => x.Value).ToArray(), record.LowInteractionEligible,
         ToApplication(record.LifecycleState), record.IsNew, record.DueAt, record.Difficulty, record.StabilityDays,
         record.IsInShortTermRelearning, record.DeckMemberships.Select(x => x.DeckId).Distinct().ToArray());

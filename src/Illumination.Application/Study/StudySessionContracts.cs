@@ -25,10 +25,7 @@ public sealed record StartStudySessionCommand(
 public sealed record SubmitStudyReviewCommand(
     Guid SessionId,
     Guid LearningItemId,
-    StudyLearningAssessment Assessment,
-    string? SubmittedResponse = null,
-    bool? AutomaticCorrectness = null,
-    StudyLearningAssessment? SuggestedAssessment = null);
+    StudyLearningAssessment Assessment);
 
 public sealed record SubmitStudyResponseCommand(Guid SessionId, Guid LearningItemId, IReadOnlyList<string>? SelectedChoiceIds = null, string? ShortTextResponse = null, string? CodeResponse = null);
 public sealed record StudyResponseEvaluationResult(Guid SessionId, Guid LearningItemId, bool? AutomaticCorrectness, StudyLearningAssessment? SuggestedAssessment, string? SubmittedResponse);
