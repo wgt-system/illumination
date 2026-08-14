@@ -34,6 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string Title => "Illumination";
     public ObservableCollection<DeckView> Decks { get; } = [];
+    public ObservableCollection<DeckPresentationItem> DeckPresentationItems { get; } = [];
     public ObservableCollection<LearningItemView> LearningItems { get; } = [];
     public ObservableCollection<LearningItemView> SelectedDeckItems { get; } = [];
     public ObservableCollection<LearningItemView> AvailableDeckItems { get; } = [];
@@ -60,6 +61,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(AddToDeckCommand)), NotifyCanExecuteChangedFor(nameof(RemoveFromDeckCommand))]
     private DeckView? _selectedDeck;
 
+    [ObservableProperty]
+    private DeckPresentationItem? _selectedDeckPresentation;
+
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(AddToDeckCommand))]
     private LearningItemView? _selectedAvailableDeckItem;
 
@@ -68,6 +72,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(StartSessionCommand))]
     private DeckView? _selectedStudyDeck;
+
+    [ObservableProperty]
+    private DeckPresentationItem? _selectedStudyDeckPresentation;
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasCurrentStudyItem)), NotifyPropertyChangedFor(nameof(IsSelectionMode)), NotifyPropertyChangedFor(nameof(IsShortTextMode)), NotifyPropertyChangedFor(nameof(IsCodeMode)), NotifyPropertyChangedFor(nameof(IsSelfAssessedMode)), NotifyCanExecuteChangedFor(nameof(RevealSolutionCommand)), NotifyCanExecuteChangedFor(nameof(SubmitResponseCommand)), NotifyCanExecuteChangedFor(nameof(GradeNochmalCommand)), NotifyCanExecuteChangedFor(nameof(GradeSchwerCommand)), NotifyCanExecuteChangedFor(nameof(GradeUnsicherCommand)), NotifyCanExecuteChangedFor(nameof(GradeGutCommand)), NotifyCanExecuteChangedFor(nameof(GradeLeichtCommand))]
     private StudySessionItemView? _currentStudyItem;
@@ -114,7 +121,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await RefreshContentAsync();
     }
 
-    partial void OnSelectedDeckChanged(DeckView? value) => RebuildDeckMembershipLists();
+    partial void OnSelectedDeckChanged(DeckView? value)
+    {
+        SelectedDeckPresentation = DeckPresentationItems.FirstOrDefault(x => x.Id == value?.Id);
+        RebuildDeckMembershipLists();
+    }
+
+    partial void OnSelectedDeckPresentationChanged(DeckPresentationItem? value)
+    {
+        if (value is not null && SelectedDeck?.Id != value.Id) SelectedDeck = value.Deck;
+    }
+
+    partial void OnSelectedStudyDeckPresentationChanged(DeckPresentationItem? value)
+    {
+        if (value is not null && SelectedStudyDeck?.Id != value.Id) SelectedStudyDeck = value.Deck;
+    }
 
     partial void OnCurrentStudyItemChanged(StudySessionItemView? value)
     {
@@ -338,11 +359,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var decks = await _content.ListDecksAsync();
         var items = await _content.ListLearningItemsAsync();
         Replace(Decks, decks);
+        Replace(DeckPresentationItems, DeckPresentationLabeler.Label(decks));
         Replace(LearningItems, items);
         ContentAcquisition.UpdateDecks(decks);
         await ContentCuration.RefreshAsync(items);
         SelectedDeck = Decks.FirstOrDefault(x => x.Id == selectedDeckId) ?? Decks.FirstOrDefault();
         SelectedStudyDeck = Decks.FirstOrDefault(x => x.Id == selectedStudyDeckId) ?? Decks.FirstOrDefault();
+        SelectedDeckPresentation = DeckPresentationItems.FirstOrDefault(x => x.Id == SelectedDeck?.Id) ?? DeckPresentationItems.FirstOrDefault();
+        SelectedStudyDeckPresentation = DeckPresentationItems.FirstOrDefault(x => x.Id == SelectedStudyDeck?.Id) ?? DeckPresentationItems.FirstOrDefault();
         RebuildDeckMembershipLists();
     }
 

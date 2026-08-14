@@ -7,6 +7,13 @@
         Title="Illumination"
         Width="1120" Height="740" MinWidth="920" MinHeight="620">
   <Window.Styles>
+    <Style Selector="TabControl.shell-navigation">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="TabControl.shell-navigation TabItem:selected">
+      <Setter Property="Background" Value="{DynamicResource SystemAccentColorLowBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
     <Style Selector="TabItem">
       <Setter Property="MinWidth" Value="156" />
       <Setter Property="Padding" Value="12,10" />
@@ -27,7 +34,7 @@
       <TextBlock Text="Illumination" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
     </Border>
 
-    <TabControl Grid.Row="1" TabStripPlacement="Left" Margin="0,10,0,8">
+    <TabControl Classes="shell-navigation" Grid.Row="1" TabStripPlacement="Left" Margin="0,10,0,8">
       <TabItem>
         <TabItem.Header>
           <StackPanel Orientation="Horizontal" Spacing="10">
@@ -38,12 +45,12 @@
         <Grid ColumnDefinitions="280,*" ColumnSpacing="20" Margin="12">
           <StackPanel Spacing="10">
             <TextBlock Text="Decks" FontSize="20" FontWeight="SemiBold" />
-            <ListBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedDeck}" MinHeight="300">
+            <ListBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedDeckPresentation}" MinHeight="300">
               <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="content:DeckView">
+                <DataTemplate x:DataType="desktop:DeckPresentationItem">
                   <StackPanel Margin="6">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding LearningItemIds.Count, StringFormat='{}{0} item(s)'}" Opacity="0.65" />
+                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding LearningItemCount, StringFormat='{}{0} item(s)'}" Opacity="0.65" />
                   </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -190,9 +197,9 @@
         <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14,4,4,4">
           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,280,Auto,Auto,*,Auto" ColumnSpacing="8" RowSpacing="6">
             <TextBlock Text="Deck" VerticalAlignment="Center" Classes="secondary" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedStudyDeck}">
+            <ComboBox Grid.Column="1" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedStudyDeckPresentation}">
               <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="content:DeckView"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
             <Button Grid.Column="2" Content="Start" Command="{Binding StartSessionCommand}" />
@@ -347,7 +354,7 @@
                       <TextBox Text="{Binding NewDeckName}" Watermark="New Deck name" IsEnabled="{Binding UseNewDeck}" />
                       <ComboBox ItemsSource="{Binding ExistingDecks}" SelectedItem="{Binding SelectedExistingDeck}" IsEnabled="{Binding UseExistingDeck}">
                         <ComboBox.ItemTemplate>
-                          <DataTemplate x:DataType="content:DeckView"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                          <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                       <TextBlock Text="Optional guidance" Classes="secondary" />
