@@ -408,6 +408,13 @@ Application queries should support at least:
 - show review history,
 - show content/import provenance where retained.
 
+The v0.6 Learning Insight capability provides these queries as derived read models over
+authoritative local data. It includes overview, current-membership Deck insight,
+filterable Learning Item insight, bounded Review history, persisted Study Session
+history, and a DeckLearningContext for a later follow-Deck generation slice. It does
+not create an analytics store, mutate Learning State, or infer historical Deck
+membership.
+
 Import preview/read models also expose operation index/type, localRef or target stable ID, summary, validity, diagnostics, warnings, dependencies, and whether an operation is selectable. Preview is side-effect free: it creates no Learning Items, Decks, memberships, Reviews, scheduling changes, or successful import-history entry.
 
 After an accepted-subset commit, the result identifies created/updated item and Deck IDs, applied memberships, skipped/rejected operation indices, diagnostics where applicable, and an import/batch identity when import history is retained. There is no silent partial commit.

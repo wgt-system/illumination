@@ -109,7 +109,7 @@ Goal:
 Goal:
 
 - Deck summaries,
-- due/new/stable views,
+- due/new/relearning views,
 - Review history views,
 - Suspended/Mastered management,
 - useful learning-progress dashboard.
@@ -290,8 +290,14 @@ Deliver:
 - Suspended/Mastered management,
 - Study Session history,
 - Review history,
-- progress dashboard,
-- useful filtering/search.
+- useful filtering/search,
+- a typed DeckLearningContext for later follow-Deck generation.
+
+The v0.6 foundation is a derived read capability over authoritative local Learning
+Items, current Deck membership, Reviews, and Study Sessions. It does not introduce a
+separate analytics source of truth, arbitrary mastery scoring, denormalized statistics,
+or a generated prompt/LLM integration. The five-grade distribution is based only on
+learner-confirmed final assessments.
 
 ### v0.7.0+ – Product Refinement
 

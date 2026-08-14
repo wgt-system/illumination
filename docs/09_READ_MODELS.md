@@ -213,6 +213,33 @@ Fields include:
 - Review identities,
 - derived review count/duration.
 
+## 12B. Learning Insight (v0.6 foundation)
+
+Learning Insight is a derived Application read capability over authoritative local
+Learning Items, current Deck membership, Reviews, and Study Sessions. It is not a
+separate analytics source of truth and performs no state mutation.
+
+The overview exposes total, lifecycle, active new, active due-now, and active
+short-term-relearning counts; total Reviews; Review counts in the last 7 and 30 days;
+and the most recent Review time. Due/new/relearning predicates are factual and may
+overlap, while Suspended and Mastered items remain visible but are excluded from normal
+due/new/relearning work counts.
+
+Deck insight aggregates current membership only. It includes lifecycle and workload
+counts, Review totals/latest activity, and the five-grade distribution. A Learning Item
+in multiple current Decks contributes to each Deck. No historical Deck membership is
+reconstructed.
+
+Learning Item insight and the typed DeckLearningContext expose current scheduling,
+lifecycle, authored content identity, Review totals/latest activity, last confirmed
+learner assessment, and five-grade distributions. Automatic correctness and suggested
+assessments remain advisory metadata and never drive outcome statistics.
+
+Review history is newest-first, bounded, and optionally filtered by current Deck
+membership or Learning Item. Study Session history exposes only persisted start,
+completion, selected Deck, resolved evaluation-mode, session-option, and Review-count
+facts. Time-relative calculations use the Application TimeProvider.
+
 ## 13. Future External Learning Coverage
 
 Purpose:
