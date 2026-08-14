@@ -10,9 +10,9 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current release baseline
 
-Illumination v0.4.0 is the current stable release. It provides Learning Item and Deck content, lifecycle management, five-grade Reviews and deterministic scheduling, Study Sessions, Content Acquisition through Content Bundle 1.0, Content Quality & Curation, SQLite/EF Core persistence, migrations, and local backup safety. The optional Avalonia host exposes administration and development workflows.
+Illumination v0.4.0 is the current stable release. The dev branch is release-ready for v0.5.0 pending final acceptance and release operations. v0.5 completes SelfAssessed, Selection, ShortText, and Code interaction workflows, advisory Assisted evaluation, hint/assistance behavior, low-interaction filtering, durable interaction facts, and v0.4-to-v0.5 migration safety. The optional Avalonia host exposes administration and development workflows.
 
-The next planned direction is v0.5 Interaction Modes & Evaluation. Its response interaction, assisted evaluation, hint influence, and low-interaction filtering semantics are specified but are not claimed as released behavior here.
+The next planned direction after v0.5 is Learning Insight and progress-oriented views; it is not implemented or released here.
 
 ## Product direction
 

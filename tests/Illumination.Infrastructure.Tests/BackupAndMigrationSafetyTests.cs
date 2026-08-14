@@ -142,6 +142,12 @@ public sealed class BackupAndMigrationSafetyTests
             command.Parameters.Add(new SqliteParameter("$review", Guid.Parse(reviewId)));
             command.Parameters.Add(new SqliteParameter("$session", Guid.Parse(sessionId)));
             await command.ExecuteNonQueryAsync(cancellationToken);
+            await using var quality = oldContext.Database.GetDbConnection().CreateCommand();
+            quality.CommandText = "INSERT INTO QualityReviews (QualityReviewId, LearningItemId, ContentRevision, Outcome, EvidenceType, Findings, SuggestedCorrection, SupersededBy) VALUES ($quality, $item, 1, 'Warning', 'SourceGroundedReview', 'legacy finding', 'legacy correction', NULL); INSERT INTO UserFlagDefinitions (UserFlagDefinitionId, Name, Meaning) VALUES ($flag, 'Review later', 'legacy user meaning'); INSERT INTO LearningItemUserFlags (LearningItemId, UserFlagDefinitionId) VALUES ($item, $flag);";
+            quality.Parameters.Add(new SqliteParameter("$quality", Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd")));
+            quality.Parameters.Add(new SqliteParameter("$item", Guid.Parse(itemId)));
+            quality.Parameters.Add(new SqliteParameter("$flag", Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")));
+            await quality.ExecuteNonQueryAsync(cancellationToken);
         }
 
         await new SqliteMigrationCoordinator(fixture.CreateOptions(), new LocalSqliteBackupService(fixture.BackupDirectory, 1, fixture.TimeProvider)).MigrateAsync(cancellationToken);
@@ -156,6 +162,9 @@ public sealed class BackupAndMigrationSafetyTests
         Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT CAST(ConsiderAssistance AS INTEGER) FROM StudySessions"));
         Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT HintCount FROM Reviews"));
         Assert.Equal("0", ReadScalar(fixture.DatabasePath, "SELECT CAST(ReferenceSolutionRevealed AS INTEGER) FROM Reviews"));
+        Assert.Equal("1", ReadScalar(fixture.DatabasePath, "SELECT COUNT(*) FROM QualityReviews"));
+        Assert.Equal("legacy finding", ReadScalar(fixture.DatabasePath, "SELECT Findings FROM QualityReviews"));
+        Assert.Equal("1", ReadScalar(fixture.DatabasePath, "SELECT COUNT(*) FROM LearningItemUserFlags"));
     }
 
     private static bool HasTable(string databasePath, string tableName)

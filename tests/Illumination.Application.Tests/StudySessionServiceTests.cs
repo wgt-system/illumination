@@ -278,6 +278,114 @@ public class StudySessionServiceTests
     }
 
     [Fact]
+    public async Task Self_assessed_path_reveals_authored_help_without_automatic_correctness()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [itemId]);
+        store.Items[itemId] = Item(itemId) with
+        {
+            Hints = [new HintSnapshot("Hint 1"), new HintSnapshot("Hint 2")],
+            AssistanceAnswerChoices = [new AnswerChoiceSnapshot("Help 1", false, "help-1"), new AnswerChoiceSnapshot("Help 2", false, "help-2")],
+        };
+
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+        var firstHint = await service.RevealNextHintAsync(session.Id);
+        var secondHint = await service.RevealNextHintAsync(session.Id);
+        var assistance = await service.RevealAssistanceAnswerChoicesAsync(session.Id);
+        var solution = await service.RevealReferenceSolutionAsync(session.Id);
+        await service.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, itemId, StudyLearningAssessment.Gut));
+
+        Assert.Equal(["Hint 1"], firstHint.RevealedHintTexts);
+        Assert.Equal(["Hint 1", "Hint 2"], secondHint.RevealedHintTexts);
+        Assert.True(assistance.AssistanceAnswerChoicesRevealed);
+        Assert.Equal("Solution " + itemId, solution.RevealedReferenceSolution);
+        Assert.Null(store.LastReview!.AutomaticCorrectness);
+        Assert.Null(store.LastReview.SuggestedAssessment);
+        Assert.Equal(2, store.LastReview.HintCount);
+        Assert.True(store.LastReview.AssistanceAnswerChoicesRevealed);
+        Assert.True(store.LastReview.ReferenceSolutionRevealed);
+        Assert.Equal(StudyLearningAssessment.Gut, store.LastReview.Assessment);
+    }
+
+    [Fact]
+    public async Task Assistance_is_advisory_and_final_grade_wins_for_enabled_and_disabled_modes()
+    {
+        var store = new FakeStudyPersistence();
+        var deckId = Guid.NewGuid();
+        var assistedItemId = Guid.NewGuid();
+        var defaultItemId = Guid.NewGuid();
+        store.Decks[deckId] = new StudyDeckSnapshot(deckId, [assistedItemId]);
+        var defaultDeckId = Guid.NewGuid();
+        store.Decks[defaultDeckId] = new StudyDeckSnapshot(defaultDeckId, [defaultItemId]);
+        store.Items[assistedItemId] = Item(assistedItemId) with
+        {
+            ResponseMode = LearningItemResponseMode.Selection,
+            DirectAnswerChoices = [new AnswerChoiceSnapshot("Right", true, "right"), new AnswerChoiceSnapshot("Wrong", false, "wrong")],
+            AssistanceAnswerChoices = [new AnswerChoiceSnapshot("Help 1", false, "help-1"), new AnswerChoiceSnapshot("Help 2", false, "help-2")],
+        };
+        store.Items[defaultItemId] = Item(defaultItemId) with
+        {
+            ResponseMode = LearningItemResponseMode.Selection,
+            DirectAnswerChoices = [new AnswerChoiceSnapshot("Right", true, "right"), new AnswerChoiceSnapshot("Wrong", false, "wrong")],
+            Hints = [new HintSnapshot("Hint")],
+        };
+
+        var service = CreateService(store);
+        var assisted = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Assisted, ConsiderAssistance: true));
+        await service.RevealAssistanceAnswerChoicesAsync(assisted.Id);
+        var assistedEvaluation = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(assisted.Id, assistedItemId, ["right"]));
+        Assert.True(assistedEvaluation.AutomaticCorrectness);
+        Assert.Equal(StudyLearningAssessment.Unsicher, assistedEvaluation.SuggestedAssessment);
+        await service.SubmitReviewAsync(new SubmitStudyReviewCommand(assisted.Id, assistedItemId, StudyLearningAssessment.Leicht));
+        Assert.Equal(StudyLearningAssessment.Leicht, store.LastReview!.Assessment);
+        Assert.Equal(StudyLearningAssessment.Unsicher, store.LastReview.SuggestedAssessment);
+
+        var noPenalty = await service.StartStudySessionAsync(new StartStudySessionCommand([defaultDeckId], EvaluationMode: StudyEvaluationMode.Assisted));
+        await service.RevealNextHintAsync(noPenalty.Id);
+        var defaultEvaluation = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(noPenalty.Id, defaultItemId, ["right"]));
+        Assert.True(defaultEvaluation.AutomaticCorrectness);
+        Assert.Equal(StudyLearningAssessment.Gut, defaultEvaluation.SuggestedAssessment);
+    }
+
+    [Fact]
+    public async Task Code_response_in_assisted_mode_is_captured_without_execution_or_suggestion()
+    {
+        var store = CreateStoreWithSingleItem(out var deckId, out var itemId);
+        store.Items[itemId] = store.Items[itemId] with { ResponseMode = LearningItemResponseMode.Code };
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Assisted));
+
+        var evaluation = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, CodeResponse: "return 42;"));
+
+        Assert.Null(evaluation.AutomaticCorrectness);
+        Assert.Null(evaluation.SuggestedAssessment);
+        Assert.Equal("return 42;", evaluation.SubmittedResponse);
+    }
+
+    [Fact]
+    public async Task Short_text_uses_multiple_conservative_accepted_answers()
+    {
+        var store = CreateStoreWithSingleItem(out var deckId, out var itemId);
+        store.Items[itemId] = store.Items[itemId] with
+        {
+            ResponseMode = LearningItemResponseMode.ShortText,
+            AcceptedShortAnswers = ["Café", "coffee shop"],
+        };
+        var service = CreateService(store);
+        var session = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Assisted));
+
+        var unicodeEquivalent = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, ShortTextResponse: "  cafe\u0301  "));
+        var punctuationVariant = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, ShortTextResponse: "coffee-shop"));
+        var secondAnswer = await service.SubmitResponseAsync(new SubmitStudyResponseCommand(session.Id, itemId, ShortTextResponse: "COFFEE SHOP"));
+
+        Assert.True(unicodeEquivalent.AutomaticCorrectness);
+        Assert.False(punctuationVariant.AutomaticCorrectness);
+        Assert.True(secondAnswer.AutomaticCorrectness);
+    }
+    [Fact]
     public async Task Session_identity_is_stable_and_get_next_repeats_until_review()
     {
         var store = CreateStoreWithSingleItem(out var deckId, out var itemId);
