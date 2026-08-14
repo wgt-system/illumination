@@ -75,6 +75,12 @@ public sealed class ContentManagementService
         return ToView(item, itemSnapshotDeckIds: snapshot.DeckIds);
     }
 
+    public async Task DeleteLearningItemAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        _ = await LoadLearningItemSnapshotAsync(id, cancellationToken);
+        await _persistence.DeleteLearningItemAsync(id, cancellationToken);
+    }
+
     public Task SuspendLearningItemAsync(Guid id, CancellationToken cancellationToken = default) =>
         ChangeLifecycleAsync(id, item => item.Suspend(), cancellationToken);
 

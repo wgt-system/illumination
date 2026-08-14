@@ -8,6 +8,8 @@ public interface IContentPersistence
 
     Task SaveLearningItemAsync(LearningItemSnapshot item, CancellationToken cancellationToken = default);
 
+    Task DeleteLearningItemAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default);
 
     Task<DeckSnapshot?> FindDeckAsync(Guid id, CancellationToken cancellationToken = default);

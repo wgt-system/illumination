@@ -3,7 +3,8 @@
 
         <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
           <StackPanel Spacing="8">
-            <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />            <TextBox Text="{Binding ContentCuration.SearchText}" Watermark="Search prompts" />
+            <StackPanel Orientation="Horizontal" Spacing="6"><ComboBox Width="150" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding ContentCuration.FilterDeck}"><ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox><ComboBox Width="125" ItemsSource="{Binding ContentCuration.LifecycleFilters}" SelectedItem="{Binding ContentCuration.FilterLifecycle}"/><ComboBox Width="125" ItemsSource="{Binding ContentCuration.ResponseModeFilters}" SelectedItem="{Binding ContentCuration.FilterResponseMode}"/></StackPanel>
             <ListBox ItemsSource="{Binding ContentCuration.FilteredItems}" SelectedItem="{Binding ContentCuration.SelectedItem}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="desktop:CuratedLearningItemRowViewModel">
@@ -27,12 +28,17 @@
             </ComboBox>
           </StackPanel>
             <StackPanel Grid.Column="1" Spacing="8">
-              <TextBlock Text="Create SelfAssessed Learning Item" FontSize="18" FontWeight="SemiBold" />
-              <TextBlock Text="Prompt" />
-              <TextBox Text="{Binding NewPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
-              <TextBlock Text="Reference Solution" />
-              <TextBox Text="{Binding NewReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" />
-              <Button Content="Create Learning Item" Command="{Binding CreateLearningItemCommand}" HorizontalAlignment="Left" />
+                            <TextBlock Text="{Binding Editor.FormTitle}" FontSize="18" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="6"><Button Content="New" Command="{Binding Editor.NewCommand}"/><Button Content="Save" Command="{Binding Editor.SaveCommand}"/><Button Content="Cancel" Command="{Binding Editor.CancelCommand}"/></StackPanel>
+              <TextBlock Text="Prompt" Classes="secondary"/><TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80"/>
+              <TextBlock Text="Reference Solution" Classes="secondary"/><TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100"/>
+              <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Response mode" VerticalAlignment="Center"/><ComboBox Width="150" ItemsSource="{Binding Editor.ResponseModes}" SelectedItem="{Binding Editor.ResponseMode}"/><CheckBox Content="Low-interaction eligible" IsChecked="{Binding Editor.LowInteractionEligible}"/></StackPanel>
+              <TextBlock Text="{Binding Editor.ValidationMessage}" Foreground="#D14B42" TextWrapping="Wrap"/>
+              <Expander Header="Hints" IsExpanded="False"><StackPanel Spacing="4"><ItemsControl ItemsSource="{Binding Editor.Hints}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:EditorHintRow"><StackPanel Orientation="Horizontal" Spacing="5"><TextBox Text="{Binding Text}" Width="250"/><Button Content="Remove" Command="{Binding $parent[ItemsControl].DataContext.Editor.RemoveHintCommand}" CommandParameter="{Binding}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><Button Content="Add hint" Command="{Binding Editor.AddHintCommand}" HorizontalAlignment="Left"/></StackPanel></Expander>
+              <Expander Header="Selection choices" IsVisible="{Binding Editor.IsSelection}" IsExpanded="True"><StackPanel Spacing="4"><ItemsControl ItemsSource="{Binding Editor.DirectChoices}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:EditorChoiceRow"><StackPanel Orientation="Horizontal" Spacing="5"><TextBox Text="{Binding Text}" Width="220"/><CheckBox Content="Correct" IsChecked="{Binding IsCorrect}"/><Button Content="Remove" Command="{Binding $parent[ItemsControl].DataContext.Editor.RemoveDirectChoiceCommand}" CommandParameter="{Binding}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><Button Content="Add choice" Command="{Binding Editor.AddDirectChoiceCommand}" HorizontalAlignment="Left"/></StackPanel></Expander>
+              <Expander Header="Accepted short answers" IsVisible="{Binding Editor.IsShortText}" IsExpanded="True"><StackPanel Spacing="4"><ItemsControl ItemsSource="{Binding Editor.AcceptedAnswers}"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Spacing="5"><TextBox Text="{Binding}" Width="250"/><Button Content="Remove" Command="{Binding $parent[ItemsControl].DataContext.Editor.RemoveAcceptedAnswerCommand}" CommandParameter="{Binding}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><Button Content="Add accepted answer" Command="{Binding Editor.AddAcceptedAnswerCommand}" HorizontalAlignment="Left"/></StackPanel></Expander>
+              <Expander Header="Assistance choices" IsExpanded="False"><StackPanel Spacing="4"><ItemsControl ItemsSource="{Binding Editor.AssistanceChoices}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:EditorChoiceRow"><StackPanel Orientation="Horizontal" Spacing="5"><TextBox Text="{Binding Text}" Width="220"/><Button Content="Remove" Command="{Binding $parent[ItemsControl].DataContext.Editor.RemoveAssistanceChoiceCommand}" CommandParameter="{Binding}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><Button Content="Add assistance choice" Command="{Binding Editor.AddAssistanceChoiceCommand}" HorizontalAlignment="Left"/></StackPanel></Expander>
+              <StackPanel Orientation="Horizontal" Spacing="6"><Button Content="Edit selected item" Command="{Binding EditSelectedItemCommand}"/><Button Content="Delete permanently" Command="{Binding DeleteSelectedLearningItemCommand}"/></StackPanel>
               <TextBlock Text="Selected item quality" FontSize="16" FontWeight="SemiBold" />
               <TextBlock Text="{Binding ContentCuration.SelectedItem.QualityState, FallbackValue='Select an item'}" />
               <TextBlock Text="{Binding ContentCuration.SelectedItem.Lifecycle, StringFormat='Lifecycle: {0}'}" Classes="secondary" />

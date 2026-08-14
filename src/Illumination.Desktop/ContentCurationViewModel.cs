@@ -44,6 +44,11 @@ public sealed partial class ContentCurationViewModel : ObservableObject
     [ObservableProperty]
     private UserFlagDefinitionView? _filterFlag;
 
+    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private DeckView? _filterDeck;
+    [ObservableProperty] private LearningItemLifecycle? _filterLifecycle;
+    [ObservableProperty] private LearningItemResponseMode? _filterResponseMode;
+
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewReviewResultsCommand))]
     private string _rawReviewJson = string.Empty;
 
@@ -111,16 +116,25 @@ public sealed partial class ContentCurationViewModel : ObservableObject
         Replace(FlagDefinitions, definitions);
         var curated = new List<CuratedLearningItemView>();
         foreach (var item in learningItems) curated.Add(await _curation.GetLearningItemCurationAsync(item.Id));
-        Replace(Items, curated.Select(x => new CuratedLearningItemRowViewModel(x, ReviewSelectionChanged)));
+        Replace(Items, curated.Select(x => new CuratedLearningItemRowViewModel(x, learningItems.FirstOrDefault(item => item.Id == x.Id), ReviewSelectionChanged)));
         SelectedItem = Items.FirstOrDefault(x => x.Id == selectedId) ?? Items.FirstOrDefault();
         OnPropertyChanged(nameof(FilteredItems));
         RefreshStudyFlags();
     }
 
-    public IEnumerable<CuratedLearningItemRowViewModel> FilteredItems =>
-        FilterFlag is null ? Items : Items.Where(item => item.FlagIds.Contains(FilterFlag.Id));
-
+    public IEnumerable<CuratedLearningItemRowViewModel> FilteredItems => Items.Where(item =>
+        (FilterFlag is null || item.FlagIds.Contains(FilterFlag.Id)) &&
+        (string.IsNullOrWhiteSpace(SearchText) || item.Prompt.Contains(SearchText, StringComparison.CurrentCultureIgnoreCase)) &&
+        (FilterDeck is null || item.DeckIds.Contains(FilterDeck.Id)) &&
+        (FilterLifecycle is null || item.Lifecycle == FilterLifecycle) &&
+        (FilterResponseMode is null || item.ResponseMode == FilterResponseMode));
+    public IReadOnlyList<LearningItemLifecycle?> LifecycleFilters { get; } = [null, LearningItemLifecycle.Active, LearningItemLifecycle.Suspended, LearningItemLifecycle.Mastered];
+    public IReadOnlyList<LearningItemResponseMode?> ResponseModeFilters { get; } = [null, .. Enum.GetValues<LearningItemResponseMode>().Cast<LearningItemResponseMode?>()];
     partial void OnFilterFlagChanged(UserFlagDefinitionView? value) => OnPropertyChanged(nameof(FilteredItems));
+    partial void OnSearchTextChanged(string value) => OnPropertyChanged(nameof(FilteredItems));
+    partial void OnFilterDeckChanged(DeckView? value) => OnPropertyChanged(nameof(FilteredItems));
+    partial void OnFilterLifecycleChanged(LearningItemLifecycle? value) => OnPropertyChanged(nameof(FilteredItems));
+    partial void OnFilterResponseModeChanged(LearningItemResponseMode? value) => OnPropertyChanged(nameof(FilteredItems));
     partial void OnRawReviewJsonChanged(string value) => InvalidateReviewPreview();
     partial void OnReviewModeChanged(QualityReviewPromptMode value) => InvalidateReviewPreview();
 
@@ -259,7 +273,7 @@ public sealed partial class ContentCurationViewModel : ObservableObject
 
     private void ReplaceItem(CuratedLearningItemView updated)
     {
-        var replacement = new CuratedLearningItemRowViewModel(updated, ReviewSelectionChanged) { IsSelectedForReview = SelectedItem?.IsSelectedForReview == true };
+        var replacement = new CuratedLearningItemRowViewModel(updated, null, ReviewSelectionChanged) { IsSelectedForReview = SelectedItem?.IsSelectedForReview == true };
         var index = Items.IndexOf(Items.First(x => x.Id == updated.Id));
         Items[index] = replacement;
         SelectedItem = replacement;
@@ -295,14 +309,16 @@ public sealed partial class ContentCurationViewModel : ObservableObject
 public sealed partial class CuratedLearningItemRowViewModel : ObservableObject
 {
     private readonly Action _selectionChanged;
-    public CuratedLearningItemRowViewModel(CuratedLearningItemView item, Action selectionChanged)
+    public CuratedLearningItemRowViewModel(CuratedLearningItemView item, LearningItemView? authoredItem, Action selectionChanged)
     {
-        _selectionChanged = selectionChanged;
+        _selectionChanged = selectionChanged; ResponseMode = authoredItem?.ResponseMode; DeckIds = authoredItem?.DeckIds ?? [];
         Id = item.Id; Prompt = item.Prompt; ContentRevision = item.ContentRevision; FlagIds = item.UserFlagDefinitionIds.ToHashSet();
         QualityState = item.CurrentQualityState?.Outcome.ToString() ?? "NoAssurance"; Lifecycle = item.Lifecycle;
         History = item.QualityReviews.Select(x => new QualityReviewHistoryRowViewModel(x)).ToArray();
     }
     public Guid Id { get; }
+    public LearningItemResponseMode? ResponseMode { get; }
+    public IReadOnlyList<Guid> DeckIds { get; }
     public string Prompt { get; }
     public int ContentRevision { get; }
     public string QualityState { get; }
@@ -318,6 +334,8 @@ public sealed class QualityReviewHistoryRowViewModel
 {
     public QualityReviewHistoryRowViewModel(QualityReviewView review) { Id = review.Id; Outcome = review.Outcome.ToString(); EvidenceType = review.EvidenceType.ToString(); Findings = review.Findings; SuggestedCorrection = review.SuggestedCorrection ?? string.Empty; ContentRevision = review.ContentRevision; IsActive = review.SupersededBy is null; }
     public Guid Id { get; }
+    public LearningItemResponseMode? ResponseMode { get; }
+    public IReadOnlyList<Guid> DeckIds { get; }
     public int ContentRevision { get; }
     public string Outcome { get; }
     public string EvidenceType { get; }
