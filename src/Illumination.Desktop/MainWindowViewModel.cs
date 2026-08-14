@@ -33,6 +33,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public string Title => "Illumination";
+    public enum DesktopPage { Study, Decks, Library, Import }
+
+    [ObservableProperty]
+    private DesktopPage _selectedPage = DesktopPage.Study;
+
+    public bool IsStudyPage => SelectedPage == DesktopPage.Study;
+    public bool IsDecksPage => SelectedPage == DesktopPage.Decks;
+    public bool IsLibraryPage => SelectedPage == DesktopPage.Library;
+    public bool IsImportPage => SelectedPage == DesktopPage.Import;
+
+    partial void OnSelectedPageChanged(DesktopPage value)
+    {
+        OnPropertyChanged(nameof(IsStudyPage));
+        OnPropertyChanged(nameof(IsDecksPage));
+        OnPropertyChanged(nameof(IsLibraryPage));
+        OnPropertyChanged(nameof(IsImportPage));
+    }
+
+    [RelayCommand] private void NavigateStudy() => SelectedPage = DesktopPage.Study;
+    [RelayCommand] private void NavigateDecks() => SelectedPage = DesktopPage.Decks;
+    [RelayCommand] private void NavigateLibrary() => SelectedPage = DesktopPage.Library;
+    [RelayCommand] private void NavigateImport() => SelectedPage = DesktopPage.Import;
     public ObservableCollection<DeckView> Decks { get; } = [];
     public ObservableCollection<DeckPresentationItem> DeckPresentationItems { get; } = [];
     public ObservableCollection<LearningItemView> LearningItems { get; } = [];

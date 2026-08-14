@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:desktop="using:Illumination.Desktop" xmlns:content="using:Illumination.Application.ContentManagement" x:Class="Illumination.Desktop.LibraryView" x:DataType="desktop:MainWindowViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+        <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding ContentCuration.FilteredItems}" SelectedItem="{Binding ContentCuration.SelectedItem}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="desktop:CuratedLearningItemRowViewModel">
+                  <Grid ColumnDefinitions="34,*,Auto" Margin="6" ColumnSpacing="7">
+                    <CheckBox IsChecked="{Binding IsSelectedForReview}" VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Text="{Binding Prompt}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding QualityState}" Foreground="#B77900" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding ContentRevision, StringFormat='rev {0}'}" Classes="secondary" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Button Content="Select all for review" Command="{Binding ContentCuration.SelectAllReviewItemsCommand}" />
+              <Button Content="Clear review selection" Command="{Binding ContentCuration.ClearReviewItemSelectionCommand}" />
+            </StackPanel>
+            <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.FilterFlag}">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="8">
+              <TextBlock Text="Create SelfAssessed Learning Item" FontSize="18" FontWeight="SemiBold" />
+              <TextBlock Text="Prompt" />
+              <TextBox Text="{Binding NewPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+              <TextBlock Text="Reference Solution" />
+              <TextBox Text="{Binding NewReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" />
+              <Button Content="Create Learning Item" Command="{Binding CreateLearningItemCommand}" HorizontalAlignment="Left" />
+              <TextBlock Text="Selected item quality" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding ContentCuration.SelectedItem.QualityState, FallbackValue='Select an item'}" />
+              <TextBlock Text="{Binding ContentCuration.SelectedItem.ContentRevision, StringFormat='ContentRevision: {0}'}" Classes="secondary" />
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ComboBox Width="180" ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.SelectedFlag}">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="Add flag" Command="{Binding ContentCuration.AddFlagCommand}" />
+                <Button Content="Remove flag" Command="{Binding ContentCuration.RemoveFlagCommand}" />
+              </StackPanel>
+              <TextBlock Text="New flag name" Classes="secondary" />
+              <TextBox Text="{Binding ContentCuration.NewFlagName}" Watermark="Name" />
+              <TextBox Text="{Binding ContentCuration.NewFlagMeaning}" Watermark="User-defined meaning" />
+              <Button Content="Create flag" Command="{Binding ContentCuration.CreateFlagCommand}" HorizontalAlignment="Left" />
+              <TextBlock Text="Review history" FontWeight="SemiBold" />
+              <ListBox ItemsSource="{Binding ContentCuration.SelectedItem.History}" MaxHeight="140">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel">
+                    <StackPanel Margin="2,3" Spacing="2">
+                      <TextBlock Text="{Binding Outcome}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                      <TextBlock Text="Active" IsVisible="{Binding IsActive}" Classes="secondary" />
+                      <TextBlock Text="Superseded historical review" IsVisible="{Binding !IsActive}" Classes="secondary" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="Review exchange" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ComboBox Width="150" ItemsSource="{Binding ContentCuration.ReviewModes}" SelectedItem="{Binding ContentCuration.ReviewMode}" />
+                <Button Content="Generate prompt" Command="{Binding ContentCuration.GenerateReviewPromptCommand}" />
+                <Button Content="Copy prompt" Command="{Binding ContentCuration.CopyReviewPromptCommand}" />
+              </StackPanel>
+              <TextBox Text="{Binding ContentCuration.ReviewPrompt}" IsReadOnly="True" AcceptsReturn="True" Height="120" IsVisible="{Binding ContentCuration.HasReviewPrompt}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+              <TextBox Text="{Binding ContentCuration.RawReviewJson}" AcceptsReturn="True" Height="130" Watermark="Paste Quality Review Result JSON" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <Button Content="Load result" Command="{Binding ContentCuration.LoadReviewFileCommand}" />
+                <Button Content="Preview result" Command="{Binding ContentCuration.PreviewReviewResultsCommand}" />
+                <Button Content="Accept selected reviews" Command="{Binding ContentCuration.AcceptSelectedReviewsCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ContentCuration.ReviewSummary}" IsVisible="{Binding ContentCuration.HasReviewPreview}" FontWeight="SemiBold" />
+              <ListBox ItemsSource="{Binding ContentCuration.ReviewResults}" Height="190" IsVisible="{Binding ContentCuration.HasReviewPreview}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="desktop:QualityReviewExchangeRowViewModel">
+                    <StackPanel Margin="2,3" Spacing="2">
+                      <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" Content="{Binding Outcome}" />
+                      <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                      <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
+                      <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
+                      <ItemsControl ItemsSource="{Binding PriorActiveReviews}">
+                        <ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel"><CheckBox Content="{Binding Findings, StringFormat='Supersede: {0}'}" Command="{Binding $parent[ItemsControl].DataContext.ToggleSupersededCommand}" CommandParameter="{Binding Id}" /></DataTemplate></ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </Grid>
+  </ScrollViewer>
+</UserControl>

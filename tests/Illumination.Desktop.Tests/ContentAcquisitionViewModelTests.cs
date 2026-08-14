@@ -278,8 +278,8 @@ public sealed class ContentAcquisitionViewModelTests
     public void Large_acquisition_text_areas_and_primary_preview_are_bounded_in_xaml()
     {
         var root = FindRepositoryRoot();
-        var document = XDocument.Load(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
-        var controls = document.Descendants().ToArray();
+        var desktopRoot = Path.Combine(root, "src", "Illumination.Desktop");
+        var controls = Directory.EnumerateFiles(desktopRoot, "*.axaml").SelectMany(file => XDocument.Load(file).Descendants()).ToArray();
 
         Assert.Equal("250", BoundHeight(controls, "TextBox", "Text", "{Binding GeneratedPrompt}"));
         Assert.Equal("300", BoundHeight(controls, "TextBox", "Text", "{Binding RawJson}"));
