@@ -19,6 +19,7 @@ public class IlluminationDbContext(DbContextOptions<IlluminationDbContext> optio
     public DbSet<QualityReviewRecord> QualityReviews => Set<QualityReviewRecord>();
     public DbSet<UserFlagDefinitionRecord> UserFlagDefinitions => Set<UserFlagDefinitionRecord>();
     public DbSet<LearningItemUserFlagRecord> LearningItemUserFlags => Set<LearningItemUserFlagRecord>();
+    public DbSet<StudyPreferenceRecord> StudyPreferences => Set<StudyPreferenceRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => PersistenceModelConfiguration.Configure(modelBuilder);
 }

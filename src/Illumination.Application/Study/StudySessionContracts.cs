@@ -18,7 +18,7 @@ public sealed record StartStudySessionCommand(
     IReadOnlyList<Guid> SelectedDeckIds,
     int? NewItemLimit = null,
     bool AllNew = false,
-    StudyEvaluationMode EvaluationMode = StudyEvaluationMode.Manual,
+    StudyEvaluationMode? EvaluationMode = null,
     bool ConsiderAssistance = false,
     bool LowInteractionOnly = false);
 
@@ -37,7 +37,8 @@ public sealed record StudySessionView(
     DateTimeOffset? CompletedAt,
     IReadOnlyList<Guid> SelectedDeckIds,
     IReadOnlyList<Guid> Queue,
-    IReadOnlyList<Guid> ReviewIds);
+    IReadOnlyList<Guid> ReviewIds,
+    StudyEvaluationMode EvaluationMode = StudyEvaluationMode.Manual);
 
 public sealed record StudySessionItemView(
     Guid Id,

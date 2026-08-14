@@ -15,6 +15,40 @@ namespace Illumination.Infrastructure.Tests;
 public sealed class StudySessionPersistenceTests
 {
     [Fact]
+    public async Task Study_evaluation_preference_defaults_to_manual_and_survives_reload()
+    {
+        using var fixture = new DatabaseFixture();
+        await fixture.MigrateLatestAsync();
+        var preference = fixture.CreatePreferencePersistence();
+
+        Assert.Equal(StudyEvaluationMode.Manual, await preference.LoadDefaultEvaluationModeAsync());
+        await preference.SaveDefaultEvaluationModeAsync(StudyEvaluationMode.Assisted);
+
+        Assert.Equal(StudyEvaluationMode.Assisted, await fixture.CreatePreferencePersistence().LoadDefaultEvaluationModeAsync());
+    }
+
+    [Fact]
+    public async Task Preference_migration_preserves_existing_study_sessions()
+    {
+        using var fixture = new DatabaseFixture();
+        await fixture.MigrateV02Async();
+        var itemId = Guid.NewGuid();
+        var deckId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        await fixture.SeedV02StateAsync(itemId, deckId, sessionId, reviewId);
+
+        await fixture.MigrateLatestAsync();
+
+        await using var context = fixture.CreateContext();
+        var session = await context.StudySessions.SingleAsync(x => x.StudySessionId == sessionId);
+        Assert.Equal(StudyEvaluationMode.Manual, session.EvaluationMode);
+        Assert.Equal(deckId, await context.StudySessionDecks.Where(x => x.StudySessionId == sessionId).Select(x => x.DeckId).SingleAsync());
+        Assert.Equal(itemId, await context.StudySessionQueue.Where(x => x.StudySessionId == sessionId).Select(x => x.LearningItemId).SingleAsync());
+        Assert.Equal(reviewId, await context.StudySessionReviews.Where(x => x.StudySessionId == sessionId).Select(x => x.ReviewId).SingleAsync());
+    }
+
+    [Fact]
     public async Task Study_state_review_and_session_round_trip_across_context_recreation()
     {
         using var fixture = new DatabaseFixture();
@@ -233,6 +267,8 @@ public sealed class StudySessionPersistenceTests
         public IlluminationDbContext CreateContext() => new(CreateOptions());
 
         public EfCoreStudySessionPersistence CreatePersistence() => new(new FixedDbContextFactory(CreateOptions()));
+
+        public EfCoreStudyEvaluationPreferencePersistence CreatePreferencePersistence() => new(new FixedDbContextFactory(CreateOptions()));
 
         public async Task MigrateLatestAsync()
         {

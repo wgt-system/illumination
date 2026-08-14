@@ -17,6 +17,13 @@ public interface IStudySessionPersistence
     Task CompleteStudySessionAsync(StudySessionSnapshot session, CancellationToken cancellationToken = default);
 }
 
+public interface IStudyEvaluationPreferencePersistence
+{
+    Task<StudyEvaluationMode> LoadDefaultEvaluationModeAsync(CancellationToken cancellationToken = default);
+
+    Task SaveDefaultEvaluationModeAsync(StudyEvaluationMode mode, CancellationToken cancellationToken = default);
+}
+
 public interface IStudySessionOrdering
 {
     IReadOnlyList<Guid> Order(IReadOnlyList<Guid> learningItemIds);

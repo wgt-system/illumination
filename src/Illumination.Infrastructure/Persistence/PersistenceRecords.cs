@@ -136,6 +136,12 @@ public sealed class StudySessionRecord
     public List<StudySessionReviewRecord> Reviews { get; } = [];
 }
 
+public sealed class StudyPreferenceRecord
+{
+    public int Id { get; set; }
+    public StudyEvaluationMode DefaultEvaluationMode { get; set; }
+}
+
 public sealed class StudySessionDeckRecord
 {
     public Guid StudySessionId { get; set; }

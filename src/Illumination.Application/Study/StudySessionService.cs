@@ -12,19 +12,30 @@ public sealed class StudySessionService
     private readonly IStudySessionPersistence _persistence;
     private readonly TimeProvider _timeProvider;
     private readonly IStudySessionOrdering _ordering;
+    private readonly IStudyEvaluationPreferencePersistence _preferences;
     private readonly Dictionary<(Guid SessionId, Guid ItemId), AppearanceState> _appearances = [];
 
-    public StudySessionService(IStudySessionPersistence persistence, TimeProvider timeProvider, IStudySessionOrdering ordering)
+    public StudySessionService(IStudySessionPersistence persistence, TimeProvider timeProvider, IStudySessionOrdering ordering, IStudyEvaluationPreferencePersistence? preferences = null)
     {
         _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _ordering = ordering ?? throw new ArgumentNullException(nameof(ordering));
+        _preferences = preferences ?? ManualEvaluationPreference.Instance;
+    }
+
+    public Task<StudyEvaluationMode> GetDefaultEvaluationModeAsync(CancellationToken cancellationToken = default) => _preferences.LoadDefaultEvaluationModeAsync(cancellationToken);
+
+    public async Task SetDefaultEvaluationModeAsync(StudyEvaluationMode mode, CancellationToken cancellationToken = default)
+    {
+        ValidateEvaluationMode(mode);
+        await _preferences.SaveDefaultEvaluationModeAsync(mode, cancellationToken);
     }
 
     public async Task<StudySessionView> StartStudySessionAsync(StartStudySessionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (!Enum.IsDefined(command.EvaluationMode)) throw new StudyValidationException("Unsupported evaluation mode.");
+        var evaluationMode = command.EvaluationMode ?? await GetDefaultEvaluationModeAsync(cancellationToken);
+        ValidateEvaluationMode(evaluationMode);
         var selectedDeckIds = ValidateSelectedDecks(command.SelectedDeckIds);
         var newItemLimit = ValidateNewItemOptions(command.NewItemLimit, command.AllNew);
         var decks = await _persistence.LoadDecksAsync(selectedDeckIds, cancellationToken);
@@ -53,7 +64,7 @@ public sealed class StudySessionService
         var newItems = Order(eligible.Where(item => item.IsNew).Select(item => item.Id).ToArray());
         queue.AddRange(command.AllNew ? newItems : newItems.Take(newItemLimit!.Value));
 
-        var session = new StudySessionSnapshot(Guid.NewGuid(), sessionStart, null, selectedDeckIds, queue, [], command.EvaluationMode, command.ConsiderAssistance, command.LowInteractionOnly);
+        var session = new StudySessionSnapshot(Guid.NewGuid(), sessionStart, null, selectedDeckIds, queue, [], evaluationMode, command.ConsiderAssistance, command.LowInteractionOnly);
         await _persistence.SaveStartedStudySessionAsync(session, cancellationToken);
         return ToView(session);
     }
@@ -326,7 +337,12 @@ public sealed class StudySessionService
         return newItemLimit ?? DefaultNewItemLimit;
     }
 
-    private static StudySessionView ToView(StudySessionSnapshot session) => new(session.Id, session.StartedAt, session.CompletedAt, session.SelectedDeckIds, session.Queue, session.ReviewIds);
+    private static void ValidateEvaluationMode(StudyEvaluationMode mode)
+    {
+        if (!Enum.IsDefined(mode)) throw new StudyValidationException("Unsupported evaluation mode.");
+    }
+
+    private static StudySessionView ToView(StudySessionSnapshot session) => new(session.Id, session.StartedAt, session.CompletedAt, session.SelectedDeckIds, session.Queue, session.ReviewIds, session.EvaluationMode);
 
     private static StudySessionItemView ToItemView(StudyLearningItemSnapshot item) => new(
         item.Id, item.Prompt, item.ReferenceSolution, item.ResponseMode,
@@ -371,6 +387,15 @@ public sealed class StudySessionService
         public bool? AutomaticCorrectness { get; set; }
         public StudyLearningAssessment? SuggestedAssessment { get; set; }
         public string? SubmittedResponse { get; set; }
+    }
+
+    private sealed class ManualEvaluationPreference : IStudyEvaluationPreferencePersistence
+    {
+        public static ManualEvaluationPreference Instance { get; } = new();
+
+        public Task<StudyEvaluationMode> LoadDefaultEvaluationModeAsync(CancellationToken cancellationToken = default) => Task.FromResult(StudyEvaluationMode.Manual);
+
+        public Task SaveDefaultEvaluationModeAsync(StudyEvaluationMode mode, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private static StudySessionQueueItemView ToQueueItemView(StudyLearningItemSnapshot snapshot) => new(snapshot.Id, snapshot.Prompt, snapshot.IsInShortTermRelearning);

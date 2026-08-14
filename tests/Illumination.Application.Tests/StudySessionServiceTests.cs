@@ -25,6 +25,36 @@ public class StudySessionServiceTests
     }
 
     [Fact]
+    public async Task Study_evaluation_default_is_manual_and_can_be_changed()
+    {
+        var store = CreateStoreWithSingleItem(out var deckId, out _);
+        var preferences = new FakeEvaluationPreferencePersistence();
+        var service = new StudySessionService(store, new FixedTimeProvider(Now), new IdentityOrdering(), preferences);
+
+        Assert.Equal(StudyEvaluationMode.Manual, await service.GetDefaultEvaluationModeAsync());
+        await service.SetDefaultEvaluationModeAsync(StudyEvaluationMode.Assisted);
+
+        Assert.Equal(StudyEvaluationMode.Assisted, await service.GetDefaultEvaluationModeAsync());
+        Assert.Equal(StudyEvaluationMode.Assisted, (await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]))).EvaluationMode);
+    }
+
+    [Fact]
+    public async Task Explicit_session_override_wins_and_historical_mode_remains_resolved()
+    {
+        var store = CreateStoreWithSingleItem(out var deckId, out _);
+        var preferences = new FakeEvaluationPreferencePersistence { Mode = StudyEvaluationMode.Assisted };
+        var service = new StudySessionService(store, new FixedTimeProvider(Now), new IdentityOrdering(), preferences);
+
+        var fromDefault = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId]));
+        var explicitManual = await service.StartStudySessionAsync(new StartStudySessionCommand([deckId], EvaluationMode: StudyEvaluationMode.Manual));
+        await service.SetDefaultEvaluationModeAsync(StudyEvaluationMode.Manual);
+
+        Assert.Equal(StudyEvaluationMode.Assisted, fromDefault.EvaluationMode);
+        Assert.Equal(StudyEvaluationMode.Manual, explicitManual.EvaluationMode);
+        Assert.Equal(StudyEvaluationMode.Assisted, store.Sessions[fromDefault.Id].EvaluationMode);
+    }
+
+    [Fact]
     public async Task Multiple_decks_form_a_union_and_exclude_inactive_or_future_items()
     {
         var store = new FakeStudyPersistence();
@@ -557,6 +587,19 @@ public class StudySessionServiceTests
     private sealed class ReverseOrdering : IStudySessionOrdering
     {
         public IReadOnlyList<Guid> Order(IReadOnlyList<Guid> learningItemIds) => learningItemIds.Reverse().ToArray();
+    }
+
+    private sealed class FakeEvaluationPreferencePersistence : IStudyEvaluationPreferencePersistence
+    {
+        public StudyEvaluationMode Mode { get; set; } = StudyEvaluationMode.Manual;
+
+        public Task<StudyEvaluationMode> LoadDefaultEvaluationModeAsync(CancellationToken cancellationToken = default) => Task.FromResult(Mode);
+
+        public Task SaveDefaultEvaluationModeAsync(StudyEvaluationMode mode, CancellationToken cancellationToken = default)
+        {
+            Mode = mode;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeStudyPersistence : IStudySessionPersistence

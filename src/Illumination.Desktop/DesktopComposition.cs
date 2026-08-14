@@ -40,7 +40,8 @@ internal static class DesktopComposition
         var study = new StudySessionService(
             new EfCoreStudySessionPersistence(contextFactory),
             timeProvider,
-            new RandomStudySessionOrdering());
+            new RandomStudySessionOrdering(),
+            new EfCoreStudyEvaluationPreferencePersistence(contextFactory));
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider);
         await viewModel.InitializeAsync();
         return viewModel;

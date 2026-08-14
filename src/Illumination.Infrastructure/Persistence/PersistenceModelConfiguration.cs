@@ -41,6 +41,7 @@ internal static class PersistenceModelConfiguration
         ConfigureMembership(modelBuilder.Entity<DeckLearningItemRecord>());
         ConfigureReview(modelBuilder.Entity<ReviewRecord>());
         ConfigureStudySession(modelBuilder.Entity<StudySessionRecord>());
+        ConfigureStudyPreference(modelBuilder.Entity<StudyPreferenceRecord>());
         ConfigureStudySessionDeck(modelBuilder.Entity<StudySessionDeckRecord>());
         ConfigureStudySessionQueue(modelBuilder.Entity<StudySessionQueueRecord>());
         ConfigureStudySessionReview(modelBuilder.Entity<StudySessionReviewRecord>());
@@ -118,6 +119,14 @@ internal static class PersistenceModelConfiguration
         entity.HasMany(x => x.SelectedDecks).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
         entity.HasMany(x => x.Queue).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
         entity.HasMany(x => x.Reviews).WithOne(x => x.StudySession).HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureStudyPreference(EntityTypeBuilder<StudyPreferenceRecord> entity)
+    {
+        entity.ToTable("StudyPreferences");
+        entity.HasKey(x => x.Id);
+        entity.Property(x => x.Id).HasColumnName("Id").ValueGeneratedNever();
+        entity.Property(x => x.DefaultEvaluationMode).HasColumnName("DefaultEvaluationMode").HasConversion<string>().IsRequired();
     }
 
     private static void ConfigureStudySessionDeck(EntityTypeBuilder<StudySessionDeckRecord> entity)
