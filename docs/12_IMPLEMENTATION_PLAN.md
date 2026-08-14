@@ -281,7 +281,9 @@ Deliver:
 
 v0.5 does not introduce arbitrary code execution, fuzzy or semantic answer checking, direct LLM/API integration, Content Bundle 1.0 changes, or scheduler redesign.
 
-### v0.6.0 – Learning Insight
+### v0.6.0 – Learning Insight (released)
+
+The v0.6 implementation is released and covered by the accepted integrated test, build, and Desktop startup baseline. Shipped scope includes the Desktop shell/page structure, Learning Insight, Review and Study Session history, filtering/search, DeckLearningContext, learning-aware follow-up Deck generation, Reinforce/Continue/Advance progression modes, generation ResponseMode controls, language-learning prompt hardening, improved JSON drag/drop, and explicit Suspended/Mastered lifecycle management.
 
 Deliver:
 
