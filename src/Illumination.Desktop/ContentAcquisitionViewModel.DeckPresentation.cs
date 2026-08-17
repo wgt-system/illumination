@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Illumination.Application.ContentManagement;
@@ -7,13 +8,14 @@ namespace Illumination.Desktop;
 public sealed partial class ContentAcquisitionViewModel
 {
     private bool _deckOptionsSubscribed;
+    private readonly ObservableCollection<DeckPresentationItem> _existingDeckOptions = [];
 
-    public IReadOnlyList<DeckPresentationItem> ExistingDeckOptions
+    public ObservableCollection<DeckPresentationItem> ExistingDeckOptions
     {
         get
         {
             EnsureDeckOptionSubscription();
-            return DeckPresentationLabeler.Label(ExistingDecks);
+            return _existingDeckOptions;
         }
     }
 
@@ -27,8 +29,8 @@ public sealed partial class ContentAcquisitionViewModel
 
     partial void OnSelectedExistingDeckChanged(DeckView? value)
     {
-        OnPropertyChanged(nameof(ExistingDeckOptions));
-        var presentation = ExistingDeckOptions.FirstOrDefault(x => x.Id == value?.Id);
+        EnsureDeckOptionSubscription();
+        var presentation = _existingDeckOptions.FirstOrDefault(x => x.Id == value?.Id);
         if (SelectedExistingDeckPresentation?.Id != presentation?.Id) SelectedExistingDeckPresentation = presentation;
     }
 
@@ -37,10 +39,17 @@ public sealed partial class ContentAcquisitionViewModel
         if (_deckOptionsSubscribed) return;
         ExistingDecks.CollectionChanged += ExistingDecksChanged;
         _deckOptionsSubscribed = true;
+        RebuildExistingDeckOptions();
     }
 
-    private void ExistingDecksChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void ExistingDecksChanged(object? sender, NotifyCollectionChangedEventArgs e) => RebuildExistingDeckOptions();
+
+    private void RebuildExistingDeckOptions()
     {
-        OnPropertyChanged(nameof(ExistingDeckOptions));
+        var selectedId = SelectedExistingDeck?.Id;
+        _existingDeckOptions.Clear();
+        foreach (var option in DeckPresentationLabeler.Label(ExistingDecks)) _existingDeckOptions.Add(option);
+        SelectedExistingDeckPresentation = _existingDeckOptions.FirstOrDefault(x => x.Id == selectedId)
+            ?? _existingDeckOptions.FirstOrDefault();
     }
 }
