@@ -38,6 +38,30 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
 
+                <Border Classes="surface" IsVisible="{Binding HasSourceDeckContext}" Padding="9">
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="Learning-aware follow-up" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SourceDeckName, StringFormat='Source Deck: {0}'}" TextWrapping="Wrap" />
+                    <TextBlock Text="Progression" Classes="secondary" />
+                    <ComboBox ItemsSource="{Binding ProgressionModes}" SelectedItem="{Binding ProgressionMode}" />
+                    <TextBlock Text="The source Deck supplies current learning facts only; it is never mutated by generation." Classes="secondary" TextWrapping="Wrap" />
+                    <Button Content="Clear source context" Command="{Binding ClearSourceDeckContextCommand}" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+
+                <Expander Header="Task types" IsExpanded="False">
+                  <StackPanel Spacing="5" Margin="0,5,0,0">
+                    <CheckBox Content="Restrict generated task types" IsChecked="{Binding RestrictResponseModes}" />
+                    <StackPanel Spacing="4" IsEnabled="{Binding RestrictResponseModes}">
+                      <CheckBox Content="Recall / card-style" IsChecked="{Binding SelfAssessedEnabled}" />
+                      <CheckBox Content="Choice / quiz (single or multiple correct)" IsChecked="{Binding SelectionEnabled}" />
+                      <CheckBox Content="Short answer / cloze" IsChecked="{Binding ShortTextEnabled}" />
+                      <CheckBox Content="Coding" IsChecked="{Binding CodeEnabled}" />
+                    </StackPanel>
+                    <TextBlock Text="These are allowed modes, not quotas. Generation may use fewer types when that produces better tasks." Classes="secondary" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Expander>
+
                 <Expander Header="Language-learning controls" IsExpanded="False">
                   <StackPanel Spacing="5" Margin="0,5,0,0">
                     <TextBlock Text="Optional. Leave empty for automatic inference from Subject and Guidance." Classes="secondary" TextWrapping="Wrap" />
