@@ -53,6 +53,7 @@ internal static class DesktopComposition
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
         viewModel.ConfigureLocalData(backupService, restoreService, databasePath, backupDirectory);
         viewModel.ConfigureDeckExport(new ContentBundleExportService(content));
+        viewModel.ContentAcquisition.ConfigureContentPreview(content);
         await viewModel.InitializeAsync();
         return viewModel;
     }
