@@ -19,14 +19,20 @@ internal static class DesktopComposition
         Directory.CreateDirectory(dataDirectory);
 
         var databasePath = Path.Combine(dataDirectory, "illumination.sqlite");
+        var backupDirectory = Path.Combine(dataDirectory, "backups");
+        var timeProvider = TimeProvider.System;
+        var backupService = new LocalSqliteBackupService(
+            backupDirectory,
+            BackupRetentionCount,
+            timeProvider);
+        var restoreService = new LocalSqliteRestoreService(
+            Path.Combine(dataDirectory, "restore-pending.sqlite"));
+
+        await restoreService.ApplyPendingRestoreAsync(databasePath, backupService);
+
         var options = new DbContextOptionsBuilder<IlluminationDbContext>()
             .UseSqlite($"Data Source={databasePath};Pooling=False")
             .Options;
-        var timeProvider = TimeProvider.System;
-        var backupService = new LocalSqliteBackupService(
-            Path.Combine(dataDirectory, "backups"),
-            BackupRetentionCount,
-            timeProvider);
 
         await new SqliteMigrationCoordinator(options, backupService).MigrateAsync();
 
@@ -45,6 +51,7 @@ internal static class DesktopComposition
             new RandomStudySessionOrdering(),
             new EfCoreStudyEvaluationPreferencePersistence(contextFactory));
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
+        viewModel.ConfigureLocalData(backupService, restoreService, databasePath, backupDirectory);
         await viewModel.InitializeAsync();
         return viewModel;
     }
