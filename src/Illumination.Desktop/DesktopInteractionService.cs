@@ -9,7 +9,6 @@ public interface IDesktopInteractionService
     Task<string?> LoadJsonFileAsync();
     Task<bool> SaveJsonFileAsync(string suggestedFileName, string content) => Task.FromResult(false);
     Task<bool> SaveSqliteFileAsync(string suggestedFileName, byte[] content) => Task.FromResult(false);
-    Task<byte[]?> LoadSqliteFileAsync() => Task.FromResult<byte[]?>(null);
 }
 
 public sealed class AvaloniaDesktopInteractionService(Func<Window?> windowProvider) : IDesktopInteractionService
@@ -95,25 +94,6 @@ public sealed class AvaloniaDesktopInteractionService(Func<Window?> windowProvid
         await stream.WriteAsync(content);
         await stream.FlushAsync();
         return true;
-    }
-
-    public async Task<byte[]?> LoadSqliteFileAsync()
-    {
-        var storage = GetWindow().StorageProvider;
-        if (!storage.CanOpen) return null;
-        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Select Illumination backup to restore",
-            AllowMultiple = false,
-            FileTypeFilter = [SqliteFiles],
-        });
-        var file = files.SingleOrDefault();
-        if (file is null) return null;
-
-        await using var stream = await file.OpenReadAsync();
-        using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer);
-        return buffer.ToArray();
     }
 
     private Window GetWindow() => windowProvider() ?? throw new InvalidOperationException("The application window is unavailable.");
