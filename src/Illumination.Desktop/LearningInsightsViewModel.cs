@@ -31,6 +31,8 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
     public IReadOnlyList<FollowUpProgressionMode> ProgressionModes { get; } = Enum.GetValues<FollowUpProgressionMode>();
 
     [ObservableProperty] private LearningInsightOverview? _overview;
+    [ObservableProperty] private LearningActivitySummary? _activity;
+    [ObservableProperty] private LearningDueForecast? _dueForecast;
     [ObservableProperty] private DeckInsight? _selectedDeck;
     [ObservableProperty] private string _promptSearch = string.Empty;
     [ObservableProperty] private LearningItemLifecycle? _lifecycle;
@@ -58,6 +60,8 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
         try
         {
             Overview = await _service.GetOverviewAsync();
+            Activity = await _service.GetLearningActivityAsync(30);
+            DueForecast = await _service.GetDueForecastAsync(14);
             var decks = await _service.GetDeckInsightsAsync();
             var selectedId = SelectedDeck?.Id;
             Replace(Decks, decks);
