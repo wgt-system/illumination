@@ -52,6 +52,7 @@ internal static class DesktopComposition
             new EfCoreStudyEvaluationPreferencePersistence(contextFactory));
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
         viewModel.ConfigureLocalData(backupService, restoreService, databasePath, backupDirectory);
+        viewModel.ConfigureDeckExport(new ContentBundleExportService(content));
         await viewModel.InitializeAsync();
         return viewModel;
     }
