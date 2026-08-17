@@ -19,6 +19,7 @@ public partial class App : Avalonia.Application
             viewModel.ContentAcquisition.AttachDesktopInteractions(interactions);
             viewModel.ContentCuration.AttachDesktopInteractions(interactions);
             viewModel.LocalData?.AttachDesktopInteractions(interactions);
+            viewModel.AttachDeckExportInteractions(interactions);
         }
 
         base.OnFrameworkInitializationCompleted();
