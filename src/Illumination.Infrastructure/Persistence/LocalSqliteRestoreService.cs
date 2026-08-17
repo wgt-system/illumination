@@ -68,7 +68,9 @@ public sealed class LocalSqliteRestoreService : ILocalSqliteRestoreService
         try
         {
             File.Copy(_pendingRestorePath, replacementPath, overwrite: true);
+            await ValidateIlluminationDatabaseAsync(replacementPath, cancellationToken);
             File.Move(replacementPath, targetPath, overwrite: true);
+            DeleteSqliteSidecars(targetPath);
             File.Delete(_pendingRestorePath);
             return targetPath;
         }
@@ -83,6 +85,15 @@ public sealed class LocalSqliteRestoreService : ILocalSqliteRestoreService
         if (File.Exists(_pendingRestorePath)) File.Delete(_pendingRestorePath);
         var temporaryPath = _pendingRestorePath + ".tmp";
         if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+    }
+
+    private static void DeleteSqliteSidecars(string databasePath)
+    {
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+        {
+            var sidecar = databasePath + suffix;
+            if (File.Exists(sidecar)) File.Delete(sidecar);
+        }
     }
 
     private static async Task ValidateIlluminationDatabaseAsync(string databasePath, CancellationToken cancellationToken)
