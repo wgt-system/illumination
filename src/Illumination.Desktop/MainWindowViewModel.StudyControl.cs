@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Illumination.Application.Insights;
 using Illumination.Application.Study;
 
 namespace Illumination.Desktop;
@@ -11,7 +10,6 @@ public sealed partial class MainWindowViewModel
     private bool _studyDeckSelectionInitialized;
 
     public ObservableCollection<DeckPresentationItem> SelectedStudyDecks { get; } = [];
-    public ObservableCollection<UnfinishedStudySessionDisplay> UnfinishedStudySessions { get; } = [];
 
     [ObservableProperty]
     private string _studyNewItemLimitText = "20";
@@ -25,9 +23,6 @@ public sealed partial class MainWindowViewModel
         1 => SelectedStudyDecks[0].DisplayName,
         _ => $"{SelectedStudyDecks.Count} Decks selected",
     };
-
-    public bool HasUnfinishedStudySessions => UnfinishedStudySessions.Count > 0;
-    public string UnfinishedStudySessionsHeader => $"Unfinished sessions ({UnfinishedStudySessions.Count})";
 
     [RelayCommand]
     private void AddStudyDeck()
@@ -113,7 +108,6 @@ public sealed partial class MainWindowViewModel
             ActiveEvaluationMode = session.EvaluationMode;
             IsSolutionRevealed = false;
             await RefreshStudyTransparencyAsync();
-            await RefreshUnfinishedStudySessionsAsync();
             StatusMessage = CurrentStudyItem is null
                 ? "Session started, but the selected Decks have no due or new Learning Items."
                 : $"Session started from {deckIds.Length} Deck{(deckIds.Length == 1 ? string.Empty : "s")} with {session.Queue.Count} queue entries.";
@@ -130,56 +124,11 @@ public sealed partial class MainWindowViewModel
             await _study.CompleteStudySessionAsync(_activeSessionId.Value);
             ClearStudyState();
             await RefreshContentAsync();
-            await RefreshUnfinishedStudySessionsAsync();
             StatusMessage = "Study Session completed.";
         });
     }
 
-    [RelayCommand]
-    private async Task ResumeStudySessionAsync(UnfinishedStudySessionDisplay entry)
-    {
-        if (SessionIsActive)
-        {
-            StatusMessage = "Complete the active Study Session before resuming another one.";
-            return;
-        }
-
-        await RunAsync(async () =>
-        {
-            _activeSessionId = entry.SessionId;
-            SessionIsActive = true;
-            ActiveEvaluationMode = entry.EvaluationMode;
-            ConsiderAssistance = entry.ConsiderAssistance;
-            LowInteractionOnly = entry.LowInteractionOnly;
-            SelectedEvaluationModeOption = EvaluationModeOptions.FirstOrDefault(x => x.Mode == entry.EvaluationMode)
-                ?? new StudyEvaluationModeOption(entry.EvaluationMode.ToString(), entry.EvaluationMode);
-            SetSelectedStudyDeckIds(entry.SelectedDeckIds);
-            await RefreshStudyTransparencyAsync();
-            await RefreshUnfinishedStudySessionsAsync();
-            StatusMessage = CurrentStudyItem is null
-                ? "Unfinished Study Session resumed; its queue is empty and can be completed."
-                : $"Resumed Study Session from {entry.StartedLabel}.";
-        });
-    }
-
-    [RelayCommand]
-    private async Task FinishStoredStudySessionAsync(UnfinishedStudySessionDisplay entry)
-    {
-        if (SessionIsActive && _activeSessionId == entry.SessionId)
-        {
-            await CompleteConfiguredSessionAsync();
-            return;
-        }
-
-        await RunAsync(async () =>
-        {
-            await _study.CompleteStudySessionAsync(entry.SessionId);
-            await RefreshUnfinishedStudySessionsAsync();
-            StatusMessage = "Unfinished Study Session marked complete.";
-        });
-    }
-
-    public async Task RefreshStudyContinuityAsync()
+    public void InitializeStudySelection()
     {
         NormalizeSelectedStudyDecks();
         if (!_studyDeckSelectionInitialized && SelectedStudyDecks.Count == 0 && SelectedStudyDeckPresentation is not null)
@@ -188,26 +137,6 @@ public sealed partial class MainWindowViewModel
             _studyDeckSelectionInitialized = true;
             StudyDeckSelectionChanged();
         }
-        await RefreshUnfinishedStudySessionsAsync();
-    }
-
-    private async Task RefreshUnfinishedStudySessionsAsync()
-    {
-        if (_insightService is null)
-        {
-            UnfinishedStudySessions.Clear();
-            StudySessionListChanged();
-            return;
-        }
-
-        var history = await _insightService.GetStudySessionHistoryAsync(limit: 200);
-        var unfinished = history
-            .Where(x => x.CompletedAt is null && x.SessionId != _activeSessionId)
-            .OrderByDescending(x => x.StartedAt)
-            .Select(ToUnfinishedDisplay)
-            .ToArray();
-        Replace(UnfinishedStudySessions, unfinished);
-        StudySessionListChanged();
     }
 
     private void NormalizeSelectedStudyDecks()
@@ -231,36 +160,4 @@ public sealed partial class MainWindowViewModel
     {
         OnPropertyChanged(nameof(SelectedStudyDeckSummary));
     }
-
-    private void StudySessionListChanged()
-    {
-        OnPropertyChanged(nameof(HasUnfinishedStudySessions));
-        OnPropertyChanged(nameof(UnfinishedStudySessionsHeader));
-    }
-
-    private static UnfinishedStudySessionDisplay ToUnfinishedDisplay(StudySessionHistoryEntry entry)
-    {
-        var decks = entry.SelectedDecks.Count == 0
-            ? "No current Deck identity"
-            : string.Join(", ", entry.SelectedDecks.Select(x => x.Name));
-        return new UnfinishedStudySessionDisplay(
-            entry.SessionId,
-            entry.SelectedDecks.Select(x => x.Id).ToArray(),
-            decks,
-            entry.StartedAt.ToLocalTime().ToString("g"),
-            entry.EvaluationMode,
-            entry.ConsiderAssistance,
-            entry.LowInteractionOnly,
-            entry.ReviewCount);
-    }
 }
-
-public sealed record UnfinishedStudySessionDisplay(
-    Guid SessionId,
-    IReadOnlyList<Guid> SelectedDeckIds,
-    string DecksLabel,
-    string StartedLabel,
-    StudyEvaluationMode EvaluationMode,
-    bool ConsiderAssistance,
-    bool LowInteractionOnly,
-    int ReviewCount);
