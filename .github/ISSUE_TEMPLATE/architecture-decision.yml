@@ -1,7 +1,7 @@
 name: Architecture decision
 description: Record a proposed Illumination architecture decision for review
 title: "adr: "
-labels: [architecture]
+labels: [type:architecture]
 body:
   - type: textarea
     id: context
