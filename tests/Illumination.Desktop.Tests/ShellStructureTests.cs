@@ -38,6 +38,21 @@ public sealed class ShellStructureTests
     }
 
     [Fact]
+    public void Local_data_controls_stay_within_accepted_backup_scope()
+    {
+        var root = FindRepositoryRoot();
+        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var composition = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "DesktopComposition.cs"));
+
+        Assert.Contains("Backup now", shell);
+        Assert.Contains("Export backup", shell);
+        Assert.DoesNotContain("Restore backup", shell);
+        Assert.DoesNotContain("pending restore", shell, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("LocalSqliteRestoreService", composition);
+        Assert.False(File.Exists(Path.Combine(root, "src", "Illumination.Infrastructure", "Persistence", "LocalSqliteRestoreService.cs")));
+    }
+
+    [Fact]
     public void Import_page_exposes_a_real_drop_surface()
     {
         var root = FindRepositoryRoot();

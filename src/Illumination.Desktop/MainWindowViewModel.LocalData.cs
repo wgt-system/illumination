@@ -8,13 +8,11 @@ public sealed partial class MainWindowViewModel
 
     public void ConfigureLocalData(
         ILocalSqliteBackupService backupService,
-        ILocalSqliteRestoreService restoreService,
         string databasePath,
         string backupDirectory)
     {
         LocalData = new LocalDataViewModel(
             backupService,
-            restoreService,
             databasePath,
             backupDirectory,
             message => StatusMessage = message);
