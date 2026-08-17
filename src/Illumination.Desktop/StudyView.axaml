@@ -7,22 +7,20 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14,4,4,4">
       <StackPanel Spacing="7">
-        <Grid ColumnDefinitions="Auto,280,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+        <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="6">
           <TextBlock Text="Deck" VerticalAlignment="Center" Classes="secondary" />
-          <ComboBox Grid.Column="1" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedStudyDeckPresentation}" IsEnabled="{Binding !SessionIsActive}">
+          <ComboBox Width="260" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedStudyDeckPresentation}" IsEnabled="{Binding !SessionIsActive}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Grid.Column="2" Content="Add" Command="{Binding AddStudyDeckCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <Button Grid.Column="3" Content="Add all" Command="{Binding AddAllStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <Button Grid.Column="4" Content="Clear" Command="{Binding ClearStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Start" Command="{Binding StartConfiguredSessionCommand}" />
-            <Button Content="Complete" Command="{Binding CompleteConfiguredSessionCommand}" IsEnabled="{Binding SessionIsActive}" />
-          </StackPanel>
-          <TextBlock Grid.Column="6" Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" Classes="secondary" />
-        </Grid>
+          <Button Content="Add" Command="{Binding AddStudyDeckCommand}" IsEnabled="{Binding !SessionIsActive}" />
+          <Button Content="Add all" Command="{Binding AddAllStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
+          <Button Content="Clear" Command="{Binding ClearStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
+          <Button Content="Start" Command="{Binding StartConfiguredSessionCommand}" />
+          <Button Content="Complete" Command="{Binding CompleteConfiguredSessionCommand}" IsEnabled="{Binding SessionIsActive}" />
+          <TextBlock Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" Classes="secondary" />
+        </WrapPanel>
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" IsEnabled="{Binding !SessionIsActive}">
           <TextBlock Text="Session Decks" VerticalAlignment="Center" Classes="secondary" />
