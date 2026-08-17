@@ -127,6 +127,38 @@
                 </StackPanel>
               </Grid>
               <TextBlock Text="Learning Items and Decks" FontWeight="SemiBold" />
+
+              <Expander Header="Card content preview" IsExpanded="True" IsVisible="{Binding HasRichContentPreviews}">
+                <ItemsControl ItemsSource="{Binding RichContentPreviews}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:LearningItemContentPreviewDisplay">
+                      <Border Classes="surface" Margin="0,3" Padding="10">
+                        <StackPanel Spacing="6">
+                          <CheckBox Content="{Binding Heading}" IsChecked="{Binding Operation.IsSelected}" IsEnabled="{Binding Operation.IsSelectable}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding ChangeSummary}" Classes="secondary" />
+                          <Border IsVisible="{Binding IsUpdate}" Background="#0C000000" CornerRadius="5" Padding="8">
+                            <StackPanel Spacing="3">
+                              <TextBlock Text="Current" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Current.Prompt}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Current.ReferenceSolution, StringFormat='Solution: {0}'}" TextWrapping="Wrap" Classes="secondary" />
+                              <TextBlock Text="{Binding Current.Shape}" Classes="secondary" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Border>
+                          <Border Background="#0C008000" CornerRadius="5" Padding="8">
+                            <StackPanel Spacing="3">
+                              <TextBlock Text="Proposed" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Proposed.Prompt}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Proposed.ReferenceSolution, StringFormat='Solution: {0}'}" TextWrapping="Wrap" Classes="secondary" />
+                              <TextBlock Text="{Binding Proposed.Shape}" Classes="secondary" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Expander>
+
               <ListBox ItemsSource="{Binding PrimaryOperations}" Height="300">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">
