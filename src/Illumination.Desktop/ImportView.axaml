@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:desktop="using:Illumination.Desktop"
-             xmlns:content="using:Illumination.Application.ContentManagement"
              x:Class="Illumination.Desktop.ImportView"
              x:DataType="desktop:MainWindowViewModel">
   <ContentControl Content="{Binding ContentAcquisition}">
@@ -33,9 +32,9 @@
                   </StackPanel>
                 </Grid>
                 <TextBox Text="{Binding NewDeckName}" Watermark="New Deck name" IsEnabled="{Binding UseNewDeck}" />
-                <ComboBox ItemsSource="{Binding ExistingDecks}" SelectedItem="{Binding SelectedExistingDeck}" IsEnabled="{Binding UseExistingDeck}">
+                <ComboBox ItemsSource="{Binding ExistingDeckOptions}" SelectedItem="{Binding SelectedExistingDeckPresentation}" IsEnabled="{Binding UseExistingDeck}">
                   <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="content:DeckView"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                    <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
 
