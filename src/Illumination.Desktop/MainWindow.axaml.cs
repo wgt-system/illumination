@@ -15,9 +15,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Opened += async (_, _) =>
+        Opened += (_, _) =>
         {
-            if (DataContext is MainWindowViewModel vm) await vm.RefreshStudyContinuityAsync();
+            if (DataContext is MainWindowViewModel vm) vm.InitializeStudySelection();
         };
     }
 }
