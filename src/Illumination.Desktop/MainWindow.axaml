@@ -29,9 +29,7 @@
             <StackPanel Spacing="5" Margin="0,5,0,0">
               <Button Content="Backup now" Command="{Binding LocalData.CreateBackupCommand}" HorizontalContentAlignment="Left" />
               <Button Content="Export backup..." Command="{Binding LocalData.ExportBackupCommand}" HorizontalContentAlignment="Left" />
-              <Button Content="Restore backup..." Command="{Binding LocalData.StageRestoreCommand}" HorizontalContentAlignment="Left" />
-              <Button Content="Cancel pending restore" Command="{Binding LocalData.CancelPendingRestoreCommand}" IsVisible="{Binding LocalData.HasPendingRestore}" HorizontalContentAlignment="Left" />
-              <TextBlock Text="{Binding LocalData.PendingRestoreLabel}" TextWrapping="Wrap" Classes="secondary" />
+              <TextBlock Text="Backups stay local unless you explicitly export one." TextWrapping="Wrap" Classes="secondary" />
             </StackPanel>
           </Expander>
           <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="secondary"/>
