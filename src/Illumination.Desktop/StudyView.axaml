@@ -57,24 +57,6 @@
           <CheckBox Content="Consider assistance" IsChecked="{Binding ConsiderAssistance}" />
           <CheckBox Content="Low-interaction only" IsChecked="{Binding LowInteractionOnly}" />
         </WrapPanel>
-
-        <Expander Header="{Binding UnfinishedStudySessionsHeader}" IsVisible="{Binding HasUnfinishedStudySessions}" IsExpanded="False">
-          <ItemsControl ItemsSource="{Binding UnfinishedStudySessions}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="desktop:UnfinishedStudySessionDisplay">
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,3">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding DecksLabel}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding StartedLabel, StringFormat='Started {0}'}" Classes="secondary" />
-                    <TextBlock Text="{Binding ReviewCount, StringFormat='{}{0} reviews recorded'}" Classes="secondary" />
-                  </StackPanel>
-                  <Button Grid.Column="1" Content="Resume" Command="{Binding $parent[ItemsControl].DataContext.ResumeStudySessionCommand}" CommandParameter="{Binding}" />
-                  <Button Grid.Column="2" Content="Finish" Command="{Binding $parent[ItemsControl].DataContext.FinishStoredStudySessionCommand}" CommandParameter="{Binding}" />
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </Expander>
       </StackPanel>
 
       <Grid Grid.Row="1" ColumnDefinitions="*,240" ColumnSpacing="12">
