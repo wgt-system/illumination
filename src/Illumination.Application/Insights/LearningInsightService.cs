@@ -34,6 +34,70 @@ public sealed class LearningInsightService
             reviews.OrderByDescending(x => x.CompletedAt).Select(x => (DateTimeOffset?)x.CompletedAt).FirstOrDefault());
     }
 
+    public async Task<LearningActivitySummary> GetLearningActivityAsync(int days = 30, CancellationToken cancellationToken = default)
+    {
+        if (days is <= 0 or > 366) throw new ArgumentOutOfRangeException(nameof(days), "Activity range must be between 1 and 366 days.");
+
+        var today = LocalDate(_timeProvider.GetUtcNow());
+        var start = today.AddDays(-(days - 1));
+        var reviews = await _persistence.LoadReviewsAsync(cancellationToken);
+        var sessions = await _persistence.LoadStudySessionsAsync(cancellationToken);
+
+        var reviewsByDay = reviews
+            .Select(review => (Date: LocalDate(review.CompletedAt), Review: review))
+            .Where(x => x.Date >= start && x.Date <= today)
+            .GroupBy(x => x.Date)
+            .ToDictionary(group => group.Key, group => group.Select(x => x.Review).ToArray());
+        var sessionsByDay = sessions
+            .Select(session => LocalDate(session.StartedAt))
+            .Where(date => date >= start && date <= today)
+            .GroupBy(date => date)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        var result = Enumerable.Range(0, days)
+            .Select(offset => start.AddDays(offset))
+            .Select(date =>
+            {
+                var dayReviews = reviewsByDay.GetValueOrDefault(date) ?? [];
+                var sessionCount = sessionsByDay.GetValueOrDefault(date);
+                return new LearningActivityDay(date, dayReviews.Length, sessionCount, Distribution(dayReviews));
+            })
+            .ToArray();
+
+        return new LearningActivitySummary(
+            start,
+            today,
+            result.Count(x => x.ReviewCount > 0 || x.StudySessionCount > 0),
+            result.Sum(x => x.ReviewCount),
+            result.Sum(x => x.StudySessionCount),
+            result);
+    }
+
+    public async Task<LearningDueForecast> GetDueForecastAsync(int days = 14, CancellationToken cancellationToken = default)
+    {
+        if (days is <= 0 or > 366) throw new ArgumentOutOfRangeException(nameof(days), "Due forecast range must be between 1 and 366 days.");
+
+        var now = _timeProvider.GetUtcNow();
+        var start = LocalDate(now);
+        var end = start.AddDays(days - 1);
+        var active = (await _persistence.LoadLearningItemsAsync(cancellationToken))
+            .Where(x => x.Lifecycle == LearningItemLifecycle.Active)
+            .ToArray();
+        var upcomingByDay = active
+            .Where(x => x.DueAt > now)
+            .Select(x => LocalDate(x.DueAt))
+            .Where(date => date >= start && date <= end)
+            .GroupBy(date => date)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        var upcoming = Enumerable.Range(0, days)
+            .Select(offset => start.AddDays(offset))
+            .Select(date => new DueForecastDay(date, upcomingByDay.GetValueOrDefault(date)))
+            .ToArray();
+
+        return new LearningDueForecast(active.Count(x => x.DueAt <= now), start, end, upcoming);
+    }
+
     public async Task<IReadOnlyList<DeckInsight>> GetDeckInsightsAsync(CancellationToken cancellationToken = default)
     {
         var items = await _persistence.LoadLearningItemsAsync(cancellationToken);
@@ -104,11 +168,13 @@ public sealed class LearningInsightService
         return new(deck.Id, deck.Name, items.Where(x => deck.CurrentLearningItemIds.Contains(x.Id)).Select(x => new DeckLearningContextItem(x.Id, x.Prompt, x.ReferenceSolution, x.ResponseMode, x.Lifecycle, x.IsNew, x.DueAt, x.Difficulty, x.StabilityDays, x.IsInShortTermRelearning, x.Reviews.Count, LastAssessment(x.Reviews), Distribution(x.Reviews))).ToArray());
     }
 
+    private DateOnly LocalDate(DateTimeOffset value) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(value, _timeProvider.LocalTimeZone).DateTime);
+
     private static LearningItemInsight ToInsight(LearningInsightItemSnapshot item) => new(item.Id, item.Prompt, item.ResponseMode, item.Lifecycle, item.IsNew, item.DueAt, item.Difficulty, item.StabilityDays, item.IsInShortTermRelearning, item.Reviews.Count, item.Reviews.OrderByDescending(x => x.CompletedAt).Select(x => (DateTimeOffset?)x.CompletedAt).FirstOrDefault(), LastAssessment(item.Reviews), Distribution(item.Reviews));
 
     private static StudyLearningAssessment? LastAssessment(IEnumerable<InsightReviewSnapshot> reviews) => reviews.OrderByDescending(x => x.CompletedAt).Select(x => (StudyLearningAssessment?)x.Assessment).FirstOrDefault();
 
     private static AssessmentDistribution Distribution(IEnumerable<InsightReviewSnapshot> reviews) => new(
         reviews.Count(x => x.Assessment == StudyLearningAssessment.Nochmal), reviews.Count(x => x.Assessment == StudyLearningAssessment.Schwer), reviews.Count(x => x.Assessment == StudyLearningAssessment.Unsicher), reviews.Count(x => x.Assessment == StudyLearningAssessment.Gut), reviews.Count(x => x.Assessment == StudyLearningAssessment.Leicht));
-
 }
