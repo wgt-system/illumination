@@ -1,6 +1,6 @@
 name: Feature slice
 description: Propose a bounded Illumination capability or implementation slice
-title: ""
+title: "feat: "
 labels: []
 body:
   - type: textarea
