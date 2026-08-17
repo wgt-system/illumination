@@ -35,10 +35,7 @@
                   <Border BorderBrush="#28000000" BorderThickness="1" CornerRadius="10" Padding="8,3">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                      <Button Content="×"
-                              Padding="4,0"
-                              Command="{Binding $parent[ItemsControl].DataContext.RemoveStudyDeckCommand}"
-                              CommandParameter="{Binding}" />
+                      <Button Content="×" Padding="4,0" Command="{Binding $parent[ItemsControl].DataContext.RemoveStudyDeckCommand}" CommandParameter="{Binding}" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -71,14 +68,8 @@
                     <TextBlock Text="{Binding StartedLabel, StringFormat='Started {0}'}" Classes="secondary" />
                     <TextBlock Text="{Binding ReviewCount, StringFormat='{}{0} reviews recorded'}" Classes="secondary" />
                   </StackPanel>
-                  <Button Grid.Column="1"
-                          Content="Resume"
-                          Command="{Binding $parent[ItemsControl].DataContext.ResumeStudySessionCommand}"
-                          CommandParameter="{Binding}" />
-                  <Button Grid.Column="2"
-                          Content="Finish"
-                          Command="{Binding $parent[ItemsControl].DataContext.FinishStoredStudySessionCommand}"
-                          CommandParameter="{Binding}" />
+                  <Button Grid.Column="1" Content="Resume" Command="{Binding $parent[ItemsControl].DataContext.ResumeStudySessionCommand}" CommandParameter="{Binding}" />
+                  <Button Grid.Column="2" Content="Finish" Command="{Binding $parent[ItemsControl].DataContext.FinishStoredStudySessionCommand}" CommandParameter="{Binding}" />
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -98,12 +89,9 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel VerticalAlignment="Center" Spacing="16" Margin="10,8">
-                <TextBlock Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Select one or more Decks and start a session.'}"
-                           TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Select one or more Decks and start a session.'}" TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
                 <ItemsControl IsVisible="{Binding IsSelectionMode}" ItemsSource="{Binding CurrentDirectChoices}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="desktop:StudyChoiceDisplay"><CheckBox Content="{Binding Text}" IsChecked="{Binding IsSelected}" Margin="12,2" /></DataTemplate>
-                  </ItemsControl.ItemTemplate>
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:StudyChoiceDisplay"><CheckBox Content="{Binding Text}" IsChecked="{Binding IsSelected}" Margin="12,2" /></DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <TextBox IsVisible="{Binding IsShortTextMode}" Text="{Binding ShortTextResponse}" Watermark="Short response" />
                 <TextBox IsVisible="{Binding IsCodeMode}" Text="{Binding CodeResponse}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="110" Watermark="Code response (not executed)" />
@@ -137,9 +125,7 @@
             </ScrollViewer>
 
             <ItemsControl Grid.Row="2" ItemsSource="{Binding AssessmentPreviews}" HorizontalAlignment="Center">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="7" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="7" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="desktop:StudyAssessmentPreviewDisplay">
                   <Button Classes="grade" Command="{Binding Command}">
@@ -169,15 +155,20 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <StackPanel Grid.Row="3" Margin="0,0,0,8" VerticalAlignment="Bottom" Spacing="4">
+            <StackPanel Grid.Row="3" Margin="0,0,0,8" VerticalAlignment="Bottom" Spacing="5">
               <TextBlock Text="Current item flags" Classes="secondary" />
               <ItemsControl ItemsSource="{Binding ContentCuration.StudyFlags}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="content:UserFlagDefinitionView">
-                    <Button Content="{Binding Name}" Command="{Binding $parent[ItemsControl].DataContext.ToggleStudyFlagCommand}" CommandParameter="{Binding Id}" HorizontalAlignment="Left" />
+                    <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="8" Padding="6,2"><TextBlock Text="{Binding Name}" FontSize="11" /></Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.SelectedStudyFlag}" MinWidth="180">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Content="{Binding ContentCuration.StudyFlagActionLabel}" Command="{Binding ContentCuration.ToggleSelectedStudyFlagCommand}" HorizontalAlignment="Left" />
             </StackPanel>
           </Grid>
         </Border>
