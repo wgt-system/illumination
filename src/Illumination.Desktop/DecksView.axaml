@@ -13,6 +13,13 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+        <TextBlock Text="Learn" FontWeight="SemiBold" />
+        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+          <Button Content="Study selected" Command="{Binding PrepareSelectedDeckStudyCommand}" />
+          <Button Content="Study all Decks" Command="{Binding PrepareAllDecksStudyCommand}" />
+        </WrapPanel>
+        <Button Content="Generate learning-aware follow-up" Command="{Binding GenerateFollowUpFromSelectedDeckCommand}" HorizontalAlignment="Left" />
+
         <TextBlock Text="Deck management" FontWeight="SemiBold" Margin="0,8,0,0" />
         <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
         <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
