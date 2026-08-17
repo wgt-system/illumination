@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Illumination.Application.ContentAcquisition;
 using Illumination.Application.ContentManagement;
 
 namespace Illumination.Desktop;
@@ -15,6 +16,18 @@ public sealed partial class ContentCurationViewModel
     [ObservableProperty]
     private UserFlagDefinitionView? _bulkTargetFlag;
 
+    [ObservableProperty]
+    private ContentUpdateSignificance _improvementSignificance = ContentUpdateSignificance.Minor;
+
+    [ObservableProperty]
+    private string _improvementGuidance = string.Empty;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasImprovementPrompt))]
+    private string _improvementPrompt = string.Empty;
+
+    public IReadOnlyList<ContentUpdateSignificance> ImprovementSignificanceOptions { get; } = Enum.GetValues<ContentUpdateSignificance>();
+    public bool HasImprovementPrompt => !string.IsNullOrWhiteSpace(ImprovementPrompt);
+
     [RelayCommand]
     private void SelectFilteredForManagement()
     {
@@ -25,6 +38,42 @@ public sealed partial class ContentCurationViewModel
     private void ClearManagementSelection()
     {
         foreach (var item in Items) item.IsSelectedForManagement = false;
+    }
+
+    [RelayCommand]
+    private async Task GenerateImprovementPromptAsync()
+    {
+        if (_content is null) return;
+        var ids = Items.Where(x => x.IsSelectedForManagement).Select(x => x.Id).ToArray();
+        if (ids.Length == 0)
+        {
+            _reportStatus("Select at least one Learning Item to improve.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(ImprovementGuidance))
+        {
+            _reportStatus("Describe what should be improved before generating the update prompt.");
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            var generated = await new ExistingContentImprovementPromptService(_content)
+                .GenerateAsync(ids, ImprovementSignificance, ImprovementGuidance);
+            ImprovementPrompt = generated.Prompt;
+            _reportStatus($"Generated an update prompt for {generated.LearningItemCount} existing Learning Items. Paste the returned Content Bundle into Import.");
+        });
+    }
+
+    [RelayCommand]
+    private async Task CopyImprovementPromptAsync()
+    {
+        if (_desktopInteractions is null || !HasImprovementPrompt) return;
+        await RunAsync(async () =>
+        {
+            await _desktopInteractions.CopyTextAsync(ImprovementPrompt);
+            _reportStatus("Existing-content improvement prompt copied. Use the returned JSON through the normal Import preview.");
+        });
     }
 
     [RelayCommand]
