@@ -12,8 +12,7 @@
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <ComboBox Width="170"
                     ItemsSource="{Binding DeckPresentationItems}"
-                    SelectedItem="{Binding ContentCuration.FilterDeckPresentation}"
-                    Watermark="All Decks">
+                    SelectedItem="{Binding ContentCuration.FilterDeckPresentation}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="desktop:DeckPresentationItem">
                 <TextBlock Text="{Binding DisplayName}" />
@@ -42,7 +41,7 @@
           <Button Content="Select all for review" Command="{Binding ContentCuration.SelectAllReviewItemsCommand}" />
           <Button Content="Clear review selection" Command="{Binding ContentCuration.ClearReviewItemSelectionCommand}" />
         </WrapPanel>
-        <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.FilterFlag}" Watermark="Filter by flag">
+        <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.FilterFlag}">
           <ComboBox.ItemTemplate>
             <DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate>
           </ComboBox.ItemTemplate>
