@@ -28,6 +28,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
     public bool IsEditing => _editingId.HasValue;
     public bool IsSelection => ResponseMode == LearningItemResponseMode.Selection;
     public bool IsShortText => ResponseMode == LearningItemResponseMode.ShortText;
+    public bool HasAdvisorySuggestion => !string.IsNullOrWhiteSpace(AdvisorySuggestion);
     public string FormTitle => IsEditing ? "Edit Learning Item" : "Create Learning Item";
 
     [ObservableProperty] private string _prompt = string.Empty;
@@ -35,6 +36,8 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
     [ObservableProperty] private LearningItemResponseMode _responseMode = LearningItemResponseMode.SelfAssessed;
     [ObservableProperty] private bool _lowInteractionEligible;
     [ObservableProperty] private string _validationMessage = string.Empty;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasAdvisorySuggestion))]
+    private string _advisorySuggestion = string.Empty;
 
     partial void OnResponseModeChanged(LearningItemResponseMode value)
     {
@@ -50,6 +53,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
         ResponseMode = LearningItemResponseMode.SelfAssessed;
         LowInteractionEligible = false;
         ValidationMessage = string.Empty;
+        AdvisorySuggestion = string.Empty;
         ClearCollections();
         OnPropertyChanged(nameof(IsEditing));
         OnPropertyChanged(nameof(FormTitle));
@@ -66,6 +70,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
             ResponseMode = item.ResponseMode;
             LowInteractionEligible = item.LowInteractionEligible;
             ValidationMessage = string.Empty;
+            AdvisorySuggestion = string.Empty;
             ClearCollections();
             foreach (var hint in item.Hints) Hints.Add(new(hint.Text));
             foreach (var choice in item.DirectAnswerChoices) DirectChoices.Add(new(choice.Text, choice.IsCorrect, choice.Id));
@@ -80,8 +85,14 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
         }
     }
 
+    public void ShowAdvisorySuggestion(string suggestion)
+    {
+        AdvisorySuggestion = suggestion?.Trim() ?? string.Empty;
+    }
+
     [RelayCommand] private void New() => BeginCreate();
     [RelayCommand] private void Cancel() => BeginCreate();
+    [RelayCommand] private void DismissAdvisorySuggestion() => AdvisorySuggestion = string.Empty;
 
     [RelayCommand] private void AddHint() => Hints.Add(new(string.Empty));
     [RelayCommand] private void RemoveHint(EditorHintRow row) => Hints.Remove(row);
