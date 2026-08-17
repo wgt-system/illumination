@@ -9,21 +9,49 @@ public sealed partial class ContentCurationViewModel
     [ObservableProperty]
     private DeckPresentationItem? _bulkTargetDeckPresentation;
 
-    public int ManagementSelectionCount => Items.Count(x => x.IsSelectedForManagement);
-    public bool HasManagementSelection => ManagementSelectionCount > 0;
+    [ObservableProperty]
+    private string _bulkNewDeckName = string.Empty;
+
+    [ObservableProperty]
+    private UserFlagDefinitionView? _bulkTargetFlag;
 
     [RelayCommand]
     private void SelectFilteredForManagement()
     {
         foreach (var item in FilteredItems.ToArray()) item.IsSelectedForManagement = true;
-        ManagementSelectionChanged();
     }
 
     [RelayCommand]
     private void ClearManagementSelection()
     {
         foreach (var item in Items) item.IsSelectedForManagement = false;
-        ManagementSelectionChanged();
+    }
+
+    [RelayCommand]
+    private async Task CreateDeckFromSelectedAsync()
+    {
+        if (_content is null) return;
+        var selected = Items.Where(x => x.IsSelectedForManagement).ToArray();
+        if (selected.Length == 0)
+        {
+            _reportStatus("Select at least one Learning Item for the new Deck.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(BulkNewDeckName))
+        {
+            _reportStatus("Enter a name for the new Deck.");
+            return;
+        }
+
+        var requestedName = BulkNewDeckName.Trim();
+        await RunAsync(async () =>
+        {
+            var deck = await _content.CreateDeckAsync(new CreateDeckCommand(requestedName));
+            foreach (var item in selected) await _content.AddLearningItemToDeckAsync(deck.Id, item.Id);
+            BulkNewDeckName = string.Empty;
+            if (_refreshContent is not null) await _refreshContent();
+            _reportStatus($"Created Deck '{deck.Name}' from {selected.Length} selected Learning Items. Existing Learning State is shared, not copied.");
+        });
     }
 
     [RelayCommand]
@@ -61,6 +89,44 @@ public sealed partial class ContentCurationViewModel
             foreach (var item in selected) await _content.RemoveLearningItemFromDeckAsync(BulkTargetDeckPresentation.Id, item.Id);
             if (_refreshContent is not null) await _refreshContent();
             _reportStatus($"Removed {selected.Length} Learning Items from '{BulkTargetDeckPresentation.DisplayName}'. The Learning Items were not deleted.");
+        });
+    }
+
+    [RelayCommand]
+    private async Task BulkAddFlagAsync()
+    {
+        if (BulkTargetFlag is null) return;
+        var selected = Items.Where(x => x.IsSelectedForManagement && !x.FlagIds.Contains(BulkTargetFlag.Id)).ToArray();
+        if (selected.Length == 0)
+        {
+            _reportStatus("No selected Learning Items need that flag added.");
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            foreach (var item in selected) await _curation.AddFlagToLearningItemAsync(item.Id, BulkTargetFlag.Id);
+            if (_refreshContent is not null) await _refreshContent();
+            _reportStatus($"Added flag '{BulkTargetFlag.Name}' to {selected.Length} Learning Items.");
+        });
+    }
+
+    [RelayCommand]
+    private async Task BulkRemoveFlagAsync()
+    {
+        if (BulkTargetFlag is null) return;
+        var selected = Items.Where(x => x.IsSelectedForManagement && x.FlagIds.Contains(BulkTargetFlag.Id)).ToArray();
+        if (selected.Length == 0)
+        {
+            _reportStatus("No selected Learning Items currently have that flag.");
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            foreach (var item in selected) await _curation.RemoveFlagFromLearningItemAsync(item.Id, BulkTargetFlag.Id);
+            if (_refreshContent is not null) await _refreshContent();
+            _reportStatus($"Removed flag '{BulkTargetFlag.Name}' from {selected.Length} Learning Items.");
         });
     }
 
@@ -108,22 +174,10 @@ public sealed partial class ContentCurationViewModel
             _reportStatus($"{selected.Length} Learning Items {actionLabel}.");
         });
     }
-
-    internal void ManagementSelectionChanged()
-    {
-        OnPropertyChanged(nameof(ManagementSelectionCount));
-        OnPropertyChanged(nameof(HasManagementSelection));
-    }
 }
 
 public sealed partial class CuratedLearningItemRowViewModel
 {
     [ObservableProperty]
     private bool _isSelectedForManagement;
-
-    partial void OnIsSelectedForManagementChanged(bool value)
-    {
-        // The containing view model also refreshes the aggregate after select-all/clear.
-        // Individual toggles intentionally remain local to keep row construction simple.
-    }
 }
