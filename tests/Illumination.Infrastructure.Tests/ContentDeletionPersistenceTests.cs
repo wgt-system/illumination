@@ -12,7 +12,7 @@ public sealed class ContentDeletionPersistenceTests
     private static readonly DateTimeOffset Now = new(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
     [Fact]
-    public async Task Permanent_learning_item_delete_removes_history_and_memberships_but_not_deck()
+    public async Task Permanent_learning_item_delete_removes_history_membership_and_live_queue_reference_but_not_deck()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
@@ -28,7 +28,13 @@ public sealed class ContentDeletionPersistenceTests
         var deck = await content.CreateDeckAsync(new CreateDeckCommand("Deck"));
         await content.AddLearningItemToDeckAsync(deck.Id, item.Id);
         var session = await study.StartStudySessionAsync(new StartStudySessionCommand([deck.Id]));
-        await study.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, item.Id, StudyLearningAssessment.Gut));
+        await study.SubmitReviewAsync(new SubmitStudyReviewCommand(session.Id, item.Id, StudyLearningAssessment.Nochmal));
+
+        await using (var beforeDelete = await factory.CreateDbContextAsync(TestContext.Current.CancellationToken))
+        {
+            Assert.True(await beforeDelete.Reviews.AnyAsync(x => x.LearningItemId == item.Id));
+            Assert.True(await beforeDelete.StudySessionQueue.AnyAsync(x => x.LearningItemId == item.Id));
+        }
 
         await content.DeleteLearningItemAsync(item.Id);
 
