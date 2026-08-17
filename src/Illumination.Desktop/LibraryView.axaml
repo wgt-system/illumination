@@ -23,20 +23,54 @@
           <ComboBox Width="125" ItemsSource="{Binding ContentCuration.ResponseModeFilters}" SelectedItem="{Binding ContentCuration.FilterResponseMode}" />
           <Button Content="Clear filters" Command="{Binding ContentCuration.ClearLibraryFiltersCommand}" />
         </WrapPanel>
+        <Grid ColumnDefinitions="44,44,*" Margin="6,0,6,0">
+          <TextBlock Text="Bulk" Classes="secondary" />
+          <TextBlock Grid.Column="1" Text="QA" Classes="secondary" />
+          <TextBlock Grid.Column="2" Text="Content" Classes="secondary" />
+        </Grid>
         <ListBox ItemsSource="{Binding ContentCuration.FilteredItems}" SelectedItem="{Binding ContentCuration.SelectedItem}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="desktop:CuratedLearningItemRowViewModel">
-              <Grid ColumnDefinitions="34,*,Auto" Margin="6" ColumnSpacing="7">
-                <CheckBox IsChecked="{Binding IsSelectedForReview}" VerticalAlignment="Top" />
-                <StackPanel Grid.Column="1" Spacing="3">
+              <Grid ColumnDefinitions="34,34,*,Auto" Margin="6" ColumnSpacing="7">
+                <CheckBox IsChecked="{Binding IsSelectedForManagement}" VerticalAlignment="Top" />
+                <CheckBox Grid.Column="1" IsChecked="{Binding IsSelectedForReview}" VerticalAlignment="Top" />
+                <StackPanel Grid.Column="2" Spacing="3">
                   <TextBlock Text="{Binding Prompt}" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding QualityState}" Foreground="#B77900" FontWeight="SemiBold" />
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="{Binding ContentRevision, StringFormat='rev {0}'}" Classes="secondary" />
+                <TextBlock Grid.Column="3" Text="{Binding ContentRevision, StringFormat='rev {0}'}" Classes="secondary" />
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+
+        <Expander Header="Bulk manage" IsExpanded="False">
+          <StackPanel Spacing="7" Margin="0,5,0,0">
+            <TextBlock Text="Bulk selection is separate from Quality Review selection. Permanent delete remains an individual action." TextWrapping="Wrap" Classes="secondary" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+              <Button Content="Select filtered" Command="{Binding ContentCuration.SelectFilteredForManagementCommand}" />
+              <Button Content="Clear bulk selection" Command="{Binding ContentCuration.ClearManagementSelectionCommand}" />
+            </WrapPanel>
+            <ComboBox Width="220"
+                      ItemsSource="{Binding DeckPresentationItems}"
+                      SelectedItem="{Binding ContentCuration.BulkTargetDeckPresentation}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+              <Button Content="Add to Deck" Command="{Binding ContentCuration.BulkAddSelectedToDeckCommand}" />
+              <Button Content="Remove from Deck" Command="{Binding ContentCuration.BulkRemoveSelectedFromDeckCommand}" />
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+              <Button Content="Suspend" Command="{Binding ContentCuration.BulkSuspendSelectedCommand}" />
+              <Button Content="Reactivate" Command="{Binding ContentCuration.BulkReactivateSelectedCommand}" />
+              <Button Content="Mark mastered" Command="{Binding ContentCuration.BulkMarkMasteredSelectedCommand}" />
+              <Button Content="Unmark mastered" Command="{Binding ContentCuration.BulkUnmarkMasteredSelectedCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Expander>
+
         <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
           <Button Content="Select all for review" Command="{Binding ContentCuration.SelectAllReviewItemsCommand}" />
           <Button Content="Clear review selection" Command="{Binding ContentCuration.ClearReviewItemSelectionCommand}" />
@@ -55,6 +89,14 @@
           <Button Content="Save" Command="{Binding Editor.SaveCommand}" />
           <Button Content="Cancel" Command="{Binding Editor.CancelCommand}" />
         </WrapPanel>
+        <Border IsVisible="{Binding Editor.HasAdvisorySuggestion}" BorderBrush="#55B77900" BorderThickness="1" CornerRadius="6" Padding="9">
+          <StackPanel Spacing="5">
+            <TextBlock Text="Quality Review suggestion" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Editor.AdvisorySuggestion}" TextWrapping="Wrap" />
+            <TextBlock Text="Advisory only — change the actual fields below, then save normally." Classes="secondary" TextWrapping="Wrap" />
+            <Button Content="Dismiss suggestion" Command="{Binding Editor.DismissAdvisorySuggestionCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
         <TextBlock Text="Prompt" Classes="secondary" />
         <TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
         <TextBlock Text="Reference Solution" Classes="secondary" />
@@ -174,6 +216,7 @@
               <StackPanel Margin="2,3" Spacing="2">
                 <TextBlock Text="{Binding Outcome}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                <TextBlock Text="{Binding SuggestedCorrection}" TextWrapping="Wrap" FontSize="12" Foreground="#B77900" />
                 <TextBlock Text="Active" IsVisible="{Binding IsActive}" Classes="secondary" />
                 <TextBlock Text="Superseded historical review" IsVisible="{Binding !IsActive}" Classes="secondary" />
               </StackPanel>
@@ -203,6 +246,11 @@
                 <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
                 <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
+                <Button Content="Edit using suggestion"
+                        IsVisible="{Binding HasSuggestedCorrection}"
+                        Command="{Binding $parent[ListBox].DataContext.EditFromPreviewSuggestionCommand}"
+                        CommandParameter="{Binding}"
+                        HorizontalAlignment="Left" />
                 <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
                 <ItemsControl ItemsSource="{Binding PriorActiveReviews}">
                   <ItemsControl.ItemTemplate>
