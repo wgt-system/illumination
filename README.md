@@ -10,9 +10,9 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current release baseline
 
-Illumination v0.6.0 is the current stable release. It adds the rebuilt Desktop shell, Learning Insight overviews, Deck/item insight, Review and Study Session history, filtering/search, DeckLearningContext, learning-aware follow-up Deck generation, Reinforce/Continue/Advance progression modes, generation ResponseMode controls, language-learning prompt hardening, improved JSON drag/drop, and explicit Suspended/Mastered lifecycle management. The optional Avalonia host exposes administration and development workflows.
+Illumination v0.7.0 is the current stable release. It extends the v0.6 learning baseline with substantial product refinement: richer Content Bundle generation and import previews, explicit language and follow-up generation controls, existing-content improvement prompts, Deck export, bulk content curation and Study flag workflows, direct Deck study actions, focus-aware Study shortcuts, Learning Insights activity history and due forecasts, local backup/export controls, migration hardening, and repository/C4 maintenance improvements. The optional Avalonia host remains an administration, development, and standalone capability surface.
 
-The next planned direction is broad product refinement, including usability, learning insight refinement, performance, and content-management improvements; no unreleased behavior is claimed here.
+The next planned direction remains further pre-1.0 product refinement where it improves the coherent independent Illumination capability; no speculative WGT synchronization or cross-context contract is claimed by this release.
 
 ## Product direction
 
