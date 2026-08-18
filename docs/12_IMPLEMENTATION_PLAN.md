@@ -301,7 +301,11 @@ separate analytics source of truth, arbitrary mastery scoring, denormalized stat
 or a generated prompt/LLM integration. The five-grade distribution is based only on
 learner-confirmed final assessments.
 
-### v0.7.0+ – Product Refinement
+### v0.7.0 – Product Refinement (released)
+
+The v0.7 implementation is released after the explicit Product Refinement hardening gate in Issue #19 and the accepted Release build, full test suite, and NuGet vulnerability audit. Shipped scope includes richer Content Bundle generation/import previews, language and follow-up generation controls, existing-content improvement prompts, Deck export and direct Deck actions, bulk content curation and Study flags, focus-aware Study shortcuts, Learning Insights activity history and due forecasts, local backup/export controls, migration hardening, and repository/C4 maintenance improvements.
+
+The v0.7 release gate deliberately removed two unaccepted product semantics that appeared during refinement: product-level resume/finish controls for persisted unfinished Study Sessions and staged replacement of the authoritative local SQLite database. Durable Study state, normal explicit session completion, rolling/manual backups, portable backup export, and backup-before-migration safety remain within the accepted baseline.
 
 Use further `v0.y.0` releases as needed for:
 
