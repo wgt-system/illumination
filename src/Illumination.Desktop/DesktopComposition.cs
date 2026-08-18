@@ -19,18 +19,25 @@ internal static class DesktopComposition
         Directory.CreateDirectory(dataDirectory);
 
         var databasePath = Path.Combine(dataDirectory, "illumination.sqlite");
-        var backupDirectory = Path.Combine(dataDirectory, "backups");
+        var defaultBackupDirectory = Path.Combine(dataDirectory, "backups");
+        var settingsStore = new LocalDataSettingsStore(Path.Combine(dataDirectory, "local-data-settings.json"));
+        var backupDirectory = settingsStore.LoadBackupDirectory(defaultBackupDirectory);
         var timeProvider = TimeProvider.System;
         var backupService = new LocalSqliteBackupService(
             backupDirectory,
             BackupRetentionCount,
             timeProvider);
+        var databaseExistedAtStartup = File.Exists(databasePath);
 
         var options = new DbContextOptionsBuilder<IlluminationDbContext>()
             .UseSqlite($"Data Source={databasePath};Pooling=False")
             .Options;
 
         await new SqliteMigrationCoordinator(options, backupService).MigrateAsync();
+        if (databaseExistedAtStartup)
+        {
+            new LocalSqliteAutomaticBackupPolicy(backupService).CreateStartupBackupIfNeeded(databasePath);
+        }
 
         var contextFactory = new DesktopDbContextFactory(options);
         var content = new ContentManagementService(new EfCoreContentPersistence(contextFactory), timeProvider);
@@ -38,16 +45,18 @@ internal static class DesktopComposition
         var curation = new ContentCurationService(contentPersistence, contentPersistence);
         var qualityExchange = new QualityReviewExchangeService(contentPersistence, contentPersistence);
         var insights = new LearningInsightService(new EfCoreLearningInsightPersistence(contextFactory), timeProvider);
-        var acquisition = new ContentAcquisitionService(
+        var acquisitionPersistence = new BackupBeforeContentAcquisitionPersistence(
             new EfCoreContentAcquisitionPersistence(contextFactory),
-            timeProvider);
+            backupService,
+            databasePath);
+        var acquisition = new ContentAcquisitionService(acquisitionPersistence, timeProvider);
         var study = new StudySessionService(
             new EfCoreStudySessionPersistence(contextFactory),
             timeProvider,
             new RandomStudySessionOrdering(),
             new EfCoreStudyEvaluationPreferencePersistence(contextFactory));
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
-        viewModel.ConfigureLocalData(backupService, databasePath, backupDirectory);
+        viewModel.ConfigureLocalData(backupService, settingsStore, databasePath, defaultBackupDirectory);
         viewModel.ConfigureDeckExport(new ContentBundleExportService(content));
         viewModel.ContentAcquisition.ConfigureContentPreview(content);
         await viewModel.InitializeAsync();
