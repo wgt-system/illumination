@@ -7,14 +7,16 @@ public sealed partial class MainWindowViewModel
     public LocalDataViewModel? LocalData { get; private set; }
 
     public void ConfigureLocalData(
-        ILocalSqliteBackupService backupService,
+        IConfigurableLocalSqliteBackupService backupService,
+        LocalDataSettingsStore settingsStore,
         string databasePath,
-        string backupDirectory)
+        string defaultBackupDirectory)
     {
         LocalData = new LocalDataViewModel(
             backupService,
+            settingsStore,
             databasePath,
-            backupDirectory,
+            defaultBackupDirectory,
             message => StatusMessage = message);
         OnPropertyChanged(nameof(LocalData));
     }
