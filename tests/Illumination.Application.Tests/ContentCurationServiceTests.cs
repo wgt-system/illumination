@@ -244,6 +244,8 @@ public sealed class ContentCurationServiceTests
         public Task SaveLearningItemAsync(LearningItemSnapshot item, CancellationToken cancellationToken = default) { Items[item.Id] = item; SavedItems.Add(item); return Task.CompletedTask; }
         public Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<DeckSnapshot>>([]);
         public Task<DeckSnapshot?> FindDeckAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<DeckSnapshot?>(null);
+        public Task DeleteLearningItemAsync(Guid id, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         public Task SaveDeckAsync(DeckSnapshot deck, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DeleteDeckAsync(Guid id, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<IReadOnlyList<UserFlagDefinitionSnapshot>> ListUserFlagDefinitionsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserFlagDefinitionSnapshot>>(Definitions.Values.ToArray());

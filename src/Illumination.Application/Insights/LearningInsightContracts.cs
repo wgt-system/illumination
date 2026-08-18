@@ -23,6 +23,28 @@ public sealed record LearningInsightOverview(
     int ReviewsLast30Days,
     DateTimeOffset? MostRecentReviewAt);
 
+public sealed record LearningActivityDay(
+    DateOnly Date,
+    int ReviewCount,
+    int StudySessionCount,
+    AssessmentDistribution AssessmentDistribution);
+
+public sealed record LearningActivitySummary(
+    DateOnly StartDate,
+    DateOnly EndDate,
+    int ActiveDayCount,
+    int TotalReviewCount,
+    int TotalStudySessionCount,
+    IReadOnlyList<LearningActivityDay> Days);
+
+public sealed record DueForecastDay(DateOnly Date, int DueCount);
+
+public sealed record LearningDueForecast(
+    int DueNowCount,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    IReadOnlyList<DueForecastDay> UpcomingDays);
+
 public sealed record DeckInsight(
     Guid Id,
     string Name,

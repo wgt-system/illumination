@@ -24,7 +24,16 @@
           <ToggleButton Classes="nav" Content="Library" IsChecked="{Binding IsLibraryPage}" Command="{Binding NavigateLibraryCommand}"/>
           <ToggleButton Classes="nav" Content="Import" IsChecked="{Binding IsImportPage}" Command="{Binding NavigateImportCommand}"/>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="secondary"/>
+        <StackPanel Grid.Row="2" Spacing="8">
+          <Expander Header="Local data" IsExpanded="False">
+            <StackPanel Spacing="5" Margin="0,5,0,0">
+              <Button Content="Backup now" Command="{Binding LocalData.CreateBackupCommand}" HorizontalContentAlignment="Left" />
+              <Button Content="Export backup..." Command="{Binding LocalData.ExportBackupCommand}" HorizontalContentAlignment="Left" />
+              <TextBlock Text="Backups stay local unless you explicitly export one." TextWrapping="Wrap" Classes="secondary" />
+            </StackPanel>
+          </Expander>
+          <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="secondary"/>
+        </StackPanel>
       </Grid>
     </Border>
     <Grid Grid.Column="1" Row="0">

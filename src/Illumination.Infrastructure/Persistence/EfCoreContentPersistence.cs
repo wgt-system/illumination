@@ -115,6 +115,22 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteLearningItemAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var item = await context.LearningItems.SingleOrDefaultAsync(x => x.LearningItemId == id, cancellationToken);
+        if (item is null) return;
+        context.StudySessionQueue.RemoveRange(await context.StudySessionQueue.Where(x => x.LearningItemId == id).ToArrayAsync(cancellationToken));
+        context.DeckLearningItems.RemoveRange(await context.DeckLearningItems.Where(x => x.LearningItemId == id).ToArrayAsync(cancellationToken));
+        context.Reviews.RemoveRange(await context.Reviews.Where(x => x.LearningItemId == id).ToArrayAsync(cancellationToken));
+        context.QualityReviews.RemoveRange(await context.QualityReviews.Where(x => x.LearningItemId == id).ToArrayAsync(cancellationToken));
+        context.LearningItemUserFlags.RemoveRange(await context.LearningItemUserFlags.Where(x => x.LearningItemId == id).ToArrayAsync(cancellationToken));
+        context.LearningItems.Remove(item);
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task<DeckSnapshot?> FindDeckAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);

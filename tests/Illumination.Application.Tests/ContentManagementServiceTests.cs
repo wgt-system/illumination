@@ -277,6 +277,8 @@ public class ContentManagementServiceTests
         public Task<IReadOnlyList<DeckSnapshot>> ListDecksAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DeckSnapshot>>(_decks.Values.ToArray());
 
+        public Task DeleteLearningItemAsync(Guid id, CancellationToken cancellationToken = default) { _items.TryRemove(id, out _); return Task.CompletedTask; }
+
         public Task SaveDeckAsync(DeckSnapshot deck, CancellationToken cancellationToken = default)
         {
             _decks[deck.Id] = deck;

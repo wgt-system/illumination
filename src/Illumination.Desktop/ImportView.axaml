@@ -1,1 +1,278 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:desktop="using:Illumination.Desktop" xmlns:content="using:Illumination.Application.ContentManagement" x:Class="Illumination.Desktop.ImportView" x:DataType="desktop:MainWindowViewModel">        <ContentControl Content="{Binding ContentAcquisition}">          <ContentControl.ContentTemplate>            <DataTemplate x:DataType="desktop:ContentAcquisitionViewModel">              <ScrollViewer VerticalScrollBarVisibility="Auto">                <StackPanel Spacing="14" Margin="14,4,8,12" IsEnabled="{Binding IsInteractionEnabled}">                  <Grid ColumnDefinitions="*,Auto">                    <TextBlock Text="Import" FontSize="20" FontWeight="SemiBold" />                    <TextBlock Grid.Column="1" Text="Working…" IsVisible="{Binding IsBusy}" Classes="secondary" VerticalAlignment="Center" />                  </Grid>                  <Grid ColumnDefinitions="360,*" ColumnSpacing="16">                    <StackPanel Spacing="7">                      <TextBlock Text="Generate learning content" FontSize="16" FontWeight="SemiBold" />                      <TextBlock Text="Topic or learning purpose" Classes="secondary" />                      <TextBox Text="{Binding Subject}" Watermark="What do you want to learn?" />                      <Grid ColumnDefinitions="100,*" ColumnSpacing="10">                        <StackPanel>                          <TextBlock Text="Items" Classes="secondary" />                          <NumericUpDown Value="{Binding RequestedItemCount}" Minimum="1" Maximum="10000" />                        </StackPanel>                        <StackPanel Grid.Column="1" Spacing="4">                          <TextBlock Text="Target Deck" Classes="secondary" />                          <StackPanel Orientation="Horizontal" Spacing="12">                            <RadioButton Content="New" GroupName="ImportTarget" IsChecked="{Binding UseNewDeck}" />                            <RadioButton Content="Existing" GroupName="ImportTarget" IsChecked="{Binding UseExistingDeck}" IsEnabled="{Binding HasExistingDecks}" />                          </StackPanel>                        </StackPanel>                      </Grid>                      <TextBox Text="{Binding NewDeckName}" Watermark="New Deck name" IsEnabled="{Binding UseNewDeck}" />                      <ComboBox ItemsSource="{Binding ExistingDecks}" SelectedItem="{Binding SelectedExistingDeck}" IsEnabled="{Binding UseExistingDeck}">                        <ComboBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>                        </ComboBox.ItemTemplate>                      </ComboBox>                      <TextBlock Text="Optional guidance" Classes="secondary" />                      <TextBox Text="{Binding Guidance}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" />                      <Button Content="Generate Prompt" Command="{Binding GeneratePromptCommand}" HorizontalAlignment="Left" />                    </StackPanel>                    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="7">                      <TextBlock Text="Generated prompt" FontSize="16" FontWeight="SemiBold" />                      <TextBox Grid.Row="1" Text="{Binding GeneratedPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"                               FontFamily="Consolas" FontSize="12" Height="250" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />                      <Button Grid.Row="2" Content="Copy Prompt" Command="{Binding CopyPromptCommand}" HorizontalAlignment="Left" />                    </Grid>                  </Grid>                  <Border BorderBrush="#22000000" BorderThickness="0,1,0,0" Margin="0,2,0,0" />                  <TextBlock Text="Import Content Bundle" FontSize="16" FontWeight="SemiBold" />                      <TextBlock Text="Drop one .json file here, or use the file picker / paste below." Classes="secondary" />                  <Grid ColumnDefinitions="*,300" ColumnSpacing="16">                    <Grid RowDefinitions="*,Auto" RowSpacing="7">                      <Border Classes="surface" DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" DragDrop.DragOver="OnBundleDragOver" Padding="0">                      <TextBox DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" Text="{Binding RawJson}" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"                               Watermark="Paste Content Bundle 1.0 JSON" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />                      </Border>                      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">                        <Button Content="Load JSON File" Command="{Binding LoadJsonFileCommand}" />                        <Button Content="Validate" Command="{Binding ValidateCommand}" />                      </StackPanel>                    </Grid>                    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,*" RowSpacing="6">                      <TextBlock Text="Bundle diagnostics" FontWeight="SemiBold" />                      <ListBox Grid.Row="1" ItemsSource="{Binding BundleDiagnostics}" MaxHeight="105" IsHitTestVisible="False">                        <ListBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:AcquisitionDiagnosticDisplay">                            <StackPanel Margin="2,3">                              <TextBlock Text="{Binding Scope}" FontWeight="SemiBold" FontSize="11" />                              <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#D14B42" FontSize="12" />                            </StackPanel>                          </DataTemplate>                        </ListBox.ItemTemplate>                      </ListBox>                      <Button Grid.Row="2" Content="Generate Repair Prompt" Command="{Binding GenerateRepairPromptCommand}" HorizontalAlignment="Left" />                      <Button Grid.Row="3" Content="Copy Repair Prompt" Command="{Binding CopyRepairPromptCommand}" HorizontalAlignment="Left" />                      <TextBox Grid.Row="4" Text="{Binding RepairPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"                               IsVisible="{Binding HasRepairPrompt}" FontSize="12" Height="100" ScrollViewer.VerticalScrollBarVisibility="Auto" />                    </Grid>                  </Grid>                  <StackPanel Spacing="8" IsVisible="{Binding HasCurrentPreview}">                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">                      <TextBlock Text="{Binding PreviewSummary, FallbackValue='Content preview'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">                        <Button Content="Select all valid" Command="{Binding SelectAllValidCommand}" />                        <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />                      </StackPanel>                    </Grid>                    <TextBlock Text="Learning Items and Decks" FontWeight="SemiBold" />                    <ListBox ItemsSource="{Binding PrimaryOperations}" Height="300">                      <ListBox.ItemTemplate>                        <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">                          <Grid ColumnDefinitions="34,38,150,*" Margin="2,4" ColumnSpacing="7">                            <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />                            <TextBlock Grid.Column="1" Text="{Binding OperationNumber}" Classes="secondary" Margin="0,3,0,0" />                            <TextBlock Grid.Column="2" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" Margin="0,2,0,0" />                            <StackPanel Grid.Column="3" Spacing="2">                              <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" />                              <TextBlock Text="{Binding Dependencies}" IsVisible="{Binding HasDependencies}" Classes="secondary" />                              <TextBlock Text="{Binding Warnings}" IsVisible="{Binding HasWarnings}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />                              <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />                            </StackPanel>                          </Grid>                        </DataTemplate>                      </ListBox.ItemTemplate>                    </ListBox>                    <StackPanel Spacing="5" IsVisible="{Binding HasTechnicalOperations}">                      <Button Content="{Binding TechnicalOperationsToggleText}" Command="{Binding ToggleTechnicalOperationsCommand}" HorizontalAlignment="Left" />                      <ListBox ItemsSource="{Binding VisibleTechnicalOperations}" MaxHeight="180" IsVisible="{Binding HasVisibleTechnicalOperations}">                        <ListBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">                            <Grid ColumnDefinitions="34,38,150,*" Margin="2,4" ColumnSpacing="7">                              <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />                              <TextBlock Grid.Column="1" Text="{Binding OperationNumber}" Classes="secondary" />                              <TextBlock Grid.Column="2" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" />                              <StackPanel Grid.Column="3" Spacing="2">                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />                                <TextBlock Text="{Binding Dependencies}" IsVisible="{Binding HasDependencies}" Classes="secondary" />                                <TextBlock Text="{Binding Warnings}" IsVisible="{Binding HasWarnings}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />                                <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />                              </StackPanel>                            </Grid>                          </DataTemplate>                        </ListBox.ItemTemplate>                      </ListBox>                    </StackPanel>                    <Button Content="Import Selected" Command="{Binding ImportSelectedCommand}" HorizontalAlignment="Left" />                  </StackPanel>                  <Border IsVisible="{Binding HasCurrentPreview}" BorderBrush="#22000000" BorderThickness="0,1,0,0" Padding="0,12,0,0">                    <StackPanel Spacing="8">                      <TextBlock Text="Pre-import Quality Review" FontSize="16" FontWeight="SemiBold" />                      <Grid ColumnDefinitions="Auto,180,Auto,*" ColumnSpacing="8">                        <TextBlock Text="Mode" VerticalAlignment="Center" Classes="secondary" />                        <ComboBox Grid.Column="1" ItemsSource="{Binding QualityReviewModes}" SelectedItem="{Binding QualityReviewMode}" />                        <Button Grid.Column="2" Content="Generate Quality Review Prompt" Command="{Binding GenerateQualityReviewPromptCommand}" />                        <Button Grid.Column="3" Content="Copy Prompt" Command="{Binding CopyQualityReviewPromptCommand}" HorizontalAlignment="Left" />                      </Grid>                      <TextBox Text="{Binding QualityReviewPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"                               Height="180" FontFamily="Consolas" FontSize="12" IsVisible="{Binding HasQualityReviewPrompt}"                               ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />                      <TextBlock Text="Paste or load the Quality Review Result JSON" Classes="secondary" />                      <TextBox Text="{Binding RawQualityReviewJson}" AcceptsReturn="True" TextWrapping="NoWrap" Height="180"                               FontFamily="Consolas" FontSize="12" Watermark="Paste Quality Review Result JSON"                               ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />                      <StackPanel Orientation="Horizontal" Spacing="8">                        <Button Content="Load Review JSON" Command="{Binding LoadQualityReviewFileCommand}" />                        <Button Content="Preview Review Results" Command="{Binding PreviewQualityReviewCommand}" />                        <Button Content="Select all valid reviews" Command="{Binding SelectAllValidQualityReviewsCommand}" />                        <Button Content="Clear review selection" Command="{Binding ClearQualityReviewSelectionCommand}" />                      </StackPanel>                      <TextBlock Text="{Binding QualityReviewSummary}" FontWeight="SemiBold" IsVisible="{Binding HasQualityReviewPreview}" />                      <ListBox ItemsSource="{Binding QualityReviewDiagnostics}" MaxHeight="100" IsVisible="{Binding HasQualityReviewPreview}">                        <ListBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:CurationDiagnosticDisplay">                            <StackPanel Orientation="Horizontal" Spacing="5">                              <TextBlock Text="{Binding Scope}" Classes="secondary" />                              <TextBlock Text="{Binding Message}" Foreground="#D14B42" TextWrapping="Wrap" />                            </StackPanel>                          </DataTemplate>                        </ListBox.ItemTemplate>                      </ListBox>                      <ListBox ItemsSource="{Binding QualityReviewResults}" Height="300" IsVisible="{Binding HasQualityReviewPreview}">                        <ListBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:QualityReviewResultRowViewModel">                            <Grid ColumnDefinitions="34,120,*,Auto" Margin="2,5" ColumnSpacing="7">                              <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />                              <TextBlock Grid.Column="1" Text="{Binding Outcome}" FontWeight="SemiBold" Foreground="#B77900" />                              <StackPanel Grid.Column="2" Spacing="2">                                <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" MaxLines="2" />                                <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />                                <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#7A5A00" TextWrapping="Wrap" FontSize="12" />                                <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />                              </StackPanel>                              <TextBlock Grid.Column="3" Text="{Binding LocalRef}" Classes="secondary" VerticalAlignment="Top" />                            </Grid>                          </DataTemplate>                        </ListBox.ItemTemplate>                      </ListBox>                    </StackPanel>                  </Border>                  <Border IsVisible="{Binding HasImportResult}" Background="#10008000" CornerRadius="4" Padding="12">                    <StackPanel Spacing="8">                      <TextBlock Text="Import complete" FontSize="16" FontWeight="SemiBold" />                      <TextBlock Text="{Binding ImportResult}" TextWrapping="Wrap" />                      <Button Content="{Binding ImportedDetailsToggleText}" Command="{Binding ToggleImportedDetailsCommand}" HorizontalAlignment="Left" />                      <ListBox ItemsSource="{Binding Operations}" MaxHeight="180" IsVisible="{Binding ShowImportedDetails}" IsHitTestVisible="False">                        <ListBox.ItemTemplate>                          <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">                            <Grid ColumnDefinitions="38,150,*" Margin="2,3" ColumnSpacing="7">                              <TextBlock Text="{Binding OperationNumber}" Classes="secondary" />                              <TextBlock Grid.Column="1" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" />                              <TextBlock Grid.Column="2" Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" />                            </Grid>                          </DataTemplate>                        </ListBox.ItemTemplate>                      </ListBox>                    </StackPanel>                  </Border>                </StackPanel>              </ScrollViewer>            </DataTemplate>          </ContentControl.ContentTemplate>        </ContentControl>  </UserControl>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:desktop="using:Illumination.Desktop"
+             x:Class="Illumination.Desktop.ImportView"
+             x:DataType="desktop:MainWindowViewModel">
+  <ContentControl Content="{Binding ContentAcquisition}">
+    <ContentControl.ContentTemplate>
+      <DataTemplate x:DataType="desktop:ContentAcquisitionViewModel">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="14" Margin="14,4,8,12" IsEnabled="{Binding IsInteractionEnabled}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Import" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Working…" IsVisible="{Binding IsBusy}" Classes="secondary" VerticalAlignment="Center" />
+            </Grid>
+
+            <Grid ColumnDefinitions="360,*" ColumnSpacing="16">
+              <StackPanel Spacing="7">
+                <TextBlock Text="Generate learning content" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="Topic or learning purpose" Classes="secondary" />
+                <TextBox Text="{Binding Subject}" Watermark="What do you want to learn?" />
+                <Grid ColumnDefinitions="100,*" ColumnSpacing="10">
+                  <StackPanel>
+                    <TextBlock Text="Items" Classes="secondary" />
+                    <NumericUpDown Value="{Binding RequestedItemCount}" Minimum="1" Maximum="10000" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Target Deck" Classes="secondary" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <RadioButton Content="New" GroupName="ImportTarget" IsChecked="{Binding UseNewDeck}" />
+                      <RadioButton Content="Existing" GroupName="ImportTarget" IsChecked="{Binding UseExistingDeck}" IsEnabled="{Binding HasExistingDecks}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+                <TextBox Text="{Binding NewDeckName}" Watermark="New Deck name" IsEnabled="{Binding UseNewDeck}" />
+                <ComboBox ItemsSource="{Binding ExistingDeckOptions}" SelectedItem="{Binding SelectedExistingDeckPresentation}" IsEnabled="{Binding UseExistingDeck}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Border Classes="surface" IsVisible="{Binding HasSourceDeckContext}" Padding="9">
+                  <StackPanel Spacing="5">
+                    <TextBlock Text="Learning-aware follow-up" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SourceDeckName, StringFormat='Source Deck: {0}'}" TextWrapping="Wrap" />
+                    <TextBlock Text="Progression" Classes="secondary" />
+                    <ComboBox ItemsSource="{Binding ProgressionModes}" SelectedItem="{Binding ProgressionMode}" />
+                    <TextBlock Text="The source Deck supplies current learning facts only; it is never mutated by generation." Classes="secondary" TextWrapping="Wrap" />
+                    <Button Content="Clear source context" Command="{Binding ClearSourceDeckContextCommand}" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+
+                <Expander Header="Task types" IsExpanded="False">
+                  <StackPanel Spacing="5" Margin="0,5,0,0">
+                    <CheckBox Content="Restrict generated task types" IsChecked="{Binding RestrictResponseModes}" />
+                    <StackPanel Spacing="4" IsEnabled="{Binding RestrictResponseModes}">
+                      <CheckBox Content="Recall / card-style" IsChecked="{Binding SelfAssessedEnabled}" />
+                      <CheckBox Content="Choice / quiz (single or multiple correct)" IsChecked="{Binding SelectionEnabled}" />
+                      <CheckBox Content="Short answer / cloze" IsChecked="{Binding ShortTextEnabled}" />
+                      <CheckBox Content="Coding" IsChecked="{Binding CodeEnabled}" />
+                    </StackPanel>
+                    <TextBlock Text="These are allowed modes, not quotas. Generation may use fewer types when that produces better tasks." Classes="secondary" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Expander>
+
+                <Expander Header="Language-learning controls" IsExpanded="False">
+                  <StackPanel Spacing="5" Margin="0,5,0,0">
+                    <TextBlock Text="Optional. Leave empty for automatic inference from Subject and Guidance." Classes="secondary" TextWrapping="Wrap" />
+                    <TextBox Text="{Binding InstructionLanguage}" Watermark="Instruction/meta language (e.g. German)" />
+                    <TextBox Text="{Binding SourceLanguage}" Watermark="Source/input language (e.g. English)" />
+                    <TextBox Text="{Binding TargetLanguage}" Watermark="Target/answer language (e.g. Indonesian)" />
+                    <TextBlock Text="For immersion, explicitly set the instruction language to the target language." Classes="secondary" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Expander>
+
+                <TextBlock Text="Optional guidance" Classes="secondary" />
+                <TextBox Text="{Binding Guidance}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" />
+                <Button Content="Generate Prompt" Command="{Binding GeneratePromptCommand}" HorizontalAlignment="Left" />
+              </StackPanel>
+
+              <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="7">
+                <TextBlock Text="Generated prompt" FontSize="16" FontWeight="SemiBold" />
+                <TextBox Grid.Row="1" Text="{Binding GeneratedPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                         FontFamily="Consolas" FontSize="12" Height="250" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                <Button Grid.Row="2" Content="Copy Prompt" Command="{Binding CopyPromptCommand}" HorizontalAlignment="Left" />
+              </Grid>
+            </Grid>
+
+            <Border BorderBrush="#22000000" BorderThickness="0,1,0,0" Margin="0,2,0,0" />
+            <TextBlock Text="Import Content Bundle" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="Drop one .json file here, or use the file picker / paste below." Classes="secondary" />
+            <Grid ColumnDefinitions="*,300" ColumnSpacing="16">
+              <Grid RowDefinitions="*,Auto" RowSpacing="7">
+                <Border Classes="surface" DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" DragDrop.DragOver="OnBundleDragOver" Padding="0">
+                  <TextBox DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" Text="{Binding RawJson}" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
+                           Watermark="Paste Content Bundle 1.0 JSON" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                </Border>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                  <Button Content="Load JSON File" Command="{Binding LoadJsonFileCommand}" />
+                  <Button Content="Validate" Command="{Binding ValidateCommand}" />
+                </StackPanel>
+              </Grid>
+              <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,*" RowSpacing="6">
+                <TextBlock Text="Bundle diagnostics" FontWeight="SemiBold" />
+                <ListBox Grid.Row="1" ItemsSource="{Binding BundleDiagnostics}" MaxHeight="105" IsHitTestVisible="False">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:AcquisitionDiagnosticDisplay">
+                      <StackPanel Margin="2,3">
+                        <TextBlock Text="{Binding Scope}" FontWeight="SemiBold" FontSize="11" />
+                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#D14B42" FontSize="12" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Button Grid.Row="2" Content="Generate Repair Prompt" Command="{Binding GenerateRepairPromptCommand}" HorizontalAlignment="Left" />
+                <Button Grid.Row="3" Content="Copy Repair Prompt" Command="{Binding CopyRepairPromptCommand}" HorizontalAlignment="Left" />
+                <TextBox Grid.Row="4" Text="{Binding RepairPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                         IsVisible="{Binding HasRepairPrompt}" FontSize="12" Height="100" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+              </Grid>
+            </Grid>
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasCurrentPreview}">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Text="{Binding PreviewSummary, FallbackValue='Content preview'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                  <Button Content="Select all valid" Command="{Binding SelectAllValidCommand}" />
+                  <Button Content="Clear selection" Command="{Binding ClearSelectionCommand}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="Learning Items and Decks" FontWeight="SemiBold" />
+
+              <Expander Header="Card content preview" IsExpanded="True" IsVisible="{Binding HasRichContentPreviews}">
+                <ItemsControl ItemsSource="{Binding RichContentPreviews}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:LearningItemContentPreviewDisplay">
+                      <Border Classes="surface" Margin="0,3" Padding="10">
+                        <StackPanel Spacing="6">
+                          <CheckBox Content="{Binding Heading}" IsChecked="{Binding Operation.IsSelected}" IsEnabled="{Binding Operation.IsSelectable}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding ChangeSummary}" Classes="secondary" />
+                          <Border IsVisible="{Binding IsUpdate}" Background="#0C000000" CornerRadius="5" Padding="8">
+                            <StackPanel Spacing="3">
+                              <TextBlock Text="Current" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Current.Prompt}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Current.ReferenceSolution, StringFormat='Solution: {0}'}" TextWrapping="Wrap" Classes="secondary" />
+                              <TextBlock Text="{Binding Current.Shape}" Classes="secondary" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Border>
+                          <Border Background="#0C008000" CornerRadius="5" Padding="8">
+                            <StackPanel Spacing="3">
+                              <TextBlock Text="Proposed" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Proposed.Prompt}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Proposed.ReferenceSolution, StringFormat='Solution: {0}'}" TextWrapping="Wrap" Classes="secondary" />
+                              <TextBlock Text="{Binding Proposed.Shape}" Classes="secondary" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Expander>
+
+              <ListBox ItemsSource="{Binding PrimaryOperations}" Height="300">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">
+                    <Grid ColumnDefinitions="34,38,150,*" Margin="2,4" ColumnSpacing="7">
+                      <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />
+                      <TextBlock Grid.Column="1" Text="{Binding OperationNumber}" Classes="secondary" Margin="0,3,0,0" />
+                      <TextBlock Grid.Column="2" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" Margin="0,2,0,0" />
+                      <StackPanel Grid.Column="3" Spacing="2">
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" />
+                        <TextBlock Text="{Binding Dependencies}" IsVisible="{Binding HasDependencies}" Classes="secondary" />
+                        <TextBlock Text="{Binding Warnings}" IsVisible="{Binding HasWarnings}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
+                        <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Spacing="5" IsVisible="{Binding HasTechnicalOperations}">
+                <Button Content="{Binding TechnicalOperationsToggleText}" Command="{Binding ToggleTechnicalOperationsCommand}" HorizontalAlignment="Left" />
+                <ListBox ItemsSource="{Binding VisibleTechnicalOperations}" MaxHeight="180" IsVisible="{Binding HasVisibleTechnicalOperations}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">
+                      <Grid ColumnDefinitions="34,38,150,*" Margin="2,4" ColumnSpacing="7">
+                        <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Text="{Binding OperationNumber}" Classes="secondary" />
+                        <TextBlock Grid.Column="2" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" />
+                        <StackPanel Grid.Column="3" Spacing="2">
+                          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Dependencies}" IsVisible="{Binding HasDependencies}" Classes="secondary" />
+                          <TextBlock Text="{Binding Warnings}" IsVisible="{Binding HasWarnings}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
+                          <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+              <Button Content="Import Selected" Command="{Binding ImportSelectedCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+
+            <Border IsVisible="{Binding HasCurrentPreview}" BorderBrush="#22000000" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Pre-import Quality Review" FontSize="16" FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="Auto,180,Auto,*" ColumnSpacing="8">
+                  <TextBlock Text="Mode" VerticalAlignment="Center" Classes="secondary" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding QualityReviewModes}" SelectedItem="{Binding QualityReviewMode}" />
+                  <Button Grid.Column="2" Content="Generate Quality Review Prompt" Command="{Binding GenerateQualityReviewPromptCommand}" />
+                  <Button Grid.Column="3" Content="Copy Prompt" Command="{Binding CopyQualityReviewPromptCommand}" HorizontalAlignment="Left" />
+                </Grid>
+                <TextBox Text="{Binding QualityReviewPrompt}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                         Height="180" FontFamily="Consolas" FontSize="12" IsVisible="{Binding HasQualityReviewPrompt}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                <TextBlock Text="Paste or load the Quality Review Result JSON" Classes="secondary" />
+                <TextBox Text="{Binding RawQualityReviewJson}" AcceptsReturn="True" TextWrapping="NoWrap" Height="180"
+                         FontFamily="Consolas" FontSize="12" Watermark="Paste Quality Review Result JSON"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Load Review JSON" Command="{Binding LoadQualityReviewFileCommand}" />
+                  <Button Content="Preview Review Results" Command="{Binding PreviewQualityReviewCommand}" />
+                  <Button Content="Select all valid reviews" Command="{Binding SelectAllValidQualityReviewsCommand}" />
+                  <Button Content="Clear review selection" Command="{Binding ClearQualityReviewSelectionCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding QualityReviewSummary}" FontWeight="SemiBold" IsVisible="{Binding HasQualityReviewPreview}" />
+                <ListBox ItemsSource="{Binding QualityReviewDiagnostics}" MaxHeight="100" IsVisible="{Binding HasQualityReviewPreview}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:CurationDiagnosticDisplay">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="{Binding Scope}" Classes="secondary" />
+                        <TextBlock Text="{Binding Message}" Foreground="#D14B42" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <ListBox ItemsSource="{Binding QualityReviewResults}" Height="300" IsVisible="{Binding HasQualityReviewPreview}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:QualityReviewResultRowViewModel">
+                      <Grid ColumnDefinitions="34,120,*,Auto" Margin="2,5" ColumnSpacing="7">
+                        <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1" Text="{Binding Outcome}" FontWeight="SemiBold" Foreground="#B77900" />
+                        <StackPanel Grid.Column="2" Spacing="2">
+                          <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" MaxLines="2" />
+                          <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                          <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#7A5A00" TextWrapping="Wrap" FontSize="12" />
+                          <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="3" Text="{Binding LocalRef}" Classes="secondary" VerticalAlignment="Top" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Border>
+
+            <Border IsVisible="{Binding HasImportResult}" Background="#10008000" CornerRadius="4" Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Import complete" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ImportResult}" TextWrapping="Wrap" />
+                <Button Content="{Binding ImportedDetailsToggleText}" Command="{Binding ToggleImportedDetailsCommand}" HorizontalAlignment="Left" />
+                <ListBox ItemsSource="{Binding Operations}" MaxHeight="180" IsVisible="{Binding ShowImportedDetails}" IsHitTestVisible="False">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:ContentOperationRowViewModel">
+                      <Grid ColumnDefinitions="38,150,*" Margin="2,3" ColumnSpacing="7">
+                        <TextBlock Text="{Binding OperationNumber}" Classes="secondary" />
+                        <TextBlock Grid.Column="1" Text="{Binding OperationType}" FontWeight="SemiBold" FontSize="12" />
+                        <TextBlock Grid.Column="2" Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </DataTemplate>
+    </ContentControl.ContentTemplate>
+  </ContentControl>
+</UserControl>

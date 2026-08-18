@@ -35,6 +35,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             message => StatusMessage = message);
         ContentCuration = new ContentCurationViewModel(curation, qualityExchange, message => StatusMessage = message, _content, () => RefreshContentAsync());
         Insights = new LearningInsightsViewModel(insights, GenerateFollowUpAsync, _content, () => RefreshContentAsync());
+        Editor = new LearningItemEditorViewModel(_content, message => StatusMessage = message, () => RefreshContentAsync());
     }
 
     public string Title => "Illumination";
@@ -79,9 +80,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ContentAcquisitionViewModel ContentAcquisition { get; }
     public ContentCurationViewModel ContentCuration { get; }
     public LearningInsightsViewModel Insights { get; }
+    public LearningItemEditorViewModel Editor { get; }
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(CreateDeckCommand))]
     private string _newDeckName = string.Empty;
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(RenameDeckCommand))]
+    private string _renameDeckName = string.Empty;
+    [ObservableProperty] private bool _deleteDeckArmed;
+    [ObservableProperty] private bool _deleteItemArmed;
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(CreateLearningItemCommand))]
     private string _newPrompt = string.Empty;
@@ -202,6 +208,37 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool CanCreateDeck() => !string.IsNullOrWhiteSpace(NewDeckName);
 
+    [RelayCommand]
+    private async Task EditSelectedItemAsync()
+    { if (ContentCuration.SelectedItem is not null) await Editor.BeginEditAsync(ContentCuration.SelectedItem.Id); }
+
+    [RelayCommand]
+    private void NewLearningItem() => Editor.BeginCreate();
+
+    [RelayCommand(CanExecute = nameof(CanRenameDeck))]
+    private async Task RenameDeckAsync()
+    {
+        if (SelectedDeck is null) return;
+        await RunAsync(async () => { var renamed = await _content.RenameDeckAsync(SelectedDeck.Id, new RenameDeckCommand(RenameDeckName)); RenameDeckName = string.Empty; DeleteDeckArmed = false; await RefreshContentAsync(renamed.Id); StatusMessage = $"Renamed Deck to '{renamed.Name}'."; });
+    }
+    private bool CanRenameDeck() => SelectedDeck is not null && !string.IsNullOrWhiteSpace(RenameDeckName);
+
+    [RelayCommand]
+    private async Task DeleteSelectedDeckAsync()
+    {
+        if (SelectedDeck is null) return;
+        if (!DeleteDeckArmed) { DeleteDeckArmed = true; StatusMessage = $"Select delete again to remove Deck '{SelectedDeck.Name}'. Learning Items remain."; return; }
+        var id = SelectedDeck.Id; await RunAsync(async () => { await _content.DeleteDeckAsync(id); DeleteDeckArmed = false; await RefreshContentAsync(); StatusMessage = "Deck deleted; Learning Items and progress were preserved."; });
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedLearningItemAsync()
+    {
+        if (ContentCuration.SelectedItem is null) return;
+        if (CurrentStudyItem?.Id == ContentCuration.SelectedItem.Id && SessionIsActive) { StatusMessage = "Cannot delete the Learning Item while it is in the active Study Session."; return; }
+        if (!DeleteItemArmed) { DeleteItemArmed = true; StatusMessage = $"Select delete again to permanently remove '{ContentCuration.SelectedItem.Prompt}', including history and progress."; return; }
+        var id = ContentCuration.SelectedItem.Id; await RunAsync(async () => { await _content.DeleteLearningItemAsync(id); DeleteItemArmed = false; await RefreshContentAsync(); StatusMessage = "Learning Item deleted permanently."; });
+    }
     [RelayCommand(CanExecute = nameof(CanCreateLearningItem))]
     private async Task CreateLearningItemAsync() => await RunAsync(async () =>
     {
