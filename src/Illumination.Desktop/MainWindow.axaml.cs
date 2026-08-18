@@ -1,17 +1,9 @@
 using Avalonia.Controls;
-using Avalonia.Input;
 
 namespace Illumination.Desktop;
 
 public partial class MainWindow : Window
 {
-    private async void OnBundleDrop(object? sender, DragEventArgs e)
-    {
-        var paths = e.Data.GetFileNames()?.ToArray() ?? [];
-        if (DataContext is MainWindowViewModel vm) await vm.ContentAcquisition.LoadBundleFromDropAsync(paths);
-        e.Handled = true;
-    }
-
     public MainWindow()
     {
         InitializeComponent();

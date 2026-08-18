@@ -1,0 +1,7 @@
+<Project>
+  <!--
+    This repository may be checked out beneath a WGT host during cross-repo builds.
+    Keep Illumination's build/analyzer policy independent from any parent repository's
+    Directory.Build.props, matching a normal standalone Illumination checkout.
+  -->
+</Project>

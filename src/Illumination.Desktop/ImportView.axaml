@@ -17,7 +17,7 @@
               <StackPanel Spacing="7">
                 <TextBlock Text="Generate learning content" FontSize="16" FontWeight="SemiBold" />
                 <TextBlock Text="Topic or learning purpose" Classes="secondary" />
-                <TextBox Text="{Binding Subject}" Watermark="What do you want to learn?" />
+                <TextBox Text="{Binding Subject}" PlaceholderText="What do you want to learn?" />
                 <Grid ColumnDefinitions="100,*" ColumnSpacing="10">
                   <StackPanel>
                     <TextBlock Text="Items" Classes="secondary" />
@@ -31,7 +31,7 @@
                     </StackPanel>
                   </StackPanel>
                 </Grid>
-                <TextBox Text="{Binding NewDeckName}" Watermark="New Deck name" IsEnabled="{Binding UseNewDeck}" />
+                <TextBox Text="{Binding NewDeckName}" PlaceholderText="New Deck name" IsEnabled="{Binding UseNewDeck}" />
                 <ComboBox ItemsSource="{Binding ExistingDeckOptions}" SelectedItem="{Binding SelectedExistingDeckPresentation}" IsEnabled="{Binding UseExistingDeck}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
@@ -65,9 +65,9 @@
                 <Expander Header="Language-learning controls" IsExpanded="False">
                   <StackPanel Spacing="5" Margin="0,5,0,0">
                     <TextBlock Text="Optional. Leave empty for automatic inference from Subject and Guidance." Classes="secondary" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding InstructionLanguage}" Watermark="Instruction/meta language (e.g. German)" />
-                    <TextBox Text="{Binding SourceLanguage}" Watermark="Source/input language (e.g. English)" />
-                    <TextBox Text="{Binding TargetLanguage}" Watermark="Target/answer language (e.g. Indonesian)" />
+                    <TextBox Text="{Binding InstructionLanguage}" PlaceholderText="Instruction/meta language (e.g. German)" />
+                    <TextBox Text="{Binding SourceLanguage}" PlaceholderText="Source/input language (e.g. English)" />
+                    <TextBox Text="{Binding TargetLanguage}" PlaceholderText="Target/answer language (e.g. Indonesian)" />
                     <TextBlock Text="For immersion, explicitly set the instruction language to the target language." Classes="secondary" TextWrapping="Wrap" />
                   </StackPanel>
                 </Expander>
@@ -92,7 +92,7 @@
               <Grid RowDefinitions="*,Auto" RowSpacing="7">
                 <Border Classes="surface" DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" DragDrop.DragOver="OnBundleDragOver" Padding="0">
                   <TextBox DragDrop.AllowDrop="True" DragDrop.Drop="OnBundleDrop" Text="{Binding RawJson}" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
-                           Watermark="Paste Content Bundle 1.0 JSON" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                           PlaceholderText="Paste Content Bundle 1.0 JSON" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                 </Border>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                   <Button Content="Load JSON File" Command="{Binding LoadJsonFileCommand}" />
@@ -213,7 +213,7 @@
                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                 <TextBlock Text="Paste or load the Quality Review Result JSON" Classes="secondary" />
                 <TextBox Text="{Binding RawQualityReviewJson}" AcceptsReturn="True" TextWrapping="NoWrap" Height="180"
-                         FontFamily="Consolas" FontSize="12" Watermark="Paste Quality Review Result JSON"
+                         FontFamily="Consolas" FontSize="12" PlaceholderText="Paste Quality Review Result JSON"
                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Content="Load Review JSON" Command="{Binding LoadQualityReviewFileCommand}" />
