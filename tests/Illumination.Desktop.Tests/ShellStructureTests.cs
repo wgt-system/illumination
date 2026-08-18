@@ -27,6 +27,18 @@ public sealed class ShellStructureTests
     }
 
     [Fact]
+    public void Insights_navigation_refreshes_the_derived_read_model_when_opened()
+    {
+        var root = FindRepositoryRoot();
+        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var coherence = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindowViewModel.RuntimeCoherence.cs"));
+
+        Assert.Contains("Command=\"{Binding OpenInsightsCommand}\"", shell);
+        Assert.Contains("SelectedPage = DesktopPage.Insights", coherence);
+        Assert.Contains("await Insights.RefreshAsync()", coherence);
+    }
+
+    [Fact]
     public void Study_page_does_not_expose_unaccepted_session_resume_controls()
     {
         var root = FindRepositoryRoot();
