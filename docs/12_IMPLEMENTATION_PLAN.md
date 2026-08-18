@@ -19,14 +19,19 @@ v0.1.0
 v0.2.0
 v0.3.0
 ...
+v0.8.0
+v0.9.0
+v0.10.0
+v0.11.0
+...
 v1.0.0
 ```
 
-The exact number of `v0.y.0` milestones is not predetermined.
+The exact number of `v0.y.0` milestones is not predetermined. Minor version numbers are integers, not decimal fractions: `v0.10.0` follows `v0.9.0`; reaching `v0.9.0` does not imply `v1.0.0` next.
 
 Patch releases may later use the third component where needed.
 
-`v1.0.0` should represent a coherent first major product baseline, not merely the first runnable build.
+`v1.0.0` is reserved for a deliberately completed coherent first major product baseline. It is a product-readiness decision, not an automatic consequence of the previous pre-1.0 version number.
 
 ## 2. Specification Gate
 
@@ -141,7 +146,7 @@ The first major release should include at least the product behaviors already de
 - progress visibility,
 - single-user local-first operation.
 
-The exact milestone in which each becomes usable may vary.
+The exact milestone in which each becomes usable may vary. Satisfying individual V1-capability criteria does not by itself declare the complete product `v1.0.0`; that release remains an explicit product-readiness decision.
 
 ## 5. Testing Strategy Direction
 
@@ -184,8 +189,7 @@ to separate network services without an actual architectural reason.
 
 ## 8. Next Planning Step
 
-Proceed with the v0.1.0 vertical slices in order, keeping the accepted contracts and ADRs under test. Create narrower implementation tasks only where the listed milestone behavior requires them.
-
+Continue from the current stable release with the next explicitly accepted pre-1.0 product milestone. Select scope from concrete product, reliability, usability, performance, migration, or consumer-driven integration needs; do not manufacture integration contracts or infer `v1.0.0` from version numbering.
 
 ## Accepted V1 Technology Baseline
 
@@ -307,6 +311,21 @@ The v0.7 implementation is released after the explicit Product Refinement harden
 
 The v0.7 release gate deliberately removed two unaccepted product semantics that appeared during refinement: product-level resume/finish controls for persisted unfinished Study Sessions and staged replacement of the authoritative local SQLite database. Durable Study state, normal explicit session completion, rolling/manual backups, portable backup export, and backup-before-migration safety remain within the accepted baseline.
 
+### v0.8.0 – Local Data Reliability & Runtime Coherence (released)
+
+The v0.8 implementation is released after the focused reliability gate in Issue #35 and successful Release build, full test suite, and NuGet vulnerability audit.
+
+Shipped scope includes:
+
+- fresh Learning Insights projection when the Insights surface is opened after Study activity,
+- change-aware automatic rolling local SQLite snapshots on normal Desktop startup,
+- preserved five-snapshot rolling retention and backup-before-migration behavior,
+- backup-before-Content-Bundle-commit protection without weakening the existing atomic accepted-subset import transaction,
+- persistent configurable local rolling-backup location loaded before migration and runtime composition,
+- explicit local database/backup-path presentation plus manual backup and portable export controls.
+
+v0.8 does not add authoritative database restore/replacement, cloud backup, remote readable persistence, synchronization/Conveyance semantics, speculative WGT/Vocation published contracts, scheduler redesign, or new learning-domain semantics.
+
 Use further `v0.y.0` releases as needed for:
 
 - usability,
@@ -314,13 +333,14 @@ Use further `v0.y.0` releases as needed for:
 - backup/export improvements,
 - content-management refinements,
 - performance,
-- migration hardening.
+- migration hardening,
+- other concrete product-completeness work.
 
-Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
+The pre-1.0 line may continue through `v0.9.0`, `v0.10.0`, `v0.11.0`, and beyond. Do not force `v1.0.0` after a fixed number of pre-1.0 milestones or because a particular minor number was reached.
 
 ### v1.0.0 – Coherent Independent Illumination
 
-`v1.0.0` requires a stable independent Illumination capability runtime covering:
+`v1.0.0` requires a deliberately accepted complete first major Illumination product baseline, with the stable independent capability runtime covering at least:
 
 - content acquisition,
 - Deck organization,
@@ -330,6 +350,8 @@ Do not force `v1.0.0` after a fixed number of pre-1.0 milestones.
 - local authoritative persistence,
 - backup/migration safety,
 - acceptance-tested core invariants.
+
+These capabilities are necessary but not by themselves sufficient to declare `v1.0.0`; remaining product-completeness, usability, integration, deployment, or quality requirements may continue to be addressed in further `v0.y.0` milestones.
 
 Wiiii Got This may provide the primary end-user presentation; a complete separate Illumination end-user UI is not required.
 
