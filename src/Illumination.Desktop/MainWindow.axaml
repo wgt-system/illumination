@@ -27,9 +27,18 @@
         <StackPanel Grid.Row="2" Spacing="8">
           <Expander Header="Local data" IsExpanded="False">
             <StackPanel Spacing="5" Margin="0,5,0,0">
+              <TextBlock Text="Saved actions are written directly to local SQLite." TextWrapping="Wrap" Classes="secondary" />
+              <TextBlock Text="Database" FontWeight="SemiBold" FontSize="11" />
+              <TextBlock Text="{Binding LocalData.DatabaseLocation}" TextWrapping="Wrap" Classes="secondary" />
+              <TextBlock Text="Rolling backup folder" FontWeight="SemiBold" FontSize="11" Margin="0,3,0,0" />
+              <TextBox Text="{Binding LocalData.BackupDirectoryInput}" Watermark="Local backup folder" FontSize="11" />
+              <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4">
+                <Button Content="Apply" Command="{Binding LocalData.ApplyBackupDirectoryCommand}" />
+                <Button Content="Reset" Command="{Binding LocalData.ResetBackupDirectoryCommand}" />
+              </WrapPanel>
               <Button Content="Backup now" Command="{Binding LocalData.CreateBackupCommand}" HorizontalContentAlignment="Left" />
               <Button Content="Export backup..." Command="{Binding LocalData.ExportBackupCommand}" HorizontalContentAlignment="Left" />
-              <TextBlock Text="Backups stay local unless you explicitly export one." TextWrapping="Wrap" Classes="secondary" />
+              <TextBlock Text="Automatic snapshots are local; the five most recent rolling backups are retained. Content imports are backed up before commit." TextWrapping="Wrap" Classes="secondary" />
             </StackPanel>
           </Expander>
           <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="secondary"/>

@@ -50,14 +50,23 @@ public sealed class ShellStructureTests
     }
 
     [Fact]
-    public void Local_data_controls_stay_within_accepted_backup_scope()
+    public void Local_data_controls_expose_the_accepted_v08_backup_policy_without_restore_semantics()
     {
         var root = FindRepositoryRoot();
         var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
         var composition = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "DesktopComposition.cs"));
 
+        Assert.Contains("LocalData.DatabaseLocation", shell);
+        Assert.Contains("LocalData.BackupDirectoryInput", shell);
+        Assert.Contains("LocalData.ApplyBackupDirectoryCommand", shell);
+        Assert.Contains("LocalData.ResetBackupDirectoryCommand", shell);
         Assert.Contains("Backup now", shell);
         Assert.Contains("Export backup", shell);
+        Assert.Contains("five most recent rolling backups", shell);
+        Assert.Contains("Content imports are backed up before commit", shell);
+        Assert.Contains("LocalDataSettingsStore", composition);
+        Assert.Contains("LocalSqliteAutomaticBackupPolicy", composition);
+        Assert.Contains("BackupBeforeContentAcquisitionPersistence", composition);
         Assert.DoesNotContain("Restore backup", shell);
         Assert.DoesNotContain("pending restore", shell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("LocalSqliteRestoreService", composition);

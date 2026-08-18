@@ -9,12 +9,20 @@ public interface ILocalSqliteBackupService
     string BackupTo(string sourceDatabasePath, string destinationPath);
 }
 
-public sealed class LocalSqliteBackupService : ILocalSqliteBackupService
+public interface IConfigurableLocalSqliteBackupService : ILocalSqliteBackupService
 {
+    string BackupDirectory { get; }
+
+    void SetBackupDirectory(string backupDirectory);
+}
+
+public sealed class LocalSqliteBackupService : IConfigurableLocalSqliteBackupService
+{
+    internal const string RollingBackupSearchPattern = "illumination-backup-*.sqlite";
     private const string RollingBackupPrefix = "illumination-backup-";
     private const string SqliteExtension = ".sqlite";
 
-    private readonly string _backupDirectory;
+    private string _backupDirectory;
     private readonly int _retentionCount;
     private readonly TimeProvider _timeProvider;
 
@@ -26,6 +34,14 @@ public sealed class LocalSqliteBackupService : ILocalSqliteBackupService
         _backupDirectory = Path.GetFullPath(backupDirectory);
         _retentionCount = retentionCount;
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+    }
+
+    public string BackupDirectory => _backupDirectory;
+
+    public void SetBackupDirectory(string backupDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(backupDirectory);
+        _backupDirectory = Path.GetFullPath(backupDirectory);
     }
 
     public string CreateRollingBackup(string sourceDatabasePath)
@@ -81,7 +97,7 @@ public sealed class LocalSqliteBackupService : ILocalSqliteBackupService
 
     private void EnforceRetention()
     {
-        var rollingBackups = Directory.EnumerateFiles(_backupDirectory, $"{RollingBackupPrefix}*{SqliteExtension}")
+        var rollingBackups = Directory.EnumerateFiles(_backupDirectory, RollingBackupSearchPattern)
             .OrderByDescending(Path.GetFileName, StringComparer.Ordinal)
             .ToArray();
 
