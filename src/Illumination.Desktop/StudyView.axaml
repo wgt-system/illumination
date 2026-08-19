@@ -5,65 +5,89 @@
              x:Class="Illumination.Desktop.StudyView"
              x:DataType="desktop:MainWindowViewModel">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14,4,4,4">
-      <StackPanel Spacing="7">
-        <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="6">
-          <TextBlock Text="Deck" VerticalAlignment="Center" Classes="secondary" />
-          <ComboBox Width="260" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedStudyDeckPresentation}" IsEnabled="{Binding !SessionIsActive}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <Button Content="Add" Command="{Binding AddStudyDeckCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <Button Content="Add all" Command="{Binding AddAllStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <Button Content="Clear" Command="{Binding ClearStudyDecksCommand}" IsEnabled="{Binding !SessionIsActive}" />
-          <Button Content="Start" Command="{Binding StartConfiguredSessionCommand}" />
-          <Button Content="Complete" Command="{Binding CompleteConfiguredSessionCommand}" IsEnabled="{Binding SessionIsActive}" />
-          <TextBlock Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining'}" VerticalAlignment="Center" Classes="secondary" />
-        </WrapPanel>
-
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" IsEnabled="{Binding !SessionIsActive}">
-          <TextBlock Text="Session Decks" VerticalAlignment="Center" Classes="secondary" />
-          <StackPanel Grid.Column="1" Spacing="4">
-            <TextBlock Text="{Binding SelectedStudyDeckSummary}" Classes="secondary" />
-            <ItemsControl ItemsSource="{Binding SelectedStudyDecks}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="5" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="desktop:DeckPresentationItem">
-                  <Border BorderBrush="#28000000" BorderThickness="1" CornerRadius="10" Padding="8,3">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                      <Button Content="×" Padding="4,0" Command="{Binding $parent[ItemsControl].DataContext.RemoveStudyDeckCommand}" CommandParameter="{Binding}" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Grid>
-
-        <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6" IsEnabled="{Binding !SessionIsActive}">
-          <TextBlock Text="New items" VerticalAlignment="Center" Classes="secondary" />
-          <TextBox Width="58" Text="{Binding StudyNewItemLimitText}" IsEnabled="{Binding !StudyAllNew}" />
-          <CheckBox Content="All new" IsChecked="{Binding StudyAllNew}" />
-          <TextBlock Text="Evaluation" VerticalAlignment="Center" Classes="secondary" />
-          <ComboBox ItemsSource="{Binding EvaluationModeOptions}" SelectedItem="{Binding SelectedEvaluationModeOption}" Width="170">
-            <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:StudyEvaluationModeOption"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-          </ComboBox>
-          <TextBlock Text="Global default" VerticalAlignment="Center" Classes="secondary" />
-          <ComboBox ItemsSource="{Binding EvaluationModes}" SelectedItem="{Binding GlobalEvaluationMode}" Width="110" />
-          <CheckBox Content="Consider assistance" IsChecked="{Binding ConsiderAssistance}" />
-          <CheckBox Content="Low-interaction only" IsChecked="{Binding LowInteractionOnly}" />
-        </WrapPanel>
+    <StackPanel Spacing="12" Margin="14,4,4,4">
+      <StackPanel Spacing="3">
+        <TextBlock Text="Study" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="Scheduled Study uses due and new cards from the Decks you choose. Use Practice now from Decks when you only want to look through cards without changing progress." Classes="secondary" TextWrapping="Wrap" />
       </StackPanel>
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,240" ColumnSpacing="12">
+      <Border Classes="surface" Padding="12">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Session setup" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="Choose one or more Decks, adjust optional session settings, then start." Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !SessionIsActive}" />
+              <TextBlock Text="Session active. Setup controls are locked until you complete the current session." Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding SessionIsActive}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Content="Start session" Command="{Binding StartConfiguredSessionCommand}" IsEnabled="{Binding !SessionIsActive}" />
+              <Button Content="Complete session" Command="{Binding CompleteConfiguredSessionCommand}" IsEnabled="{Binding SessionIsActive}" />
+            </StackPanel>
+          </Grid>
+
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" IsEnabled="{Binding !SessionIsActive}">
+            <TextBlock Text="Decks" VerticalAlignment="Center" Classes="secondary" />
+            <StackPanel Grid.Column="1" Spacing="5">
+              <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="5">
+                <ComboBox Width="260" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedStudyDeckPresentation}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="Add Deck" Command="{Binding AddStudyDeckCommand}" />
+                <Button Content="Add all" Command="{Binding AddAllStudyDecksCommand}" />
+                <Button Content="Clear" Command="{Binding ClearStudyDecksCommand}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding SelectedStudyDeckSummary}" Classes="secondary" />
+              <ItemsControl ItemsSource="{Binding SelectedStudyDecks}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="5" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="desktop:DeckPresentationItem">
+                    <Border BorderBrush="#28000000" BorderThickness="1" CornerRadius="10" Padding="8,3">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                        <Button Content="×" Padding="4,0" Command="{Binding $parent[ItemsControl].DataContext.RemoveStudyDeckCommand}" CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+
+          <Expander Header="Session options" IsExpanded="False" IsEnabled="{Binding !SessionIsActive}">
+            <StackPanel Spacing="7" Margin="0,5,0,0">
+              <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6">
+                <TextBlock Text="New items" VerticalAlignment="Center" Classes="secondary" />
+                <TextBox Width="58" Text="{Binding StudyNewItemLimitText}" IsEnabled="{Binding !StudyAllNew}" />
+                <CheckBox Content="Include all new cards" IsChecked="{Binding StudyAllNew}" />
+                <TextBlock Text="Evaluation" VerticalAlignment="Center" Classes="secondary" />
+                <ComboBox ItemsSource="{Binding EvaluationModeOptions}" SelectedItem="{Binding SelectedEvaluationModeOption}" Width="170">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:StudyEvaluationModeOption"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+              </WrapPanel>
+              <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6">
+                <TextBlock Text="Global evaluation default" VerticalAlignment="Center" Classes="secondary" />
+                <ComboBox ItemsSource="{Binding EvaluationModes}" SelectedItem="{Binding GlobalEvaluationMode}" Width="110" />
+                <CheckBox Content="Consider hints/assistance in grade suggestion" IsChecked="{Binding ConsiderAssistance}" />
+                <CheckBox Content="Low-interaction cards only" IsChecked="{Binding LowInteractionOnly}" />
+              </WrapPanel>
+              <TextBlock Text="These options change which cards enter this scheduled session or how answer checking suggests a grade. You always confirm the final grade." Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </Expander>
+        </StackPanel>
+      </Border>
+
+      <Grid ColumnDefinitions="*,240" ColumnSpacing="12">
         <Border BorderBrush="#33000000" BorderThickness="1" CornerRadius="7" Padding="20,16">
           <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="Current card" Classes="secondary" />
+              <StackPanel Spacing="2">
+                <TextBlock Text="Current card" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding RemainingQueueEntryCount, StringFormat='{}{0} remaining after the current card'}" IsVisible="{Binding SessionIsActive}" Classes="secondary" />
+              </StackPanel>
               <Border Grid.Column="1" IsVisible="{Binding CurrentItemRequiresReinforcement}" Background="#35C87900" CornerRadius="10" Padding="8,3">
                 <TextBlock Text="Reinforcement" FontSize="11" />
               </Border>
@@ -71,7 +95,16 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel VerticalAlignment="Center" Spacing="16" Margin="10,8">
-                <TextBlock Text="{Binding CurrentStudyItem.Prompt, FallbackValue='Select one or more Decks and start a session.'}" TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
+                <StackPanel Spacing="5" IsVisible="{Binding !SessionIsActive}">
+                  <TextBlock Text="No scheduled Study Session is active." TextAlignment="Center" FontSize="20" FontWeight="SemiBold" />
+                  <TextBlock Text="Choose Decks in Session setup and select Start session. If you only want to see cards again without affecting progress, use Practice now from the Decks page." TextAlignment="Center" TextWrapping="Wrap" Classes="secondary" />
+                </StackPanel>
+                <StackPanel Spacing="5" IsVisible="{Binding SessionIsActive}">
+                  <TextBlock Text="This session has no current card." IsVisible="{Binding !HasCurrentStudyItem}" TextAlignment="Center" FontSize="20" FontWeight="SemiBold" />
+                  <TextBlock Text="The selected Decks currently contain no eligible due/new cards under this session's filters. Complete the session, change the setup, or use Practice now if you want unscheduled review." IsVisible="{Binding !HasCurrentStudyItem}" TextAlignment="Center" TextWrapping="Wrap" Classes="secondary" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding CurrentStudyItem.Prompt}" IsVisible="{Binding HasCurrentStudyItem}" TextWrapping="Wrap" TextAlignment="Center" FontSize="27" FontWeight="SemiBold" />
                 <ItemsControl IsVisible="{Binding IsSelectionMode}" ItemsSource="{Binding CurrentDirectChoices}">
                   <ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:StudyChoiceDisplay"><CheckBox Content="{Binding Text}" IsChecked="{Binding IsSelected}" Margin="12,2" /></DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -90,7 +123,7 @@
                 <ItemsControl IsVisible="{Binding HasCurrentStudyItem}" ItemsSource="{Binding RevealedHints}">
                   <ItemsControl.ItemTemplate><DataTemplate><Border Background="#12000000" Padding="8" Margin="4"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></Border></DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button Content="Show solution" Command="{Binding RevealSolutionCommand}" HorizontalAlignment="Center" />
+                <Button Content="Show reference answer" Command="{Binding RevealSolutionCommand}" IsVisible="{Binding HasCurrentStudyItem}" HorizontalAlignment="Center" />
                 <StackPanel IsVisible="{Binding HasAutomaticResult}" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                   <TextBlock Text="Automatic result:" Classes="secondary" />
                   <TextBlock Text="{Binding AutomaticCorrectness}" FontWeight="SemiBold" />
@@ -99,14 +132,14 @@
                 </StackPanel>
                 <Border IsVisible="{Binding IsSolutionRevealed}" Background="#16000000" CornerRadius="5" Padding="16">
                   <StackPanel Spacing="5">
-                    <TextBlock Text="Solution" Classes="secondary" />
+                    <TextBlock Text="Reference answer" Classes="secondary" />
                     <TextBlock Text="{Binding CurrentStudyItem.ReferenceSolution}" TextWrapping="Wrap" FontSize="17" />
                   </StackPanel>
                 </Border>
               </StackPanel>
             </ScrollViewer>
 
-            <ItemsControl Grid.Row="2" ItemsSource="{Binding AssessmentPreviews}" HorizontalAlignment="Center">
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding AssessmentPreviews}" HorizontalAlignment="Center" IsVisible="{Binding HasCurrentStudyItem}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="7" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="desktop:StudyAssessmentPreviewDisplay">
@@ -119,15 +152,16 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Grid.Row="3" Text="Complete may be used at any time; reinforcement remains available in a later session." Classes="secondary" HorizontalAlignment="Center" />
+            <TextBlock Grid.Row="3" Text="Complete session may be used at any time. Unfinished reinforcement remains available in a later scheduled session." Classes="secondary" HorizontalAlignment="Center" IsVisible="{Binding SessionIsActive}" />
           </Grid>
         </Border>
 
         <Border Grid.Column="1" BorderBrush="#22000000" BorderThickness="1" CornerRadius="7" Padding="12">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
             <TextBlock Text="Upcoming" FontSize="15" FontWeight="SemiBold" />
-            <TextBlock Grid.Row="1" Text="Next five queue entries" Classes="secondary" />
-            <ListBox Grid.Row="2" ItemsSource="{Binding UpcomingStudyItems}" IsHitTestVisible="False">
+            <TextBlock Grid.Row="1" Text="Next five queue entries" Classes="secondary" IsVisible="{Binding HasCurrentStudyItem}" />
+            <TextBlock Grid.Row="2" Text="Upcoming cards appear here during an active scheduled session." TextWrapping="Wrap" Classes="secondary" IsVisible="{Binding !HasCurrentStudyItem}" VerticalAlignment="Center" />
+            <ListBox Grid.Row="2" ItemsSource="{Binding UpcomingStudyItems}" IsHitTestVisible="False" IsVisible="{Binding HasCurrentStudyItem}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="desktop:StudyQueueEntryDisplay">
                   <StackPanel Margin="3,5" Spacing="3">
@@ -137,7 +171,7 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <StackPanel Grid.Row="3" Margin="0,0,0,8" VerticalAlignment="Bottom" Spacing="5">
+            <StackPanel Grid.Row="3" Margin="0,0,0,8" VerticalAlignment="Bottom" Spacing="5" IsVisible="{Binding HasCurrentStudyItem}">
               <TextBlock Text="Current item flags" Classes="secondary" />
               <ItemsControl ItemsSource="{Binding ContentCuration.StudyFlags}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -155,6 +189,6 @@
           </Grid>
         </Border>
       </Grid>
-    </Grid>
+    </StackPanel>
   </ScrollViewer>
 </UserControl>
