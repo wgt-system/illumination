@@ -10,9 +10,9 @@ It does not own job opportunities, Vocation learning clusters, devices, platform
 
 ## Current release baseline
 
-Illumination v0.7.0 is the current stable release. It extends the v0.6 learning baseline with substantial product refinement: richer Content Bundle generation and import previews, explicit language and follow-up generation controls, existing-content improvement prompts, Deck export, bulk content curation and Study flag workflows, direct Deck study actions, focus-aware Study shortcuts, Learning Insights activity history and due forecasts, local backup/export controls, migration hardening, and repository/C4 maintenance improvements. The optional Avalonia host remains an administration, development, and standalone capability surface.
+Illumination v0.8.0 is the current stable release. It builds on the v0.7 Product Refinement baseline with focused local-data reliability and runtime-coherence hardening: change-aware automatic rolling SQLite backups, a persistent configurable local backup directory, backup-before-import protection, preserved backup-before-migration safety, and fresh Learning Insights projections when the Insights surface is opened. Manual backup and portable export remain available, while authoritative database restore/replacement, cloud backup, synchronization, and speculative WGT/Vocation contracts remain outside this release.
 
-The next planned direction remains further pre-1.0 product refinement where it improves the coherent independent Illumination capability; no speculative WGT synchronization or cross-context contract is claimed by this release.
+Further development remains explicitly pre-1.0 until the product is deliberately judged ready as a complete first major version. Pre-1.0 minor versions continue numerically (`v0.9.0`, `v0.10.0`, `v0.11.0`, and so on); `v1.0.0` is not an automatic successor to `v0.9.0`.
 
 ## Product direction
 
@@ -82,8 +82,7 @@ The accepted V1 runtime baseline is C# / .NET 10 LTS, SQLite, and EF Core's SQLi
 
 ## Release direction
 
-Feature milestones are expected to use `vMAJOR.MINOR.PATCH`, progressing through `v0.y.0` releases toward a coherent `v1.0.0`. The number of pre-1.0 milestones is not predetermined.
-
+Feature milestones use `vMAJOR.MINOR.PATCH`. Until the first major product baseline is deliberately declared complete, development may continue through as many `v0.y.0` releases as needed, including minor numbers above 9 such as `v0.10.0` and `v0.11.0`. `v1.0.0` is reserved for the intentionally completed first major product version rather than being inferred from the previous minor number.
 
 ## Technology stack
 
@@ -91,7 +90,6 @@ Illumination is a local-first executable capability runtime using:
 
 - C# / .NET
 - SQLite
-
 - EF Core SQLite provider
 - Avalonia and CommunityToolkit.Mvvm for the optional standalone Desktop host
 - xUnit v3 for tests

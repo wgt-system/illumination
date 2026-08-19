@@ -7,8 +7,11 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
       <StackPanel Spacing="8">
-        <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
-        <TextBox Text="{Binding ContentCuration.SearchText}" PlaceholderText="Search prompts" />
+        <StackPanel Spacing="3">
+          <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
+          <TextBlock Text="Find and edit individual cards here. Bulk curation and Quality Review tools are available below when you need them." Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+        <TextBox Text="{Binding ContentCuration.SearchText}" Watermark="Search questions / tasks" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <ComboBox Width="170" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding ContentCuration.FilterDeckPresentation}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
@@ -17,15 +20,15 @@
           <ComboBox Width="125" ItemsSource="{Binding ContentCuration.ResponseModeFilters}" SelectedItem="{Binding ContentCuration.FilterResponseMode}" />
           <Button Content="Clear filters" Command="{Binding ContentCuration.ClearLibraryFiltersCommand}" />
         </WrapPanel>
-        <Grid ColumnDefinitions="44,44,*" Margin="6,0,6,0">
+        <Grid ColumnDefinitions="44,58,*" Margin="6,0,6,0">
           <TextBlock Text="Bulk" Classes="secondary" />
-          <TextBlock Grid.Column="1" Text="QA" Classes="secondary" />
+          <TextBlock Grid.Column="1" Text="Review" Classes="secondary" />
           <TextBlock Grid.Column="2" Text="Content" Classes="secondary" />
         </Grid>
         <ListBox ItemsSource="{Binding ContentCuration.FilteredItems}" SelectedItem="{Binding ContentCuration.SelectedItem}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="desktop:CuratedLearningItemRowViewModel">
-              <Grid ColumnDefinitions="34,34,*,Auto" Margin="6" ColumnSpacing="7">
+              <Grid ColumnDefinitions="34,48,*,Auto" Margin="6" ColumnSpacing="7">
                 <CheckBox IsChecked="{Binding IsSelectedForManagement}" VerticalAlignment="Top" />
                 <CheckBox Grid.Column="1" IsChecked="{Binding IsSelectedForReview}" VerticalAlignment="Top" />
                 <StackPanel Grid.Column="2" Spacing="3">
@@ -40,7 +43,7 @@
 
         <Expander Header="Bulk manage" IsExpanded="False">
           <StackPanel Spacing="8" Margin="0,5,0,0">
-            <TextBlock Text="Bulk selection is separate from Quality Review selection. Permanent delete remains an individual action." TextWrapping="Wrap" Classes="secondary" />
+            <TextBlock Text="Use the Bulk checkbox to select several Learning Items. This is separate from the Review checkbox used by Quality Review." TextWrapping="Wrap" Classes="secondary" />
             <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
               <Button Content="Select filtered" Command="{Binding ContentCuration.SelectFilteredForManagementCommand}" />
               <Button Content="Clear bulk selection" Command="{Binding ContentCuration.ClearManagementSelectionCommand}" />
@@ -48,7 +51,7 @@
 
             <TextBlock Text="Build a Deck from the selection" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <TextBox Text="{Binding ContentCuration.BulkNewDeckName}" PlaceholderText="New Deck name" />
+              <TextBox Text="{Binding ContentCuration.BulkNewDeckName}" Watermark="New Deck name" />
               <Button Grid.Column="1" Content="Create Deck" Command="{Binding ContentCuration.CreateDeckFromSelectedCommand}" />
             </Grid>
 
@@ -79,9 +82,9 @@
             </WrapPanel>
 
             <TextBlock Text="Improve selected content with ChatGPT" FontWeight="SemiBold" />
-            <TextBlock Text="Generates update_learning_item operations only. Returned JSON still goes through normal Import preview and explicit selection." TextWrapping="Wrap" Classes="secondary" />
+            <TextBlock Text="Generates update_learning_item operations only. Returned JSON still goes through normal Generate / Import preview and explicit selection." TextWrapping="Wrap" Classes="secondary" />
             <ComboBox Width="150" ItemsSource="{Binding ContentCuration.ImprovementSignificanceOptions}" SelectedItem="{Binding ContentCuration.ImprovementSignificance}" />
-            <TextBox Text="{Binding ContentCuration.ImprovementGuidance}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="62" PlaceholderText="What should be improved? e.g. natural language, factual precision, clearer distractors..." />
+            <TextBox Text="{Binding ContentCuration.ImprovementGuidance}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="62" Watermark="What should be improved? e.g. natural language, factual precision, clearer distractors..." />
             <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
               <Button Content="Generate update prompt" Command="{Binding ContentCuration.GenerateImprovementPromptCommand}" />
               <Button Content="Copy update prompt" Command="{Binding ContentCuration.CopyImprovementPromptCommand}" IsEnabled="{Binding ContentCuration.HasImprovementPrompt}" />
@@ -90,13 +93,19 @@
           </StackPanel>
         </Expander>
 
-        <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
-          <Button Content="Select all for review" Command="{Binding ContentCuration.SelectAllReviewItemsCommand}" />
-          <Button Content="Clear review selection" Command="{Binding ContentCuration.ClearReviewItemSelectionCommand}" />
-        </WrapPanel>
-        <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.FilterFlag}">
-          <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-        </ComboBox>
+        <Expander Header="Advanced: Review selection and quality filter" IsExpanded="False">
+          <StackPanel Spacing="7" Margin="0,5,0,0">
+            <TextBlock Text="The Review checkbox selects Learning Items for the optional Quality Review exchange. It does not change scheduling or Study progress." Classes="secondary" TextWrapping="Wrap" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
+              <Button Content="Select all for review" Command="{Binding ContentCuration.SelectAllReviewItemsCommand}" />
+              <Button Content="Clear review selection" Command="{Binding ContentCuration.ClearReviewItemSelectionCommand}" />
+            </WrapPanel>
+            <TextBlock Text="Filter by user flag" Classes="secondary" />
+            <ComboBox ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.FilterFlag}">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+        </Expander>
       </StackPanel>
 
       <StackPanel Grid.Column="1" Spacing="8">
@@ -114,15 +123,32 @@
             <Button Content="Dismiss suggestion" Command="{Binding Editor.DismissAdvisorySuggestionCommand}" HorizontalAlignment="Left" />
           </StackPanel>
         </Border>
-        <TextBlock Text="Prompt" Classes="secondary" />
-        <TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
-        <TextBlock Text="Reference Solution" Classes="secondary" />
-        <TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+        <TextBlock Text="Question / task" FontWeight="SemiBold" />
+        <TextBlock Text="This is what appears on the front of the Learning Item during Study. It is not a ChatGPT prompt." Classes="secondary" TextWrapping="Wrap" />
+        <TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Watermark="What should the learner answer or do?" />
+        <TextBlock Text="Reference answer" FontWeight="SemiBold" />
+        <TextBlock Text="The answer or solution shown for checking the Learning Item." Classes="secondary" TextWrapping="Wrap" />
+        <TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" Watermark="Expected answer or solution" />
+        <StackPanel Spacing="4" IsVisible="{Binding Editor.IsCreating}">
+          <TextBlock Text="Add to Deck (optional)" Classes="secondary" />
+          <ComboBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding Editor.SelectedDeckPresentation}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Leave empty to create an unassigned Learning Item." Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Classes="surface" Padding="9">
+          <StackPanel Spacing="5">
+            <TextBlock Text="Need more than one card?" FontWeight="SemiBold" />
+            <TextBlock Text="Use Generate / Import to create or extend a Deck with ChatGPT and bring the returned Content Bundle back by paste, file picker, or drag &amp; drop." Classes="secondary" TextWrapping="Wrap" />
+            <Button Content="Open Generate / Import" Command="{Binding NavigateImportCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
         <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="6">
           <TextBlock Text="Response mode" VerticalAlignment="Center" />
           <ComboBox Width="150" ItemsSource="{Binding Editor.ResponseModes}" SelectedItem="{Binding Editor.ResponseMode}" />
-          <CheckBox Content="Low-interaction eligible" IsChecked="{Binding Editor.LowInteractionEligible}" />
+          <CheckBox Content="Suitable for low-interaction study" IsChecked="{Binding Editor.LowInteractionEligible}" />
         </WrapPanel>
+        <TextBlock Text="Response mode controls how an answer is entered or checked. Low-interaction suitability only affects optional Study filtering." Classes="secondary" TextWrapping="Wrap" />
         <TextBlock Text="{Binding Editor.ValidationMessage}" Foreground="#D14B42" TextWrapping="Wrap" />
 
         <Expander Header="Hints" IsExpanded="False">
@@ -203,79 +229,87 @@
           <Button Content="Delete permanently" Command="{Binding DeleteSelectedLearningItemCommand}" />
         </WrapPanel>
 
-        <TextBlock Text="Selected item quality" FontSize="16" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding ContentCuration.SelectedItem.QualityState, FallbackValue='Select an item'}" />
-        <TextBlock Text="{Binding ContentCuration.SelectedItem.Lifecycle, StringFormat='Lifecycle: {0}'}" Classes="secondary" />
+        <TextBlock Text="Selected item" FontSize="16" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding ContentCuration.SelectedItem.Lifecycle, StringFormat='Lifecycle: {0}', FallbackValue='Select an item to manage its lifecycle.'}" Classes="secondary" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <Button Content="Suspend" Command="{Binding ContentCuration.SuspendSelectedCommand}" IsVisible="{Binding ContentCuration.CanSuspendSelected}" />
           <Button Content="Reactivate" Command="{Binding ContentCuration.ReactivateSelectedCommand}" IsVisible="{Binding ContentCuration.CanReactivateSelected}" />
           <Button Content="Mark mastered" Command="{Binding ContentCuration.MarkMasteredSelectedCommand}" IsVisible="{Binding ContentCuration.CanMarkMasteredSelected}" />
           <Button Content="Unmark mastered" Command="{Binding ContentCuration.UnmarkMasteredSelectedCommand}" IsVisible="{Binding ContentCuration.CanUnmarkMasteredSelected}" />
         </WrapPanel>
-        <TextBlock Text="{Binding ContentCuration.SelectedItem.ContentRevision, StringFormat='ContentRevision: {0}'}" Classes="secondary" />
 
-        <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
-          <ComboBox Width="180" ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.SelectedFlag}">
-            <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-          </ComboBox>
-          <Button Content="Add flag" Command="{Binding ContentCuration.AddFlagCommand}" />
-          <Button Content="Remove flag" Command="{Binding ContentCuration.RemoveFlagCommand}" />
-        </WrapPanel>
-        <TextBlock Text="New flag name" Classes="secondary" />
-        <TextBox Text="{Binding ContentCuration.NewFlagName}" PlaceholderText="Name" />
-        <TextBox Text="{Binding ContentCuration.NewFlagMeaning}" PlaceholderText="User-defined meaning" />
-        <Button Content="Create flag" Command="{Binding ContentCuration.CreateFlagCommand}" HorizontalAlignment="Left" />
+        <Expander Header="Advanced: quality, flags and review exchange" IsExpanded="False">
+          <StackPanel Spacing="8" Margin="0,5,0,0">
+            <TextBlock Text="Specialist curation metadata. These tools do not replace normal Learning Item editing or scheduled Study." Classes="secondary" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ContentCuration.SelectedItem.QualityState, FallbackValue='Select an item'}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ContentCuration.SelectedItem.ContentRevision, StringFormat='ContentRevision: {0}'}" Classes="secondary" />
 
-        <TextBlock Text="Review history" FontWeight="SemiBold" />
-        <ListBox ItemsSource="{Binding ContentCuration.SelectedItem.History}" MaxHeight="140">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel">
-              <StackPanel Margin="2,3" Spacing="2">
-                <TextBlock Text="{Binding Outcome}" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
-                <TextBlock Text="{Binding SuggestedCorrection}" TextWrapping="Wrap" FontSize="12" Foreground="#B77900" />
-                <TextBlock Text="Active" IsVisible="{Binding IsActive}" Classes="secondary" />
-                <TextBlock Text="Superseded historical review" IsVisible="{Binding !IsActive}" Classes="secondary" />
-              </StackPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+            <TextBlock Text="User flags" FontWeight="SemiBold" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
+              <ComboBox Width="180" ItemsSource="{Binding ContentCuration.FlagDefinitions}" SelectedItem="{Binding ContentCuration.SelectedFlag}">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="content:UserFlagDefinitionView"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Content="Add flag" Command="{Binding ContentCuration.AddFlagCommand}" />
+              <Button Content="Remove flag" Command="{Binding ContentCuration.RemoveFlagCommand}" />
+            </WrapPanel>
+            <TextBlock Text="Create a user-defined flag" Classes="secondary" />
+            <TextBox Text="{Binding ContentCuration.NewFlagName}" Watermark="Flag name" />
+            <TextBox Text="{Binding ContentCuration.NewFlagMeaning}" Watermark="What does this flag mean?" />
+            <Button Content="Create flag" Command="{Binding ContentCuration.CreateFlagCommand}" HorizontalAlignment="Left" />
 
-        <TextBlock Text="Review exchange" FontWeight="SemiBold" />
-        <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
-          <ComboBox Width="150" ItemsSource="{Binding ContentCuration.ReviewModes}" SelectedItem="{Binding ContentCuration.ReviewMode}" />
-          <Button Content="Generate prompt" Command="{Binding ContentCuration.GenerateReviewPromptCommand}" />
-          <Button Content="Copy prompt" Command="{Binding ContentCuration.CopyReviewPromptCommand}" />
-        </WrapPanel>
-        <TextBox Text="{Binding ContentCuration.ReviewPrompt}" IsReadOnly="True" AcceptsReturn="True" Height="120" IsVisible="{Binding ContentCuration.HasReviewPrompt}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
-        <TextBox Text="{Binding ContentCuration.RawReviewJson}" AcceptsReturn="True" Height="130" PlaceholderText="Paste Quality Review Result JSON" ScrollViewer.VerticalScrollBarVisibility="Auto" />
-        <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
-          <Button Content="Load result" Command="{Binding ContentCuration.LoadReviewFileCommand}" />
-          <Button Content="Preview result" Command="{Binding ContentCuration.PreviewReviewResultsCommand}" />
-          <Button Content="Accept selected reviews" Command="{Binding ContentCuration.AcceptSelectedReviewsCommand}" />
-        </WrapPanel>
-        <TextBlock Text="{Binding ContentCuration.ReviewSummary}" IsVisible="{Binding ContentCuration.HasReviewPreview}" FontWeight="SemiBold" />
-        <ListBox ItemsSource="{Binding ContentCuration.ReviewResults}" Height="190" IsVisible="{Binding ContentCuration.HasReviewPreview}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="desktop:QualityReviewExchangeRowViewModel">
-              <StackPanel Margin="2,3" Spacing="2">
-                <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" Content="{Binding Outcome}" />
-                <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
-                <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
-                <Button Content="Edit using suggestion" IsVisible="{Binding HasSuggestedCorrection}" Command="{Binding $parent[ListBox].DataContext.EditFromPreviewSuggestionCommand}" CommandParameter="{Binding}" HorizontalAlignment="Left" />
-                <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
-                <ItemsControl ItemsSource="{Binding PriorActiveReviews}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel">
-                      <CheckBox Content="{Binding Findings, StringFormat='Supersede: {0}'}" Command="{Binding $parent[ItemsControl].DataContext.ToggleSupersededCommand}" CommandParameter="{Binding Id}" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+            <TextBlock Text="Quality Review history" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding ContentCuration.SelectedItem.History}" MaxHeight="140">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel">
+                  <StackPanel Margin="2,3" Spacing="2">
+                    <TextBlock Text="{Binding Outcome}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{Binding SuggestedCorrection}" TextWrapping="Wrap" FontSize="12" Foreground="#B77900" />
+                    <TextBlock Text="Active" IsVisible="{Binding IsActive}" Classes="secondary" />
+                    <TextBlock Text="Superseded historical review" IsVisible="{Binding !IsActive}" Classes="secondary" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Text="Quality Review exchange" FontWeight="SemiBold" />
+            <TextBlock Text="Optional ChatGPT-based review workflow. Generate a review prompt, then paste or load its structured result before explicitly accepting reviews." Classes="secondary" TextWrapping="Wrap" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
+              <ComboBox Width="150" ItemsSource="{Binding ContentCuration.ReviewModes}" SelectedItem="{Binding ContentCuration.ReviewMode}" />
+              <Button Content="Generate review prompt" Command="{Binding ContentCuration.GenerateReviewPromptCommand}" />
+              <Button Content="Copy review prompt" Command="{Binding ContentCuration.CopyReviewPromptCommand}" />
+            </WrapPanel>
+            <TextBox Text="{Binding ContentCuration.ReviewPrompt}" IsReadOnly="True" AcceptsReturn="True" Height="120" IsVisible="{Binding ContentCuration.HasReviewPrompt}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+            <TextBox Text="{Binding ContentCuration.RawReviewJson}" AcceptsReturn="True" Height="130" Watermark="Paste Quality Review Result JSON" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="7" LineSpacing="6">
+              <Button Content="Load result" Command="{Binding ContentCuration.LoadReviewFileCommand}" />
+              <Button Content="Preview result" Command="{Binding ContentCuration.PreviewReviewResultsCommand}" />
+              <Button Content="Accept selected reviews" Command="{Binding ContentCuration.AcceptSelectedReviewsCommand}" />
+            </WrapPanel>
+            <TextBlock Text="{Binding ContentCuration.ReviewSummary}" IsVisible="{Binding ContentCuration.HasReviewPreview}" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding ContentCuration.ReviewResults}" Height="190" IsVisible="{Binding ContentCuration.HasReviewPreview}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="desktop:QualityReviewExchangeRowViewModel">
+                  <StackPanel Margin="2,3" Spacing="2">
+                    <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsSelectable}" Content="{Binding Outcome}" />
+                    <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Findings}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{Binding SuggestedCorrection, StringFormat='Suggested correction: {0}'}" IsVisible="{Binding HasSuggestedCorrection}" Foreground="#B77900" TextWrapping="Wrap" FontSize="12" />
+                    <Button Content="Edit using suggestion" IsVisible="{Binding HasSuggestedCorrection}" Command="{Binding $parent[ListBox].DataContext.EditFromPreviewSuggestionCommand}" CommandParameter="{Binding}" HorizontalAlignment="Left" />
+                    <TextBlock Text="{Binding Diagnostics}" IsVisible="{Binding HasDiagnostics}" Foreground="#D14B42" TextWrapping="Wrap" FontSize="12" />
+                    <ItemsControl ItemsSource="{Binding PriorActiveReviews}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="desktop:QualityReviewHistoryRowViewModel">
+                          <CheckBox Content="{Binding Findings, StringFormat='Supersede: {0}'}" Command="{Binding $parent[ItemsControl].DataContext.ToggleSupersededCommand}" CommandParameter="{Binding Id}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </Expander>
       </StackPanel>
     </Grid>
   </ScrollViewer>

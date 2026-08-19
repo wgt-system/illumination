@@ -18,12 +18,45 @@
           <Button Content="Study selected" Command="{Binding PrepareSelectedDeckStudyCommand}" />
           <Button Content="Study all Decks" Command="{Binding PrepareAllDecksStudyCommand}" />
         </WrapPanel>
+        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+          <Button Content="Practice Deck now" Command="{Binding StartSelectedDeckPracticeCommand}" />
+          <Button Content="Practice selected item" Command="{Binding StartSelectedItemPracticeCommand}" />
+        </WrapPanel>
+        <TextBlock Text="Practice now ignores due dates and is read-only: no grades, Reviews or scheduling changes." TextWrapping="Wrap" Classes="secondary" />
+
+        <Border Classes="surface" IsVisible="{Binding PracticeIsActive}" Padding="9">
+          <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Practice now" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="{Binding PracticeProgress}" Classes="secondary" />
+            </Grid>
+            <TextBlock Text="{Binding CurrentPracticeItem.Prompt}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <Border Background="#0C008000" CornerRadius="5" Padding="7" IsVisible="{Binding PracticeSolutionRevealed}">
+              <TextBlock Text="{Binding CurrentPracticeItem.ReferenceSolution}" TextWrapping="Wrap" />
+            </Border>
+            <Button Content="Reveal reference answer" Command="{Binding RevealPracticeSolutionCommand}" IsVisible="{Binding !PracticeSolutionRevealed}" HorizontalAlignment="Left" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="5" LineSpacing="5">
+              <Button Content="Previous" Command="{Binding PreviousPracticeItemCommand}" />
+              <Button Content="Next" Command="{Binding NextPracticeItemCommand}" />
+              <Button Content="Close" Command="{Binding ClosePracticeCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
         <Button Content="Generate learning-aware follow-up" Command="{Binding GenerateFollowUpFromSelectedDeckCommand}" HorizontalAlignment="Left" />
 
+        <Expander Header="Restart learning" IsExpanded="False" Margin="0,4,0,0">
+          <StackPanel Spacing="6" Margin="0,5,0,0">
+            <TextBlock Text="Reset the selected Deck's current scheduling state so its items become new and due now. Content, Review history, Deck membership and Suspended/Mastered lifecycle are preserved." TextWrapping="Wrap" Classes="secondary" />
+            <TextBlock Text="This changes real Learning State; it is not a temporary practice mode. The action requires a second click to confirm." TextWrapping="Wrap" Classes="secondary" />
+            <Button Content="Restart Deck learning" Command="{Binding RestartSelectedDeckLearningCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Expander>
+
         <TextBlock Text="Deck management" FontWeight="SemiBold" Margin="0,8,0,0" />
-        <TextBox Text="{Binding NewDeckName}" PlaceholderText="Deck name" />
+        <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
         <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
-        <TextBox Text="{Binding RenameDeckName}" PlaceholderText="Rename selected Deck" />
+        <TextBox Text="{Binding RenameDeckName}" Watermark="Rename selected Deck" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <Button Content="Rename" Command="{Binding RenameDeckCommand}" />
           <Button Content="Delete Deck" Command="{Binding DeleteSelectedDeckCommand}" />
@@ -47,6 +80,7 @@
         </ListBox>
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
           <Button Content="Remove selected" Command="{Binding RemoveFromDeckCommand}" />
+          <Button Content="Restart selected item" Command="{Binding RestartSelectedDeckItemLearningCommand}" />
           <TextBlock Text="Available Learning Items" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0" />
         </StackPanel>
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">

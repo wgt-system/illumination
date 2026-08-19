@@ -28,7 +28,7 @@
           <ToggleButton Classes="nav" Content="Insights" IsChecked="{Binding IsInsightsPage}" Command="{Binding NavigateInsightsCommand}"/>
           <ToggleButton Classes="nav" Content="Decks" IsChecked="{Binding IsDecksPage}" Command="{Binding NavigateDecksCommand}"/>
           <ToggleButton Classes="nav" Content="Library" IsChecked="{Binding IsLibraryPage}" Command="{Binding NavigateLibraryCommand}"/>
-          <ToggleButton Classes="nav" Content="Import" IsChecked="{Binding IsImportPage}" Command="{Binding NavigateImportCommand}"/>
+          <ToggleButton Classes="nav" Content="Generate / Import" IsChecked="{Binding IsImportPage}" Command="{Binding NavigateImportCommand}"/>
         </StackPanel>
         <StackPanel Grid.Row="2" Spacing="8">
           <Expander Header="Local data" IsExpanded="False">
