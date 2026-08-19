@@ -69,21 +69,26 @@ public sealed partial class ContentAcquisitionViewModel
 
     partial void OnGeneratedPromptChanged(string value)
     {
-        if (_applyingLanguageGuidance || string.IsNullOrWhiteSpace(value) || !HasExplicitLanguageGuidance) return;
+        if (_applyingLanguageGuidance || string.IsNullOrWhiteSpace(value)) return;
 
         _applyingLanguageGuidance = true;
         try
         {
-            GeneratedPrompt = LanguageContentPromptGuidance.Apply(
-                new GeneratedContentPrompt(value),
-                new LanguageGenerationGuidance(
-                    InstructionLanguage,
-                    SourceLanguage,
-                    TargetLanguage,
-                    SelectedLanguageProficiency.Level,
-                    SelectedLanguageExerciseProfile.Profile,
-                    ProgressionMode,
-                    HasSourceDeckContext)).Prompt;
+            var generated = ApplyExistingDeckInventory(new GeneratedContentPrompt(value));
+            if (HasExplicitLanguageGuidance)
+            {
+                generated = LanguageContentPromptGuidance.Apply(
+                    generated,
+                    new LanguageGenerationGuidance(
+                        InstructionLanguage,
+                        SourceLanguage,
+                        TargetLanguage,
+                        SelectedLanguageProficiency.Level,
+                        SelectedLanguageExerciseProfile.Profile,
+                        ProgressionMode,
+                        HasSourceDeckContext || (UseExistingDeck && SelectedExistingDeck is not null)));
+            }
+            GeneratedPrompt = generated.Prompt;
         }
         finally
         {
