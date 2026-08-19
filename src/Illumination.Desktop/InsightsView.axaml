@@ -125,7 +125,7 @@
             <StackPanel Spacing="7">
               <TextBlock Text="Items" Classes="section-title" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
-                <TextBox Width="260" Text="{Binding PromptSearch}" Watermark="Search prompt" />
+                <TextBox Width="260" Text="{Binding PromptSearch}" PlaceholderText="Search prompt" />
                 <CheckBox Content="New" IsChecked="{Binding NewOnly}" />
                 <CheckBox Content="Due" IsChecked="{Binding DueNowOnly}" />
                 <CheckBox Content="Relearning" IsChecked="{Binding RelearningOnly}" />
