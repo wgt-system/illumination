@@ -54,9 +54,9 @@
         </Expander>
 
         <TextBlock Text="Deck management" FontWeight="SemiBold" Margin="0,8,0,0" />
-        <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
+        <TextBox Text="{Binding NewDeckName}" PlaceholderText="Deck name" />
         <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
-        <TextBox Text="{Binding RenameDeckName}" Watermark="Rename selected Deck" />
+        <TextBox Text="{Binding RenameDeckName}" PlaceholderText="Rename selected Deck" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <Button Content="Rename" Command="{Binding RenameDeckCommand}" />
           <Button Content="Delete Deck" Command="{Binding DeleteSelectedDeckCommand}" />
