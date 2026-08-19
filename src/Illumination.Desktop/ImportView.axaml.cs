@@ -15,7 +15,7 @@ public partial class ImportView : UserControl
 
     private async void OnBundleDrop(object? sender, DragEventArgs e)
     {
-        var paths = e.Data.GetFileNames()?.ToArray() ?? [];
+        var paths = DroppedFileDataTransfer.GetLocalPaths(e);
         if (sender is Control control && control.DataContext is ContentAcquisitionViewModel vm)
             await vm.LoadBundleFromDropAsync(paths);
         e.Handled = true;
