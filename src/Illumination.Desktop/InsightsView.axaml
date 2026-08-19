@@ -7,184 +7,277 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel DataContext="{Binding Insights}" Spacing="14" Margin="14,4,8,12">
       <TextBlock Text="Learning Insights" Classes="page-title" />
-      <TextBlock Text="Authoritative local learning facts. No mastery score is inferred." Classes="secondary" />
-      <TextBlock Text="{Binding Status}" Foreground="#D14B42" />
-
-      <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="8">
-        <Border Classes="surface"><StackPanel><TextBlock Text="Active" Classes="secondary"/><TextBlock Text="{Binding Overview.ActiveCount}" FontSize="22"/></StackPanel></Border>
-        <Border Grid.Column="1" Classes="surface"><StackPanel><TextBlock Text="Suspended" Classes="secondary"/><TextBlock Text="{Binding Overview.SuspendedCount}" FontSize="22"/></StackPanel></Border>
-        <Border Grid.Column="2" Classes="surface"><StackPanel><TextBlock Text="Mastered" Classes="secondary"/><TextBlock Text="{Binding Overview.MasteredCount}" FontSize="22"/></StackPanel></Border>
-        <Border Grid.Column="3" Classes="surface"><StackPanel><TextBlock Text="New" Classes="secondary"/><TextBlock Text="{Binding Overview.NewItemCount}" FontSize="22"/></StackPanel></Border>
-        <Border Grid.Column="4" Classes="surface"><StackPanel><TextBlock Text="Due now" Classes="secondary"/><TextBlock Text="{Binding Overview.DueNowCount}" FontSize="22"/></StackPanel></Border>
-        <Border Grid.Column="5" Classes="surface"><StackPanel><TextBlock Text="Relearning" Classes="secondary"/><TextBlock Text="{Binding Overview.ShortTermRelearningCount}" FontSize="22"/></StackPanel></Border>
-      </Grid>
-
-      <Border Classes="surface">
-        <WrapPanel Orientation="Horizontal" ItemHeight="28" ItemWidth="190">
-          <TextBlock Text="{Binding Overview.TotalLearningItems, StringFormat='Items: {0}'}" />
-          <TextBlock Text="{Binding Overview.TotalCompletedReviewCount, StringFormat='Reviews: {0}'}" />
-          <TextBlock Text="{Binding Overview.ReviewsLast7Days, StringFormat='Last 7 days: {0}'}" />
-          <TextBlock Text="{Binding Overview.ReviewsLast30Days, StringFormat='Last 30 days: {0}'}" />
-          <TextBlock Text="{Binding Overview.MostRecentReviewAt, StringFormat='Most recent: {0:g}'}" />
-        </WrapPanel>
+      <TextBlock Text="See what needs attention, what is becoming stable, and where to continue next. Illumination shows local learning evidence rather than inventing a mastery score." Classes="secondary" TextWrapping="Wrap" />
+      <Border Classes="surface" IsVisible="{Binding HasStatus}" Padding="9">
+        <TextBlock Text="{Binding Status}" Foreground="#D14B42" TextWrapping="Wrap" />
       </Border>
 
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-        <Border Classes="surface">
-          <StackPanel Spacing="7">
-            <TextBlock Text="30-day activity" Classes="section-title" />
-            <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="4">
-              <TextBlock Text="{Binding Activity.ActiveDayCount, StringFormat='Active days: {0}'}" />
-              <TextBlock Text="{Binding Activity.TotalReviewCount, StringFormat='Reviews: {0}'}" />
-              <TextBlock Text="{Binding Activity.TotalStudySessionCount, StringFormat='Sessions: {0}'}" />
-            </WrapPanel>
-            <ItemsControl ItemsSource="{Binding Activity.Days}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="insight:LearningActivityDay">
-                  <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="5" Padding="6" MinWidth="86">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Date}" Classes="secondary" />
-                      <TextBlock Text="{Binding ReviewCount, StringFormat='Reviews {0}'}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding StudySessionCount, StringFormat='Sessions {0}'}" Classes="secondary" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Border>
+      <Border Classes="surface" IsVisible="{Binding !HasLearningData}" Padding="14">
+        <StackPanel Spacing="5">
+          <TextBlock Text="No learning history yet" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Text="Create or import Learning Items, put them in a Deck, and complete some Study reviews. This page will then summarize current learning evidence and upcoming work." Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
 
-        <Border Grid.Column="1" Classes="surface">
-          <StackPanel Spacing="7">
-            <TextBlock Text="14-day due forecast" Classes="section-title" />
-            <TextBlock Text="{Binding DueForecast.DueNowCount, StringFormat='Due now: {0}'}" FontWeight="SemiBold" />
-            <TextBlock Text="Future due dates are derived directly from current Active Learning State." Classes="secondary" TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding DueForecast.UpcomingDays}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="insight:DueForecastDay">
-                  <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="5" Padding="6" MinWidth="86">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Date}" Classes="secondary" />
-                      <TextBlock Text="{Binding DueCount, StringFormat='Due {0}'}" FontWeight="SemiBold" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Border>
-      </Grid>
-
-      <Grid ColumnDefinitions="300,*" ColumnSpacing="14">
-        <Border Classes="surface">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Deck progress" Classes="section-title" />
-            <ListBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedDeck}" MinHeight="180">
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="insight:DeckInsight">
-                  <StackPanel Margin="3">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding CurrentItemCount, StringFormat='Items: {0}'}" Classes="secondary"/>
-                    <TextBlock Text="{Binding TotalReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary"/>
-                  </StackPanel>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-            <Button Content="Generate follow-up Deck" Command="{Binding GenerateFollowUpCommand}" />
-            <TextBlock Text="Follow-up progression" Classes="secondary" />
-            <ComboBox ItemsSource="{Binding ProgressionModes}" SelectedItem="{Binding ProgressionMode}" />
-            <TextBlock Text="Optional task types" Classes="secondary" />
-            <CheckBox Content="Recall / card" IsChecked="{Binding SelfAssessedEnabled}" />
-            <CheckBox Content="Choice / quiz" IsChecked="{Binding SelectionEnabled}" />
-            <CheckBox Content="Short answer / cloze" IsChecked="{Binding ShortTextEnabled}" />
-            <CheckBox Content="Coding" IsChecked="{Binding CodeEnabled}" />
-          </StackPanel>
-        </Border>
-        <StackPanel Grid.Column="1" Spacing="10">
-          <Border Classes="surface">
-            <StackPanel Spacing="5">
-              <TextBlock Text="{Binding SelectedDeck.Name}" Classes="section-title" />
-              <TextBlock Text="{Binding SelectedDeck.CurrentItemCount, StringFormat='Items: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.ActiveCount, StringFormat='Active: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.SuspendedCount, StringFormat='Suspended: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.MasteredCount, StringFormat='Mastered: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.NewCount, StringFormat='New: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.DueNowCount, StringFormat='Due: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.RelearningCount, StringFormat='Relearning: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.TotalReviewCount, StringFormat='Reviews: {0}'}" />
-              <TextBlock Text="{Binding SelectedDeck.AssessmentDistribution, Converter={x:Static desktop:InsightDistributionConverter.Instance}}" />
+      <StackPanel Spacing="14" IsVisible="{Binding HasLearningData}">
+        <TextBlock Text="What needs attention" Classes="section-title" />
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+          <Border Classes="surface" Padding="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Due now" Classes="secondary" />
+              <TextBlock Text="{Binding Overview.DueNowCount}" FontSize="28" FontWeight="SemiBold" />
+              <TextBlock Text="Active cards currently scheduled for review." Classes="secondary" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
+          <Border Grid.Column="1" Classes="surface" Padding="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="New" Classes="secondary" />
+              <TextBlock Text="{Binding Overview.NewItemCount}" FontSize="28" FontWeight="SemiBold" />
+              <TextBlock Text="Cards that have not yet entered normal review history." Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Classes="surface" Padding="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Relearning" Classes="secondary" />
+              <TextBlock Text="{Binding Overview.ShortTermRelearningCount}" FontSize="28" FontWeight="SemiBold" />
+              <TextBlock Text="Cards currently requiring short-term reinforcement." Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Classes="surface" Padding="10">
+          <WrapPanel Orientation="Horizontal" ItemHeight="28" ItemWidth="190">
+            <TextBlock Text="{Binding Overview.TotalLearningItems, StringFormat='Items: {0}'}" />
+            <TextBlock Text="{Binding Overview.TotalCompletedReviewCount, StringFormat='Reviews: {0}'}" />
+            <TextBlock Text="{Binding Overview.ReviewsLast7Days, StringFormat='Last 7 days: {0}'}" />
+            <TextBlock Text="{Binding Overview.ReviewsLast30Days, StringFormat='Last 30 days: {0}'}" />
+            <TextBlock Text="{Binding Overview.MostRecentReviewAt, StringFormat='Most recent: {0:g}'}" />
+          </WrapPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
           <Border Classes="surface">
             <StackPanel Spacing="7">
-              <TextBlock Text="Items" Classes="section-title" />
-              <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
-                <TextBox Width="260" Text="{Binding PromptSearch}" Watermark="Search prompt" />
-                <CheckBox Content="New" IsChecked="{Binding NewOnly}" />
-                <CheckBox Content="Due" IsChecked="{Binding DueNowOnly}" />
-                <CheckBox Content="Relearning" IsChecked="{Binding RelearningOnly}" />
-                <ComboBox ItemsSource="{Binding LifecycleOptions}" SelectedItem="{Binding Lifecycle}" Width="120" />
+              <TextBlock Text="30-day activity" Classes="section-title" />
+              <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="4">
+                <TextBlock Text="{Binding Activity.ActiveDayCount, StringFormat='Active days: {0}'}" />
+                <TextBlock Text="{Binding Activity.TotalReviewCount, StringFormat='Reviews: {0}'}" />
+                <TextBlock Text="{Binding Activity.TotalStudySessionCount, StringFormat='Sessions: {0}'}" />
               </WrapPanel>
-              <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" MaxHeight="320">
-                <ListBox.ItemTemplate>
-                  <DataTemplate x:DataType="insight:LearningItemInsight">
-                    <Grid ColumnDefinitions="*,Auto" Margin="2,4">
-                      <StackPanel>
-                        <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding ResponseMode}" Classes="secondary"/>
-                        <TextBlock Text="{Binding Difficulty, StringFormat='Difficulty: {0:0.##}'}" Classes="secondary"/>
-                        <TextBlock Text="{Binding StabilityDays, StringFormat='Stability: {0:0.##} days'}" Classes="secondary"/>
-                        <TextBlock Text="{Binding ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary"/>
-                        <TextBlock Text="{Binding LastConfirmedAssessment, StringFormat='Last assessment: {0}'}" Classes="secondary"/>
+              <ItemsControl ItemsSource="{Binding Activity.Days}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="insight:LearningActivityDay">
+                    <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="5" Padding="6" MinWidth="86">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Date}" Classes="secondary" />
+                        <TextBlock Text="{Binding ReviewCount, StringFormat='Reviews {0}'}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StudySessionCount, StringFormat='Sessions {0}'}" Classes="secondary" />
                       </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding LifecycleState}" VerticalAlignment="Top"/>
-                    </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Classes="surface">
+            <StackPanel Spacing="7">
+              <TextBlock Text="14-day due forecast" Classes="section-title" />
+              <TextBlock Text="{Binding DueForecast.DueNowCount, StringFormat='Due now: {0}'}" FontWeight="SemiBold" />
+              <TextBlock Text="Upcoming workload derived directly from current Active Learning State." Classes="secondary" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding DueForecast.UpcomingDays}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="insight:DueForecastDay">
+                    <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="5" Padding="6" MinWidth="86">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Date}" Classes="secondary" />
+                        <TextBlock Text="{Binding DueCount, StringFormat='Due {0}'}" FontWeight="SemiBold" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Expander Header="Library state" IsExpanded="False">
+          <Border Classes="surface" Padding="10" Margin="0,5,0,0">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Lifecycle counts are useful for maintenance, but they do not represent a learning score." Classes="secondary" TextWrapping="Wrap" />
+              <WrapPanel Orientation="Horizontal" ItemSpacing="18" LineSpacing="5">
+                <TextBlock Text="{Binding Overview.ActiveCount, StringFormat='Active: {0}'}" />
+                <TextBlock Text="{Binding Overview.SuspendedCount, StringFormat='Suspended: {0}'}" />
+                <TextBlock Text="{Binding Overview.MasteredCount, StringFormat='Mastered: {0}'}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+        </Expander>
+
+        <TextBlock Text="Deck focus" Classes="section-title" Margin="0,4,0,0" />
+        <TextBlock Text="Choose a Deck to inspect its current learning evidence. Follow-up generation uses the same evidence automatically when extending an existing Deck." Classes="secondary" TextWrapping="Wrap" />
+        <Border Classes="surface" IsVisible="{Binding !HasDecks}" Padding="12">
+          <TextBlock Text="No Decks exist yet. Create a Deck before looking for Deck-level learning patterns." Classes="secondary" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="300,*" ColumnSpacing="14" IsVisible="{Binding HasDecks}">
+          <Border Classes="surface">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Decks" FontWeight="SemiBold" />
+              <ListBox ItemsSource="{Binding Decks}" SelectedItem="{Binding SelectedDeck}" MinHeight="180">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="insight:DeckInsight">
+                    <StackPanel Margin="3">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding CurrentItemCount, StringFormat='Items: {0}'}" Classes="secondary" />
+                      <TextBlock Text="{Binding DueNowCount, StringFormat='Due now: {0}'}" Classes="secondary" />
+                      <TextBlock Text="{Binding TotalReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary" />
+                    </StackPanel>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
-              <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
-                <Button Content="Suspend" Command="{Binding SuspendCommand}" IsVisible="{Binding CanSuspendAction}" />
-                <Button Content="Mark mastered" Command="{Binding MarkMasteredCommand}" IsVisible="{Binding CanMarkMasteredAction}" />
-                <Button Content="Reactivate" Command="{Binding ReactivateCommand}" IsVisible="{Binding CanReactivateAction}" />
-                <Button Content="Unmark mastered" Command="{Binding UnmarkMasteredCommand}" IsVisible="{Binding CanUnmarkMasteredAction}" />
-              </WrapPanel>
             </StackPanel>
           </Border>
-        </StackPanel>
-      </Grid>
 
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-        <Border Classes="surface">
-          <StackPanel Spacing="6">
-            <TextBlock Text="Recent Reviews" Classes="section-title"/>
-            <ItemsControl ItemsSource="{Binding Reviews}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="insight:ReviewHistoryEntry">
-                  <StackPanel><TextBlock Text="{Binding Prompt}" TextWrapping="Wrap"/><TextBlock Text="{Binding Assessment}" Classes="secondary"/><TextBlock Text="{Binding CompletedAt}" Classes="secondary"/></StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+          <StackPanel Grid.Column="1" Spacing="10" IsVisible="{Binding HasSelectedDeck}">
+            <Border Classes="surface">
+              <StackPanel Spacing="7">
+                <TextBlock Text="{Binding SelectedDeck.Name}" Classes="section-title" />
+                <WrapPanel Orientation="Horizontal" ItemSpacing="16" LineSpacing="5">
+                  <TextBlock Text="{Binding SelectedDeck.CurrentItemCount, StringFormat='Items: {0}'}" />
+                  <TextBlock Text="{Binding SelectedDeck.NewCount, StringFormat='New: {0}'}" />
+                  <TextBlock Text="{Binding SelectedDeck.DueNowCount, StringFormat='Due: {0}'}" />
+                  <TextBlock Text="{Binding SelectedDeck.RelearningCount, StringFormat='Relearning: {0}'}" />
+                  <TextBlock Text="{Binding SelectedDeck.TotalReviewCount, StringFormat='Reviews: {0}'}" />
+                </WrapPanel>
+                <TextBlock Text="{Binding SelectedDeck.AssessmentDistribution, Converter={x:Static desktop:InsightDistributionConverter.Instance}}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Expander Header="Create learning-aware follow-up content" IsExpanded="False">
+              <Border Classes="surface" Padding="10" Margin="0,5,0,0">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Use current Deck evidence to prepare a focused Generate / Import workflow. This does not mutate the Deck until returned content is validated and imported." Classes="secondary" TextWrapping="Wrap" />
+                  <TextBlock Text="Progression" Classes="secondary" />
+                  <ComboBox ItemsSource="{Binding ProgressionModes}" SelectedItem="{Binding ProgressionMode}" />
+                  <TextBlock Text="Optional task types" Classes="secondary" />
+                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="5">
+                    <CheckBox Content="Recall / card" IsChecked="{Binding SelfAssessedEnabled}" />
+                    <CheckBox Content="Choice / quiz" IsChecked="{Binding SelectionEnabled}" />
+                    <CheckBox Content="Short answer / cloze" IsChecked="{Binding ShortTextEnabled}" />
+                    <CheckBox Content="Coding" IsChecked="{Binding CodeEnabled}" />
+                  </WrapPanel>
+                  <Button Content="Prepare follow-up generation" Command="{Binding GenerateFollowUpCommand}" HorizontalAlignment="Left" />
+                </StackPanel>
+              </Border>
+            </Expander>
+
+            <Border Classes="surface">
+              <StackPanel Spacing="7">
+                <TextBlock Text="Cards in this Deck" Classes="section-title" />
+                <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+                  <TextBox Width="260" Text="{Binding PromptSearch}" Watermark="Search cards" />
+                  <CheckBox Content="New" IsChecked="{Binding NewOnly}" />
+                  <CheckBox Content="Due" IsChecked="{Binding DueNowOnly}" />
+                  <CheckBox Content="Relearning" IsChecked="{Binding RelearningOnly}" />
+                  <ComboBox ItemsSource="{Binding LifecycleOptions}" SelectedItem="{Binding Lifecycle}" Width="120" />
+                </WrapPanel>
+                <TextBlock Text="No cards match the current Deck/filter selection." Classes="secondary" IsVisible="{Binding !HasItems}" />
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" MaxHeight="320" IsVisible="{Binding HasItems}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="insight:LearningItemInsight">
+                      <Grid ColumnDefinitions="*,Auto" Margin="2,5">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary" />
+                          <TextBlock Text="{Binding LastConfirmedAssessment, StringFormat='Last assessment: {0}'}" Classes="secondary" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding LifecycleState}" VerticalAlignment="Top" Classes="secondary" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="surface" IsVisible="{Binding HasSelectedItem}">
+              <StackPanel Spacing="7">
+                <TextBlock Text="Selected card" Classes="section-title" />
+                <TextBlock Text="{Binding SelectedItem.Prompt}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="5">
+                  <TextBlock Text="{Binding SelectedItem.ResponseMode, StringFormat='Mode: {0}'}" Classes="secondary" />
+                  <TextBlock Text="{Binding SelectedItem.ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary" />
+                  <TextBlock Text="{Binding SelectedItem.LastConfirmedAssessment, StringFormat='Last assessment: {0}'}" Classes="secondary" />
+                </WrapPanel>
+
+                <Expander Header="Advanced scheduler details" IsExpanded="False">
+                  <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="5" Margin="0,5,0,0">
+                    <TextBlock Text="{Binding SelectedItem.Difficulty, StringFormat='Difficulty: {0:0.##}'}" Classes="secondary" />
+                    <TextBlock Text="{Binding SelectedItem.StabilityDays, StringFormat='Stability: {0:0.##} days'}" Classes="secondary" />
+                  </WrapPanel>
+                </Expander>
+
+                <Expander Header="Manage lifecycle" IsExpanded="False">
+                  <StackPanel Spacing="6" Margin="0,5,0,0">
+                    <TextBlock Text="Lifecycle changes affect whether this card participates in normal Study. They are maintenance actions, not learning grades." Classes="secondary" TextWrapping="Wrap" />
+                    <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+                      <Button Content="Suspend" Command="{Binding SuspendCommand}" IsVisible="{Binding CanSuspendAction}" />
+                      <Button Content="Mark mastered" Command="{Binding MarkMasteredCommand}" IsVisible="{Binding CanMarkMasteredAction}" />
+                      <Button Content="Reactivate" Command="{Binding ReactivateCommand}" IsVisible="{Binding CanReactivateAction}" />
+                      <Button Content="Unmark mastered" Command="{Binding UnmarkMasteredCommand}" IsVisible="{Binding CanUnmarkMasteredAction}" />
+                    </WrapPanel>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+            </Border>
           </StackPanel>
-        </Border>
-        <Border Grid.Column="1" Classes="surface">
-          <StackPanel Spacing="6">
-            <TextBlock Text="Study Sessions" Classes="section-title"/>
-            <ItemsControl ItemsSource="{Binding Sessions}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="insight:StudySessionHistoryEntry">
-                  <StackPanel><TextBlock Text="{Binding EvaluationMode}"/><TextBlock Text="{Binding StartedAt}" Classes="secondary"/><TextBlock Text="{Binding ReviewCount}" Classes="secondary"/></StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Border>
-      </Grid>
+        </Grid>
+
+        <Expander Header="Recent history" IsExpanded="False">
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="14" Margin="0,5,0,0">
+            <Border Classes="surface">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Recent Reviews" Classes="section-title" />
+                <TextBlock Text="No Reviews recorded yet." Classes="secondary" IsVisible="{Binding !HasReviews}" />
+                <ItemsControl ItemsSource="{Binding Reviews}" IsVisible="{Binding HasReviews}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="insight:ReviewHistoryEntry">
+                      <StackPanel Margin="0,3">
+                        <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Assessment}" Classes="secondary" />
+                        <TextBlock Text="{Binding CompletedAt}" Classes="secondary" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="surface">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Study Sessions" Classes="section-title" />
+                <TextBlock Text="No Study Sessions recorded yet." Classes="secondary" IsVisible="{Binding !HasSessions}" />
+                <ItemsControl ItemsSource="{Binding Sessions}" IsVisible="{Binding HasSessions}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="insight:StudySessionHistoryEntry">
+                      <StackPanel Margin="0,3">
+                        <TextBlock Text="{Binding EvaluationMode}" />
+                        <TextBlock Text="{Binding StartedAt}" Classes="secondary" />
+                        <TextBlock Text="{Binding ReviewCount, StringFormat='Reviews: {0}'}" Classes="secondary" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Expander>
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </UserControl>
