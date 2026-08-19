@@ -1,12 +1,11 @@
+using Illumination.Domain.Learning;
+
 namespace Illumination.Application.ContentManagement;
 
 public sealed record RestartLearningResult(int LearningItemCount, DateTimeOffset RestartedAt);
 
 public sealed class LearningStateMaintenanceService
 {
-    private const double InitialDifficulty = 5.0;
-    private const double InitialStabilityDays = 0.5;
-
     private readonly IContentPersistence _content;
     private readonly ILearningStateBatchPersistence _learningStatePersistence;
     private readonly TimeProvider _timeProvider;
@@ -62,12 +61,15 @@ public sealed class LearningStateMaintenanceService
         return new RestartLearningResult(states.Count, restartedAt);
     }
 
-    private static LearningStateMaintenanceSnapshot Reset(LearningItemSnapshot item, DateTimeOffset restartedAt) =>
-        new(
+    private static LearningStateMaintenanceSnapshot Reset(LearningItemSnapshot item, DateTimeOffset restartedAt)
+    {
+        var projection = LearningStateRestartPolicy.Project(restartedAt);
+        return new LearningStateMaintenanceSnapshot(
             item.Id,
-            IsNew: true,
-            DueAt: restartedAt,
-            Difficulty: InitialDifficulty,
-            StabilityDays: InitialStabilityDays,
-            IsInShortTermRelearning: false);
+            projection.IsNew,
+            projection.DueAt,
+            projection.Difficulty,
+            projection.StabilityDays,
+            projection.IsInShortTermRelearning);
+    }
 }
