@@ -54,6 +54,8 @@ Illumination remains an independent bounded context and executable capability ru
 
 The existing Avalonia project may remain as an optional standalone/admin/dev host. A complete separate Illumination end-user UI is not required.
 
+The current Avalonia host is intentionally optimized for capability coverage, administration, development and acceptance testing. It is **not** the production UX baseline and its current screen density or information architecture should not be copied mechanically into the future end-user product. A later production presentation should be deliberately designed around low-friction learning workflows and the accepted WGT/service-hosting architecture. Individual components or interactions may be reused where they fit that product design.
+
 ## Data locality
 
 Illumination is local-first.
