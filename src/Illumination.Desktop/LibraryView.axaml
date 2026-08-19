@@ -122,9 +122,10 @@
         <TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" Watermark="Expected answer or solution" />
         <StackPanel Spacing="4" IsVisible="{Binding Editor.IsCreating}">
           <TextBlock Text="Add to Deck (optional)" Classes="secondary" />
-          <ComboBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding Editor.SelectedDeckPresentation}" Watermark="Leave empty for an unassigned Learning Item">
+          <ComboBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding Editor.SelectedDeckPresentation}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
+          <TextBlock Text="Leave empty to create an unassigned Learning Item." Classes="secondary" TextWrapping="Wrap" />
         </StackPanel>
         <Border Classes="surface" Padding="9">
           <StackPanel Spacing="5">
