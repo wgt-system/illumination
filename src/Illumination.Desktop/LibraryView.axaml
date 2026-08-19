@@ -8,7 +8,7 @@
     <Grid ColumnDefinitions="*,360" ColumnSpacing="24" Margin="12">
       <StackPanel Spacing="8">
         <TextBlock Text="Learning Items" FontSize="20" FontWeight="SemiBold" />
-        <TextBox Text="{Binding ContentCuration.SearchText}" Watermark="Search prompts" />
+        <TextBox Text="{Binding ContentCuration.SearchText}" Watermark="Search questions / tasks" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
           <ComboBox Width="170" ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding ContentCuration.FilterDeckPresentation}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
@@ -114,15 +114,32 @@
             <Button Content="Dismiss suggestion" Command="{Binding Editor.DismissAdvisorySuggestionCommand}" HorizontalAlignment="Left" />
           </StackPanel>
         </Border>
-        <TextBlock Text="Prompt" Classes="secondary" />
-        <TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
-        <TextBlock Text="Reference Solution" Classes="secondary" />
-        <TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+        <TextBlock Text="Question / task" FontWeight="SemiBold" />
+        <TextBlock Text="This is what appears on the front of the Learning Item during Study. It is not a ChatGPT prompt." Classes="secondary" TextWrapping="Wrap" />
+        <TextBox Text="{Binding Editor.Prompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Watermark="What should the learner answer or do?" />
+        <TextBlock Text="Reference answer" FontWeight="SemiBold" />
+        <TextBlock Text="The answer or solution shown for checking the Learning Item." Classes="secondary" TextWrapping="Wrap" />
+        <TextBox Text="{Binding Editor.ReferenceSolution}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" Watermark="Expected answer or solution" />
+        <StackPanel Spacing="4" IsVisible="{Binding Editor.IsCreating}">
+          <TextBlock Text="Add to Deck (optional)" Classes="secondary" />
+          <ComboBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding Editor.SelectedDeckPresentation}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="desktop:DeckPresentationItem"><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Leave empty to create an unassigned Learning Item." Classes="secondary" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Classes="surface" Padding="9">
+          <StackPanel Spacing="5">
+            <TextBlock Text="Need more than one card?" FontWeight="SemiBold" />
+            <TextBlock Text="Use Generate / Import to create or extend a Deck with ChatGPT and bring the returned Content Bundle back by paste, file picker, or drag &amp; drop." Classes="secondary" TextWrapping="Wrap" />
+            <Button Content="Open Generate / Import" Command="{Binding NavigateImportCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
         <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="6">
           <TextBlock Text="Response mode" VerticalAlignment="Center" />
           <ComboBox Width="150" ItemsSource="{Binding Editor.ResponseModes}" SelectedItem="{Binding Editor.ResponseMode}" />
-          <CheckBox Content="Low-interaction eligible" IsChecked="{Binding Editor.LowInteractionEligible}" />
+          <CheckBox Content="Suitable for low-interaction study" IsChecked="{Binding Editor.LowInteractionEligible}" />
         </WrapPanel>
+        <TextBlock Text="Response mode controls how an answer is entered or checked. Low-interaction suitability only affects optional Study filtering." Classes="secondary" TextWrapping="Wrap" />
         <TextBlock Text="{Binding Editor.ValidationMessage}" Foreground="#D14B42" TextWrapping="Wrap" />
 
         <Expander Header="Hints" IsExpanded="False">
