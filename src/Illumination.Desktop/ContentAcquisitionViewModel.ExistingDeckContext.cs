@@ -5,34 +5,20 @@ namespace Illumination.Desktop;
 
 public sealed partial class ContentAcquisitionViewModel
 {
-    private const string ExistingDeckInventoryMarker = "Existing target Deck anti-duplication inventory:";
     private Func<IReadOnlyList<LearningItemView>>? _existingDeckContentProvider;
 
     public void ConfigureExistingDeckContent(Func<IReadOnlyList<LearningItemView>> provider) =>
         _existingDeckContentProvider = provider ?? throw new ArgumentNullException(nameof(provider));
 
-    private GeneratedContentPrompt ApplyExistingDeckInventory(GeneratedContentPrompt prompt)
+    private IReadOnlyList<ContentGenerationInventoryItem> BuildExistingDeckInventory()
     {
-        ArgumentNullException.ThrowIfNull(prompt);
-        if (!UseExistingDeck || SelectedExistingDeck is null || _existingDeckContentProvider is null ||
-            prompt.Prompt.Contains(ExistingDeckInventoryMarker, StringComparison.Ordinal))
-            return prompt;
+        if (!UseExistingDeck || SelectedExistingDeck is null || _existingDeckContentProvider is null)
+            return [];
 
         var deckId = SelectedExistingDeck.Id;
-        var existing = _existingDeckContentProvider()
+        return _existingDeckContentProvider()
             .Where(item => item.DeckIds.Contains(deckId))
-            .OrderBy(item => item.Prompt, StringComparer.CurrentCultureIgnoreCase)
+            .Select(item => new ContentGenerationInventoryItem(item.Id, item.Prompt, item.ReferenceSolution))
             .ToArray();
-        if (existing.Length == 0) return prompt;
-
-        var lines = new List<string>
-        {
-            ExistingDeckInventoryMarker,
-            $"The selected existing Deck `{SelectedExistingDeck.Name}` already contains {existing.Length} Learning Item(s). Treat the prompt/referenceSolution pairs below as existing content, not suggestions to regenerate.",
-            "For ordinary extension, create genuinely new material and reject duplicates or cosmetic near-duplicates. Reuse existing content only when an explicit Reinforce follow-up intentionally calls for repetition.",
-        };
-        lines.AddRange(existing.Select(item => $"- prompt={item.Prompt} | referenceSolution={item.ReferenceSolution}"));
-
-        return new GeneratedContentPrompt(prompt.Prompt.TrimEnd() + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, lines) + Environment.NewLine);
     }
 }
