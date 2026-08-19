@@ -151,7 +151,7 @@ public static class LearningGenerationProfilePromptGuidance
         FollowUpProgressionMode.Reinforce =>
             "- Progression use — Reinforce / Easier: concentrate on the reinforcement pattern below, vary the wording/application enough to avoid cosmetic duplicates, and scaffold weak prerequisites rather than restarting the entire Deck from trivial material.",
         FollowUpProgressionMode.Continue =>
-            "- Progression use — Continue / Balanced: introduce genuinely new material at the current level while respecting weak prerequisites; established material is a foundation, not a request to regenerate it.",
+            "- Progression use — Continue / Balanced: Continue should introduce genuinely new material at the current level while respecting weak prerequisites; established material is a foundation, not a request to regenerate it.",
         FollowUpProgressionMode.Advance =>
             "- Progression use — Advance / Harder: build from comparatively established material, but weak/relearning evidence below is a prerequisite caution. Do not jump beyond prerequisites merely because some items are stable.",
         _ =>
