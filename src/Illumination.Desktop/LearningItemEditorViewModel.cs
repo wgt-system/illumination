@@ -26,6 +26,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
     public IReadOnlyList<LearningItemResponseMode> ResponseModes { get; } = Enum.GetValues<LearningItemResponseMode>();
 
     public bool IsEditing => _editingId.HasValue;
+    public bool IsCreating => !IsEditing;
     public bool IsSelection => ResponseMode == LearningItemResponseMode.Selection;
     public bool IsShortText => ResponseMode == LearningItemResponseMode.ShortText;
     public bool HasAdvisorySuggestion => !string.IsNullOrWhiteSpace(AdvisorySuggestion);
@@ -35,6 +36,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
     [ObservableProperty] private string _referenceSolution = string.Empty;
     [ObservableProperty] private LearningItemResponseMode _responseMode = LearningItemResponseMode.SelfAssessed;
     [ObservableProperty] private bool _lowInteractionEligible;
+    [ObservableProperty] private DeckPresentationItem? _selectedDeckPresentation;
     [ObservableProperty] private string _validationMessage = string.Empty;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasAdvisorySuggestion))]
     private string _advisorySuggestion = string.Empty;
@@ -52,11 +54,11 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
         ReferenceSolution = string.Empty;
         ResponseMode = LearningItemResponseMode.SelfAssessed;
         LowInteractionEligible = false;
+        SelectedDeckPresentation = null;
         ValidationMessage = string.Empty;
         AdvisorySuggestion = string.Empty;
         ClearCollections();
-        OnPropertyChanged(nameof(IsEditing));
-        OnPropertyChanged(nameof(FormTitle));
+        NotifyEditorModeChanged();
     }
 
     public async Task BeginEditAsync(Guid id)
@@ -69,6 +71,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
             ReferenceSolution = item.ReferenceSolution;
             ResponseMode = item.ResponseMode;
             LowInteractionEligible = item.LowInteractionEligible;
+            SelectedDeckPresentation = null;
             ValidationMessage = string.Empty;
             AdvisorySuggestion = string.Empty;
             ClearCollections();
@@ -76,8 +79,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
             foreach (var choice in item.DirectAnswerChoices) DirectChoices.Add(new(choice.Text, choice.IsCorrect, choice.Id));
             foreach (var choice in item.AssistanceAnswerChoices) AssistanceChoices.Add(new(choice.Text, choice.IsCorrect, choice.Id));
             foreach (var answer in item.AcceptedShortAnswers) AcceptedAnswers.Add(new(answer));
-            OnPropertyChanged(nameof(IsEditing));
-            OnPropertyChanged(nameof(FormTitle));
+            NotifyEditorModeChanged();
         }
         catch (Exception ex)
         {
@@ -121,7 +123,7 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
         try
         {
             if (string.IsNullOrWhiteSpace(Prompt) || string.IsNullOrWhiteSpace(ReferenceSolution))
-                throw new ContentValidationException("Prompt and Reference Solution are required.", new ArgumentException());
+                throw new ContentValidationException("Question / task and reference answer are required.", new ArgumentException());
 
             var hints = Hints.Where(x => !string.IsNullOrWhiteSpace(x.Text)).Select(x => new HintInput(x.Text)).ToArray();
             var direct = ResponseMode == LearningItemResponseMode.Selection
@@ -140,12 +142,16 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
             }
             else
             {
-                await _content.CreateLearningItemAsync(new CreateLearningItemCommand(
+                var created = await _content.CreateLearningItemAsync(new CreateLearningItemCommand(
                     Prompt, ReferenceSolution, ResponseMode, hints, direct, assistance, answers, LowInteractionEligible));
+                if (SelectedDeckPresentation is { } deck)
+                    await _content.AddLearningItemToDeckAsync(deck.Id, created.Id);
             }
 
             await _refresh();
-            _status(wasEditing ? "Learning Item updated." : "Learning Item created.");
+            _status(wasEditing ? "Learning Item updated." : SelectedDeckPresentation is { } selectedDeck
+                ? $"Learning Item created in '{selectedDeck.DisplayName}'."
+                : "Learning Item created.");
             BeginCreate();
         }
         catch (Exception ex)
@@ -153,6 +159,13 @@ public sealed partial class LearningItemEditorViewModel : ObservableObject
             ValidationMessage = ex.Message;
             _status(ex.Message);
         }
+    }
+
+    private void NotifyEditorModeChanged()
+    {
+        OnPropertyChanged(nameof(IsEditing));
+        OnPropertyChanged(nameof(IsCreating));
+        OnPropertyChanged(nameof(FormTitle));
     }
 
     private static void MoveUp<T>(ObservableCollection<T> items, T item)
