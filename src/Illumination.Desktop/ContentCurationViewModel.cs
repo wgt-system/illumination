@@ -334,8 +334,6 @@ public sealed class QualityReviewHistoryRowViewModel
 {
     public QualityReviewHistoryRowViewModel(QualityReviewView review) { Id = review.Id; Outcome = review.Outcome.ToString(); EvidenceType = review.EvidenceType.ToString(); Findings = review.Findings; SuggestedCorrection = review.SuggestedCorrection ?? string.Empty; ContentRevision = review.ContentRevision; IsActive = review.SupersededBy is null; }
     public Guid Id { get; }
-    public LearningItemResponseMode? ResponseMode { get; }
-    public IReadOnlyList<Guid> DeckIds { get; }
     public int ContentRevision { get; }
     public string Outcome { get; }
     public string EvidenceType { get; }
