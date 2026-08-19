@@ -45,7 +45,9 @@ public sealed class LearningStateMaintenanceServiceTests
 
         Assert.Equal(2, result.LearningItemCount);
         Assert.Equal(1, batch.CallCount);
-        Assert.Equal([first, second], batch.LastBatch!.Select(x => x.LearningItemId).OrderBy(x => x).ToArray().OrderBy(x => x).ToArray());
+        Assert.Equal(2, batch.LastBatch!.Count);
+        Assert.Contains(batch.LastBatch!, state => state.LearningItemId == first);
+        Assert.Contains(batch.LastBatch!, state => state.LearningItemId == second);
         Assert.All(batch.LastBatch!, state =>
         {
             Assert.True(state.IsNew);
