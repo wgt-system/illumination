@@ -75,6 +75,8 @@ public sealed partial class ContentAcquisitionViewModel
         try
         {
             var generated = ApplyExistingDeckInventory(new GeneratedContentPrompt(value));
+            if (_sourceDeckContext is not null)
+                generated = LearningGenerationProfilePromptGuidance.Apply(generated, _sourceDeckContext, ProgressionMode);
             if (HasExplicitLanguageGuidance)
             {
                 generated = LanguageContentPromptGuidance.Apply(
