@@ -65,6 +65,7 @@ internal static class DesktopComposition
         viewModel.ConfigureLearningStateMaintenance(learningStateMaintenance);
         viewModel.ContentAcquisition.ConfigureContentPreview(content);
         viewModel.ContentAcquisition.ConfigureExistingDeckContent(() => viewModel.LearningItems.ToArray());
+        viewModel.ContentAcquisition.ConfigureDeckLearningContextProvider(insights.GetDeckLearningContextAsync);
         await viewModel.InitializeAsync();
         return viewModel;
     }

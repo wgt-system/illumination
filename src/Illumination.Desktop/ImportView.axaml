@@ -86,7 +86,7 @@
 
                 <TextBlock Text="Optional guidance" Classes="secondary" />
                 <TextBox Text="{Binding Guidance}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" />
-                <Button Content="Generate Prompt" Command="{Binding GeneratePromptCommand}" HorizontalAlignment="Left" />
+                <Button Content="Generate Prompt" Command="{Binding GenerateLearningAwarePromptCommand}" HorizontalAlignment="Left" />
               </StackPanel>
 
               <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="7">
