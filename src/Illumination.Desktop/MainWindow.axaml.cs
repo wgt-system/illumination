@@ -7,7 +7,7 @@ public partial class MainWindow : Window
 {
     private async void OnBundleDrop(object? sender, DragEventArgs e)
     {
-        var paths = e.Data.GetFileNames()?.ToArray() ?? [];
+        var paths = DroppedFileDataTransfer.GetLocalPaths(e);
         if (DataContext is MainWindowViewModel vm) await vm.ContentAcquisition.LoadBundleFromDropAsync(paths);
         e.Handled = true;
     }
