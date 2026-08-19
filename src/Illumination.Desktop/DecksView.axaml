@@ -12,7 +12,16 @@
       <Grid ColumnDefinitions="300,*" ColumnSpacing="20">
         <StackPanel Spacing="10">
           <TextBlock Text="Your Decks" FontWeight="SemiBold" />
-          <ListBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedDeckPresentation}" MinHeight="300">
+          <Border Classes="surface" Padding="12"
+                  IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}">
+            <StackPanel Spacing="5">
+              <TextBlock Text="No Decks yet" FontWeight="SemiBold" />
+              <TextBlock Text="Create a Deck below, or use Generate / Import to create structured learning content and assign it to a Deck." Classes="secondary" TextWrapping="Wrap" />
+              <Button Content="Open Generate / Import" Command="{Binding NavigateImportCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+          </Border>
+          <ListBox ItemsSource="{Binding DeckPresentationItems}" SelectedItem="{Binding SelectedDeckPresentation}" MinHeight="300"
+                   IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="desktop:DeckPresentationItem">
                 <StackPanel Margin="6">
@@ -23,7 +32,8 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <Expander Header="Create a Deck" IsExpanded="False">
+          <Expander Header="Create a Deck"
+                    IsExpanded="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="6" Margin="0,5,0,0">
               <TextBlock Text="A Deck groups cards for Study. A card may belong to more than one Deck while keeping one shared Learning State." Classes="secondary" TextWrapping="Wrap" />
               <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
@@ -31,7 +41,8 @@
             </StackPanel>
           </Expander>
 
-          <Border Classes="surface" Padding="10">
+          <Border Classes="surface" Padding="10"
+                  IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="7">
               <TextBlock Text="Use selected Deck" FontWeight="SemiBold" />
               <TextBlock Text="Study follows the scheduler. Practice now ignores due dates and never writes Reviews or scheduling changes." Classes="secondary" TextWrapping="Wrap" />
@@ -43,7 +54,8 @@
             </StackPanel>
           </Border>
 
-          <Expander Header="Study across Decks" IsExpanded="False">
+          <Expander Header="Study across Decks" IsExpanded="False"
+                    IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="6" Margin="0,5,0,0">
               <TextBlock Text="Prepare one Study Session using the union of all current Decks. Shared cards are deduplicated." Classes="secondary" TextWrapping="Wrap" />
               <Button Content="Study all Decks" Command="{Binding PrepareAllDecksStudyCommand}" HorizontalAlignment="Left" />
@@ -69,7 +81,8 @@
             </StackPanel>
           </Border>
 
-          <Expander Header="Manage selected Deck" IsExpanded="False">
+          <Expander Header="Manage selected Deck" IsExpanded="False"
+                    IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="8" Margin="0,5,0,0">
               <TextBlock Text="Rename, export or delete the selected Deck. Deleting a Deck removes only the Deck and memberships; its cards, Reviews and Learning State remain." Classes="secondary" TextWrapping="Wrap" />
               <TextBox Text="{Binding RenameDeckName}" Watermark="New Deck name" />
@@ -86,7 +99,8 @@
             </StackPanel>
           </Expander>
 
-          <Expander Header="Advanced: learning-state maintenance" IsExpanded="False">
+          <Expander Header="Advanced: learning-state maintenance" IsExpanded="False"
+                    IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="6" Margin="0,5,0,0">
               <TextBlock Text="Restart learning changes real scheduling state for the selected Deck. It keeps content, membership and immutable Review history, but makes eligible cards new and due now. Use Practice now instead when you only want to look through material again." TextWrapping="Wrap" Classes="secondary" />
               <TextBlock Text="The restart action requires a second click to confirm." TextWrapping="Wrap" Classes="secondary" />
@@ -97,49 +111,77 @@
 
         <StackPanel Grid.Column="1" Spacing="10">
           <TextBlock Text="Cards in selected Deck" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Text="Select a card below to practice it immediately or use the maintenance controls. Deck membership changes do not delete cards from the Library." Classes="secondary" TextWrapping="Wrap" />
-          <ListBox ItemsSource="{Binding SelectedDeckItems}" SelectedItem="{Binding SelectedDeckItem}" MinHeight="280">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="content:LearningItemView">
-                <StackPanel Margin="6" Spacing="2">
-                  <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding ResponseMode}" Classes="secondary" />
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-
-          <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
-            <Button Content="Practice selected card" Command="{Binding StartSelectedItemPracticeCommand}" />
-          </WrapPanel>
-
-          <Expander Header="Manage cards in this Deck" IsExpanded="False">
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="14" Margin="0,6,0,0">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Remove from Deck" FontWeight="SemiBold" />
-                <TextBlock Text="Removes only this membership. The card and its Learning State remain available elsewhere." Classes="secondary" TextWrapping="Wrap" />
-                <Button Content="Remove selected card" Command="{Binding RemoveFromDeckCommand}" HorizontalAlignment="Left" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="6">
-                <TextBlock Text="Add existing Library card" FontWeight="SemiBold" />
-                <ListBox ItemsSource="{Binding AvailableDeckItems}" SelectedItem="{Binding SelectedAvailableDeckItem}" MaxHeight="260">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="content:LearningItemView">
-                      <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" Margin="6" />
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-                <Button Content="Add selected card" Command="{Binding AddToDeckCommand}" HorizontalAlignment="Left" />
-              </StackPanel>
-            </Grid>
-          </Expander>
-
-          <Expander Header="Advanced: selected-card learning state" IsExpanded="False">
-            <StackPanel Spacing="6" Margin="0,5,0,0">
-              <TextBlock Text="Restart only the selected card's current scheduling state. Review history is preserved." Classes="secondary" TextWrapping="Wrap" />
-              <Button Content="Restart selected card" Command="{Binding RestartSelectedDeckItemLearningCommand}" HorizontalAlignment="Left" />
+          <Border Classes="surface" Padding="12"
+                  IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}">
+            <StackPanel Spacing="5">
+              <TextBlock Text="Choose or create a Deck first" FontWeight="SemiBold" />
+              <TextBlock Text="Once a Deck exists, its cards and membership controls appear here." Classes="secondary" TextWrapping="Wrap" />
             </StackPanel>
-          </Expander>
+          </Border>
+
+          <StackPanel Spacing="10"
+                      IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
+            <TextBlock Text="Select a card below to practice it immediately or use the maintenance controls. Deck membership changes do not delete cards from the Library." Classes="secondary" TextWrapping="Wrap" />
+            <Border Classes="surface" Padding="12"
+                    IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}">
+              <StackPanel Spacing="5">
+                <TextBlock Text="This Deck has no cards yet" FontWeight="SemiBold" />
+                <TextBlock Text="Add an existing Library card below, create a card in Library, or generate follow-up content for this Deck." Classes="secondary" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <ListBox ItemsSource="{Binding SelectedDeckItems}" SelectedItem="{Binding SelectedDeckItem}" MinHeight="280"
+                     IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="content:LearningItemView">
+                  <StackPanel Margin="6" Spacing="2">
+                    <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding ResponseMode}" Classes="secondary" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6"
+                       IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
+              <Button Content="Practice selected card" Command="{Binding StartSelectedItemPracticeCommand}" />
+            </WrapPanel>
+
+            <Expander Header="Manage cards in this Deck" IsExpanded="False">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="14" Margin="0,6,0,0">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Remove from Deck" FontWeight="SemiBold" />
+                  <TextBlock Text="Removes only this membership. The card and its Learning State remain available elsewhere." Classes="secondary" TextWrapping="Wrap" />
+                  <TextBlock Text="There are no cards to remove from this Deck." Classes="secondary"
+                             IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}" />
+                  <Button Content="Remove selected card" Command="{Binding RemoveFromDeckCommand}" HorizontalAlignment="Left"
+                          IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="6">
+                  <TextBlock Text="Add existing Library card" FontWeight="SemiBold" />
+                  <TextBlock Text="No other Library cards are available to add. Create or import more content first." Classes="secondary" TextWrapping="Wrap"
+                             IsVisible="{Binding AvailableDeckItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}" />
+                  <ListBox ItemsSource="{Binding AvailableDeckItems}" SelectedItem="{Binding SelectedAvailableDeckItem}" MaxHeight="260"
+                           IsVisible="{Binding AvailableDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="content:LearningItemView">
+                        <TextBlock Text="{Binding Prompt}" TextWrapping="Wrap" Margin="6" />
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Button Content="Add selected card" Command="{Binding AddToDeckCommand}" HorizontalAlignment="Left"
+                          IsVisible="{Binding AvailableDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}" />
+                </StackPanel>
+              </Grid>
+            </Expander>
+
+            <Expander Header="Advanced: selected-card learning state" IsExpanded="False"
+                      IsVisible="{Binding SelectedDeckItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
+              <StackPanel Spacing="6" Margin="0,5,0,0">
+                <TextBlock Text="Restart only the selected card's current scheduling state. Review history is preserved." Classes="secondary" TextWrapping="Wrap" />
+                <Button Content="Restart selected card" Command="{Binding RestartSelectedDeckItemLearningCommand}" HorizontalAlignment="Left" />
+              </StackPanel>
+            </Expander>
+          </StackPanel>
         </StackPanel>
       </Grid>
     </StackPanel>
