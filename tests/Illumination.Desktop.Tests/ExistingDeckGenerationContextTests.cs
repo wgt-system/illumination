@@ -8,7 +8,7 @@ namespace Illumination.Desktop.Tests;
 public sealed class ExistingDeckGenerationContextTests
 {
     [Fact]
-    public async Task Existing_deck_generation_includes_current_card_inventory_and_language_profile()
+    public async Task Existing_deck_generation_includes_current_card_inventory_and_language_profile_before_contract()
     {
         var deckId = Guid.NewGuid();
         var firstId = Guid.NewGuid();
@@ -34,11 +34,17 @@ public sealed class ExistingDeckGenerationContextTests
         await vm.GeneratePromptCommand.ExecuteAsync(null);
 
         Assert.Contains("Existing target Deck anti-duplication inventory:", vm.GeneratedPrompt);
-        Assert.Contains("prompt=makan | referenceSolution=essen", vm.GeneratedPrompt);
-        Assert.Contains("prompt=tertidur | referenceSolution=einschlafen", vm.GeneratedPrompt);
-        Assert.Contains("Do not generate the same word, phrase, question, answer pair", vm.GeneratedPrompt);
+        Assert.Contains("makan => essen", vm.GeneratedPrompt);
+        Assert.Contains("tertidur => einschlafen", vm.GeneratedPrompt);
+        Assert.Contains("Never create an exact prompt/referenceSolution duplicate", vm.GeneratedPrompt);
         Assert.Contains("CEFR B1", vm.GeneratedPrompt);
         Assert.Contains("Exercise profile: vocabulary flashcards", vm.GeneratedPrompt);
+        Assert.True(
+            vm.GeneratedPrompt.IndexOf("Explicit language-learning controls:", StringComparison.Ordinal) <
+            vm.GeneratedPrompt.IndexOf("Canonical Content Bundle 1.0 contract guidance:", StringComparison.Ordinal));
+        Assert.True(
+            vm.GeneratedPrompt.IndexOf("Existing target Deck anti-duplication inventory:", StringComparison.Ordinal) <
+            vm.GeneratedPrompt.IndexOf("Canonical Content Bundle 1.0 contract guidance:", StringComparison.Ordinal));
     }
 
     private static LearningItemView Item(Guid id, string prompt, string solution, Guid deckId) =>
