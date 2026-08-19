@@ -44,7 +44,7 @@
               </WrapPanel>
               <Button Content="Backup now" Command="{Binding LocalData.CreateBackupCommand}" HorizontalContentAlignment="Left" />
               <Button Content="Export backup..." Command="{Binding LocalData.ExportBackupCommand}" HorizontalContentAlignment="Left" />
-              <TextBlock Text="Automatic snapshots stay local; the five most recent rolling backups are retained. Accepted mutating content imports are backed up before commit." TextWrapping="Wrap" Classes="secondary" />
+              <TextBlock Text="Automatic snapshots stay local; the five most recent rolling backups are retained. Content imports are backed up before commit." TextWrapping="Wrap" Classes="secondary" />
             </StackPanel>
           </Expander>
         </StackPanel>
