@@ -10,6 +10,21 @@ public sealed partial class ContentCurationViewModel
 
     partial void OnFilterDeckPresentationChanged(DeckPresentationItem? value) => FilterDeck = value?.Deck;
 
+    public void NormalizeDeckPresentations(IReadOnlyList<DeckPresentationItem> presentations)
+    {
+        ArgumentNullException.ThrowIfNull(presentations);
+
+        var filterDeckId = FilterDeckPresentation?.Id;
+        FilterDeckPresentation = filterDeckId is { } filterId
+            ? presentations.FirstOrDefault(x => x.Id == filterId)
+            : null;
+
+        var bulkDeckId = BulkTargetDeckPresentation?.Id;
+        BulkTargetDeckPresentation = bulkDeckId is { } bulkId
+            ? presentations.FirstOrDefault(x => x.Id == bulkId)
+            : null;
+    }
+
     [RelayCommand]
     private void ClearLibraryFilters()
     {
