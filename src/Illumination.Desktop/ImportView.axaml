@@ -64,10 +64,21 @@
 
                 <Expander Header="Language-learning controls" IsExpanded="False">
                   <StackPanel Spacing="5" Margin="0,5,0,0">
-                    <TextBlock Text="Optional. Leave empty for automatic inference from Subject and Guidance." Classes="secondary" TextWrapping="Wrap" />
+                    <TextBlock Text="Optional. Set a stable level and exercise profile when generating language-learning content instead of relying on free-form Guidance alone." Classes="secondary" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="Learner level" Classes="secondary" />
+                        <ComboBox ItemsSource="{Binding LanguageProficiencyOptions}" SelectedItem="{Binding SelectedLanguageProficiency}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="3">
+                        <TextBlock Text="Exercise profile" Classes="secondary" />
+                        <ComboBox ItemsSource="{Binding LanguageExerciseProfileOptions}" SelectedItem="{Binding SelectedLanguageExerciseProfile}" />
+                      </StackPanel>
+                    </Grid>
                     <TextBox Text="{Binding InstructionLanguage}" Watermark="Instruction/meta language (e.g. German)" />
-                    <TextBox Text="{Binding SourceLanguage}" Watermark="Source/input language (e.g. English)" />
-                    <TextBox Text="{Binding TargetLanguage}" Watermark="Target/answer language (e.g. Indonesian)" />
+                    <TextBox Text="{Binding SourceLanguage}" Watermark="Source/input language (e.g. Indonesian)" />
+                    <TextBox Text="{Binding TargetLanguage}" Watermark="Target/answer language (e.g. German)" />
+                    <TextBlock Text="CEFR levels are generation difficulty targets, not certifications. Vocabulary flashcards explicitly request concise lexical cards instead of open-ended LLM tasks." Classes="secondary" TextWrapping="Wrap" />
                     <TextBlock Text="For immersion, explicitly set the instruction language to the target language." Classes="secondary" TextWrapping="Wrap" />
                   </StackPanel>
                 </Expander>
