@@ -59,6 +59,7 @@ internal static class DesktopComposition
         viewModel.ConfigureLocalData(backupService, settingsStore, databasePath, defaultBackupDirectory);
         viewModel.ConfigureDeckExport(new ContentBundleExportService(content));
         viewModel.ContentAcquisition.ConfigureContentPreview(content);
+        viewModel.ContentAcquisition.ConfigureExistingDeckContent(() => viewModel.LearningItems.ToArray());
         await viewModel.InitializeAsync();
         return viewModel;
     }
