@@ -20,6 +20,14 @@
         </WrapPanel>
         <Button Content="Generate learning-aware follow-up" Command="{Binding GenerateFollowUpFromSelectedDeckCommand}" HorizontalAlignment="Left" />
 
+        <Expander Header="Restart learning" IsExpanded="False" Margin="0,4,0,0">
+          <StackPanel Spacing="6" Margin="0,5,0,0">
+            <TextBlock Text="Reset the selected Deck's current scheduling state so its items become new and due now. Content, Review history, Deck membership and Suspended/Mastered lifecycle are preserved." TextWrapping="Wrap" Classes="secondary" />
+            <TextBlock Text="This changes real Learning State; it is not a temporary practice mode. The action requires a second click to confirm." TextWrapping="Wrap" Classes="secondary" />
+            <Button Content="Restart Deck learning" Command="{Binding RestartSelectedDeckLearningCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Expander>
+
         <TextBlock Text="Deck management" FontWeight="SemiBold" Margin="0,8,0,0" />
         <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
         <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
@@ -47,6 +55,7 @@
         </ListBox>
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
           <Button Content="Remove selected" Command="{Binding RemoveFromDeckCommand}" />
+          <Button Content="Restart selected item" Command="{Binding RestartSelectedDeckItemLearningCommand}" />
           <TextBlock Text="Available Learning Items" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0" />
         </StackPanel>
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
