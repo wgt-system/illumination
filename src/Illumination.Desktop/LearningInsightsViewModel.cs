@@ -15,7 +15,11 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
     private readonly Func<Task>? _refreshAll;
     private readonly Func<DeckInsight, Task> _generateFollowUp;
 
-    public LearningInsightsViewModel(LearningInsightService? service, Func<DeckInsight, Task> generateFollowUp, ContentManagementService? content = null, Func<Task>? refreshAll = null)
+    public LearningInsightsViewModel(
+        LearningInsightService? service,
+        Func<DeckInsight, Task> generateFollowUp,
+        ContentManagementService? content = null,
+        Func<Task>? refreshAll = null)
     {
         _service = service;
         _generateFollowUp = generateFollowUp;
@@ -27,25 +31,66 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
     public ObservableCollection<LearningItemInsight> Items { get; } = [];
     public ObservableCollection<ReviewHistoryEntry> Reviews { get; } = [];
     public ObservableCollection<StudySessionHistoryEntry> Sessions { get; } = [];
-    public IReadOnlyList<LearningItemLifecycle?> LifecycleOptions { get; } = [null, LearningItemLifecycle.Active, LearningItemLifecycle.Suspended, LearningItemLifecycle.Mastered];
+    public IReadOnlyList<LearningItemLifecycle?> LifecycleOptions { get; } =
+        [null, LearningItemLifecycle.Active, LearningItemLifecycle.Suspended, LearningItemLifecycle.Mastered];
     public IReadOnlyList<FollowUpProgressionMode> ProgressionModes { get; } = Enum.GetValues<FollowUpProgressionMode>();
 
-    [ObservableProperty] private LearningInsightOverview? _overview;
-    [ObservableProperty] private LearningActivitySummary? _activity;
-    [ObservableProperty] private LearningDueForecast? _dueForecast;
-    [ObservableProperty] private DeckInsight? _selectedDeck;
-    [ObservableProperty] private string _promptSearch = string.Empty;
-    [ObservableProperty] private LearningItemLifecycle? _lifecycle;
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SuspendCommand)), NotifyCanExecuteChangedFor(nameof(MarkMasteredCommand)), NotifyCanExecuteChangedFor(nameof(ReactivateCommand)), NotifyCanExecuteChangedFor(nameof(UnmarkMasteredCommand))] private LearningItemInsight? _selectedItem;
-    [ObservableProperty] private bool _newOnly;
-    [ObservableProperty] private bool _dueNowOnly;
-    [ObservableProperty] private bool _relearningOnly;
-    [ObservableProperty] private FollowUpProgressionMode _progressionMode = FollowUpProgressionMode.Continue;
-    [ObservableProperty] private bool _selfAssessedEnabled;
-    [ObservableProperty] private bool _selectionEnabled;
-    [ObservableProperty] private bool _shortTextEnabled;
-    [ObservableProperty] private bool _codeEnabled;
-    [ObservableProperty] private string _status = string.Empty;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasLearningData))]
+    private LearningInsightOverview? _overview;
+
+    [ObservableProperty]
+    private LearningActivitySummary? _activity;
+
+    [ObservableProperty]
+    private LearningDueForecast? _dueForecast;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasSelectedDeck)), NotifyCanExecuteChangedFor(nameof(GenerateFollowUpCommand))]
+    private DeckInsight? _selectedDeck;
+
+    [ObservableProperty]
+    private string _promptSearch = string.Empty;
+
+    [ObservableProperty]
+    private LearningItemLifecycle? _lifecycle;
+
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SuspendCommand)), NotifyCanExecuteChangedFor(nameof(MarkMasteredCommand)), NotifyCanExecuteChangedFor(nameof(ReactivateCommand)), NotifyCanExecuteChangedFor(nameof(UnmarkMasteredCommand)), NotifyPropertyChangedFor(nameof(HasSelectedItem))]
+    private LearningItemInsight? _selectedItem;
+
+    [ObservableProperty]
+    private bool _newOnly;
+
+    [ObservableProperty]
+    private bool _dueNowOnly;
+
+    [ObservableProperty]
+    private bool _relearningOnly;
+
+    [ObservableProperty]
+    private FollowUpProgressionMode _progressionMode = FollowUpProgressionMode.Continue;
+
+    [ObservableProperty]
+    private bool _selfAssessedEnabled;
+
+    [ObservableProperty]
+    private bool _selectionEnabled;
+
+    [ObservableProperty]
+    private bool _shortTextEnabled;
+
+    [ObservableProperty]
+    private bool _codeEnabled;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasStatus))]
+    private string _status = string.Empty;
+
+    public bool HasLearningData => Overview?.TotalLearningItems > 0;
+    public bool HasDecks => Decks.Count > 0;
+    public bool HasSelectedDeck => SelectedDeck is not null;
+    public bool HasItems => Items.Count > 0;
+    public bool HasSelectedItem => SelectedItem is not null;
+    public bool HasReviews => Reviews.Count > 0;
+    public bool HasSessions => Sessions.Count > 0;
+    public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
 
     partial void OnSelectedDeckChanged(DeckInsight? value) => _ = RefreshItemsAsync();
     partial void OnPromptSearchChanged(string value) => _ = RefreshItemsAsync();
@@ -62,23 +107,34 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
             Overview = await _service.GetOverviewAsync();
             Activity = await _service.GetLearningActivityAsync(30);
             DueForecast = await _service.GetDueForecastAsync(14);
+
             var decks = await _service.GetDeckInsightsAsync();
             var selectedId = SelectedDeck?.Id;
             Replace(Decks, decks);
+            OnPropertyChanged(nameof(HasDecks));
             SelectedDeck = Decks.FirstOrDefault(x => x.Id == selectedId) ?? Decks.FirstOrDefault();
+
             await RefreshItemsAsync();
+
             Replace(Reviews, await _service.GetReviewHistoryAsync(limit: 12));
             Replace(Sessions, await _service.GetStudySessionHistoryAsync(limit: 8));
+            OnPropertyChanged(nameof(HasReviews));
+            OnPropertyChanged(nameof(HasSessions));
             Status = string.Empty;
         }
-        catch (Exception exception) { Status = exception.Message; }
+        catch (Exception exception)
+        {
+            Status = exception.Message;
+        }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanGenerateFollowUp))]
     private async Task GenerateFollowUpAsync()
     {
         if (SelectedDeck is not null) await _generateFollowUp(SelectedDeck);
     }
+
+    private bool CanGenerateFollowUp() => SelectedDeck is not null;
 
     public IReadOnlyList<LearningItemResponseMode> SelectedResponseModes => new[]
     {
@@ -107,22 +163,38 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanSuspend))]
-    private Task SuspendAsync() => ChangeLifecycleAsync(item => _content!.SuspendLearningItemAsync(item.LearningItemId), "Learning Item suspended.");
+    private Task SuspendAsync() => ChangeLifecycleAsync(
+        item => _content!.SuspendLearningItemAsync(item.LearningItemId),
+        "Learning Item suspended.");
 
     [RelayCommand(CanExecute = nameof(CanReactivate))]
-    private Task ReactivateAsync() => ChangeLifecycleAsync(item => _content!.ReactivateLearningItemAsync(item.LearningItemId), "Learning Item reactivated and due now.");
+    private Task ReactivateAsync() => ChangeLifecycleAsync(
+        item => _content!.ReactivateLearningItemAsync(item.LearningItemId),
+        "Learning Item reactivated and due now.");
 
     [RelayCommand(CanExecute = nameof(CanMarkMastered))]
-    private Task MarkMasteredAsync() => ChangeLifecycleAsync(item => _content!.MarkLearningItemMasteredAsync(item.LearningItemId), "Learning Item marked as mastered.");
+    private Task MarkMasteredAsync() => ChangeLifecycleAsync(
+        item => _content!.MarkLearningItemMasteredAsync(item.LearningItemId),
+        "Learning Item marked as mastered.");
 
     [RelayCommand(CanExecute = nameof(CanUnmarkMastered))]
-    private Task UnmarkMasteredAsync() => ChangeLifecycleAsync(item => _content!.UnmarkLearningItemMasteredAsync(item.LearningItemId), "Learning Item returned to active and due now.");
+    private Task UnmarkMasteredAsync() => ChangeLifecycleAsync(
+        item => _content!.UnmarkLearningItemMasteredAsync(item.LearningItemId),
+        "Learning Item returned to active and due now.");
 
     private async Task ChangeLifecycleAsync(Func<LearningItemInsight, Task> action, string message)
     {
         if (_content is null || SelectedItem is null) return;
-        try { await action(SelectedItem); await (_refreshAll?.Invoke() ?? RefreshAsync()); Status = message; }
-        catch (Exception exception) { Status = exception.Message; }
+        try
+        {
+            await action(SelectedItem);
+            await (_refreshAll?.Invoke() ?? RefreshAsync());
+            Status = message;
+        }
+        catch (Exception exception)
+        {
+            Status = exception.Message;
+        }
     }
 
     private async Task RefreshItemsAsync()
@@ -130,6 +202,7 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
         if (_service is null) return;
         try
         {
+            var selectedItemId = SelectedItem?.LearningItemId;
             var items = await _service.GetLearningItemInsightsAsync(new LearningItemInsightQuery(
                 SelectedDeck?.Id,
                 PromptSearch,
@@ -137,10 +210,15 @@ public sealed partial class LearningInsightsViewModel : ObservableObject
                 NewOnly,
                 DueNowOnly,
                 RelearningOnly));
+
             Replace(Items, items);
-            SelectedItem = Items.FirstOrDefault(x => x.LearningItemId == SelectedItem?.LearningItemId);
+            OnPropertyChanged(nameof(HasItems));
+            SelectedItem = Items.FirstOrDefault(x => x.LearningItemId == selectedItemId);
         }
-        catch (Exception exception) { Status = exception.Message; }
+        catch (Exception exception)
+        {
+            Status = exception.Message;
+        }
     }
 
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values)
