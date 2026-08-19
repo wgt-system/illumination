@@ -18,6 +18,31 @@
           <Button Content="Study selected" Command="{Binding PrepareSelectedDeckStudyCommand}" />
           <Button Content="Study all Decks" Command="{Binding PrepareAllDecksStudyCommand}" />
         </WrapPanel>
+        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
+          <Button Content="Practice Deck now" Command="{Binding StartSelectedDeckPracticeCommand}" />
+          <Button Content="Practice selected item" Command="{Binding StartSelectedItemPracticeCommand}" />
+        </WrapPanel>
+        <TextBlock Text="Practice now ignores due dates and is read-only: no grades, Reviews or scheduling changes." TextWrapping="Wrap" Classes="secondary" />
+
+        <Border Classes="surface" IsVisible="{Binding PracticeIsActive}" Padding="9">
+          <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Practice now" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="{Binding PracticeProgress}" Classes="secondary" />
+            </Grid>
+            <TextBlock Text="{Binding CurrentPracticeItem.Prompt}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <Border Background="#0C008000" CornerRadius="5" Padding="7" IsVisible="{Binding PracticeSolutionRevealed}">
+              <TextBlock Text="{Binding CurrentPracticeItem.ReferenceSolution}" TextWrapping="Wrap" />
+            </Border>
+            <Button Content="Reveal reference answer" Command="{Binding RevealPracticeSolutionCommand}" IsVisible="{Binding !PracticeSolutionRevealed}" HorizontalAlignment="Left" />
+            <WrapPanel Orientation="Horizontal" ItemSpacing="5" LineSpacing="5">
+              <Button Content="Previous" Command="{Binding PreviousPracticeItemCommand}" />
+              <Button Content="Next" Command="{Binding NextPracticeItemCommand}" />
+              <Button Content="Close" Command="{Binding ClosePracticeCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
         <Button Content="Generate learning-aware follow-up" Command="{Binding GenerateFollowUpFromSelectedDeckCommand}" HorizontalAlignment="Left" />
 
         <Expander Header="Restart learning" IsExpanded="False" Margin="0,4,0,0">
