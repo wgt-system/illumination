@@ -15,7 +15,7 @@ public sealed record LanguageExerciseProfileOption(string Label, LanguageExercis
 
 public sealed partial class ContentAcquisitionViewModel
 {
-    private bool _applyingLanguageGuidance;
+    private bool _composingGeneratedPrompt;
 
     public IReadOnlyList<LanguageProficiencyOption> LanguageProficiencyOptions { get; } =
     [
@@ -69,32 +69,41 @@ public sealed partial class ContentAcquisitionViewModel
 
     partial void OnGeneratedPromptChanged(string value)
     {
-        if (_applyingLanguageGuidance || string.IsNullOrWhiteSpace(value)) return;
+        if (_composingGeneratedPrompt || string.IsNullOrWhiteSpace(value)) return;
 
-        _applyingLanguageGuidance = true;
+        _composingGeneratedPrompt = true;
         try
         {
-            var generated = ApplyExistingDeckInventory(new GeneratedContentPrompt(value));
-            if (_sourceDeckContext is not null)
-                generated = LearningGenerationProfilePromptGuidance.Apply(generated, _sourceDeckContext, ProgressionMode);
-            if (HasExplicitLanguageGuidance)
-            {
-                generated = LanguageContentPromptGuidance.Apply(
-                    generated,
-                    new LanguageGenerationGuidance(
-                        InstructionLanguage,
-                        SourceLanguage,
-                        TargetLanguage,
-                        SelectedLanguageProficiency.Level,
-                        SelectedLanguageExerciseProfile.Profile,
-                        ProgressionMode,
-                        HasSourceDeckContext || (UseExistingDeck && SelectedExistingDeck is not null)));
-            }
-            GeneratedPrompt = generated.Prompt;
+            var command = new GenerateContentPromptCommand(
+                Subject,
+                RequestedItemCount,
+                NewDeckName: UseNewDeck ? NewDeckName : null,
+                ExistingDeckId: UseExistingDeck ? SelectedExistingDeck?.Id : null,
+                Guidance: Guidance,
+                SourceDeckContext: _sourceDeckContext,
+                ProgressionMode: ProgressionMode,
+                AllowedResponseModes: RestrictResponseModes ? SelectedResponseModes() : null);
+            var language = HasExplicitLanguageGuidance
+                ? new LanguageGenerationGuidance(
+                    InstructionLanguage,
+                    SourceLanguage,
+                    TargetLanguage,
+                    SelectedLanguageProficiency.Level,
+                    SelectedLanguageExerciseProfile.Profile,
+                    ProgressionMode,
+                    HasSourceDeckContext || (UseExistingDeck && SelectedExistingDeck is not null))
+                : null;
+
+            GeneratedPrompt = ContentGenerationPromptComposer.Compose(
+                _service,
+                command,
+                language,
+                BuildExistingDeckInventory(),
+                UseExistingDeck ? SelectedExistingDeck?.Name : null).Prompt;
         }
         finally
         {
-            _applyingLanguageGuidance = false;
+            _composingGeneratedPrompt = false;
         }
     }
 }
