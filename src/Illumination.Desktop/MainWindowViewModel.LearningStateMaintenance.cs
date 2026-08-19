@@ -45,9 +45,28 @@ public sealed partial class MainWindowViewModel
         {
             var result = await _learningStateMaintenance.RestartDeckAsync(deckId);
             await RefreshContentAsync(deckId);
-            StatusMessage = result.LearningItemCount == 0
-                ? "The Deck is empty; no Learning State changed."
-                : $"Restarted learning for {result.LearningItemCount} item(s). They are new and due now; Review history and lifecycle were preserved.";
+            if (result.LearningItemCount == 0)
+            {
+                StatusMessage = "The Deck is empty; no Learning State changed.";
+                return;
+            }
+
+            var now = _timeProvider.GetUtcNow();
+            var refreshed = LearningItems.Where(item => item.DeckIds.Contains(deckId)).ToArray();
+            var resetVisible = refreshed.Count(item => item.IsNew && item.DueAt <= now);
+            if (resetVisible != result.LearningItemCount)
+                throw new InvalidOperationException($"Restart wrote {result.LearningItemCount} item(s), but the refreshed view reports only {resetVisible} as new and due now.");
+
+            var active = refreshed.Count(item => item.Lifecycle == LearningItemLifecycle.Active);
+            var excludedByLifecycle = refreshed.Length - active;
+            var studySelection = StudyAllNew
+                ? "Scheduled Study is currently set to include all new Active cards."
+                : $"Scheduled Study still applies the current new-card limit ({StudyNewItemLimitText}) and its filters; choose All new to include every reset Active card in one session.";
+            var lifecycle = excludedByLifecycle == 0
+                ? string.Empty
+                : $" {excludedByLifecycle} item(s) remain Suspended/Mastered and therefore stay outside normal Study until reactivated/unmastered.";
+
+            StatusMessage = $"Restarted learning for {result.LearningItemCount} item(s); the refreshed state confirms all are New and due now. {studySelection}{lifecycle} Review history is preserved.";
         });
     }
 
@@ -85,7 +104,24 @@ public sealed partial class MainWindowViewModel
         {
             await _learningStateMaintenance.RestartLearningItemAsync(itemId);
             await RefreshContentAsync(deckId);
-            StatusMessage = "Learning Item restarted. It is new and due now; Review history and lifecycle were preserved.";
+            SelectedDeckItem = SelectedDeckItems.FirstOrDefault(item => item.Id == itemId);
+
+            var restarted = LearningItems.FirstOrDefault(item => item.Id == itemId)
+                ?? throw new InvalidOperationException("The restarted Learning Item disappeared from the refreshed content view.");
+            if (!restarted.IsNew || restarted.DueAt > _timeProvider.GetUtcNow())
+                throw new InvalidOperationException("Restart completed, but the refreshed Learning Item is not reported as New and due now.");
+
+            var studyEligibility = restarted.Lifecycle switch
+            {
+                LearningItemLifecycle.Active => StudyAllNew
+                    ? "It is eligible for scheduled Study under the current all-new setting."
+                    : $"It is eligible as a new card, subject to the current Study new-card limit ({StudyNewItemLimitText}) and other session filters.",
+                LearningItemLifecycle.Suspended => "Its Suspended lifecycle was preserved, so normal Study still excludes it until Reactivate.",
+                LearningItemLifecycle.Mastered => "Its Mastered lifecycle was preserved, so normal Study still excludes it until Unmark mastered.",
+                _ => string.Empty,
+            };
+
+            StatusMessage = $"Learning Item restarted; the refreshed state confirms it is New and due now. {studyEligibility} Review history is preserved.";
         });
     }
 }
