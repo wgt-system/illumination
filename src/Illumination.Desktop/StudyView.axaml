@@ -108,8 +108,8 @@
                 <ItemsControl IsVisible="{Binding IsSelectionMode}" ItemsSource="{Binding CurrentDirectChoices}">
                   <ItemsControl.ItemTemplate><DataTemplate x:DataType="desktop:StudyChoiceDisplay"><CheckBox Content="{Binding Text}" IsChecked="{Binding IsSelected}" Margin="12,2" /></DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBox IsVisible="{Binding IsShortTextMode}" Text="{Binding ShortTextResponse}" Watermark="Short response" />
-                <TextBox IsVisible="{Binding IsCodeMode}" Text="{Binding CodeResponse}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="110" Watermark="Code response (not executed)" />
+                <TextBox IsVisible="{Binding IsShortTextMode}" Text="{Binding ShortTextResponse}" PlaceholderText="Short response" />
+                <TextBox IsVisible="{Binding IsCodeMode}" Text="{Binding CodeResponse}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="110" PlaceholderText="Code response (not executed)" />
                 <Button IsVisible="{Binding IsSelectionMode}" Content="Submit choices" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
                 <Button IsVisible="{Binding IsShortTextMode}" Content="Submit response" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
                 <Button IsVisible="{Binding IsCodeMode}" Content="Submit code response" Command="{Binding SubmitResponseCommand}" HorizontalAlignment="Center" />
