@@ -3,67 +3,10 @@
         xmlns:desktop="using:Illumination.Desktop"
         x:Class="Illumination.Desktop.MainWindow"
         x:DataType="desktop:MainWindowViewModel"
-        Title="Illumination" Width="1120" Height="740" MinWidth="920" MinHeight="620">
-  <Window.Styles>
-    <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="24"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="TextBlock.section-title"><Setter Property="FontSize" Value="17"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="TextBlock.secondary"><Setter Property="Opacity" Value="0.68"/><Setter Property="FontSize" Value="12"/></Style>
-    <Style Selector="Border.surface"><Setter Property="BorderBrush" Value="#33000000"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="14"/></Style>
-    <Style Selector="ToggleButton.nav"><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="10,9"/><Setter Property="Margin" Value="0,2"/></Style>
-    <Style Selector="ToggleButton.nav:checked"><Setter Property="Background" Value="{DynamicResource SystemAccentColorLowBrush}"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Button.grade"><Setter Property="MinWidth" Value="116"/><Setter Property="MinHeight" Value="62"/><Setter Property="Padding" Value="10,8"/></Style>
-  </Window.Styles>
-
-  <Grid ColumnDefinitions="172,*" RowDefinitions="*,Auto" Margin="12">
-    <Border Grid.Column="0" Grid.RowSpan="2" Classes="surface" Padding="10" Margin="0,0,12,0">
-      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
-        <StackPanel Spacing="3">
-          <TextBlock Text="Illumination" FontSize="20" FontWeight="SemiBold"/>
-          <TextBlock Text="Local-first learning" Classes="secondary"/>
-        </StackPanel>
-
-        <StackPanel Grid.Row="1" Spacing="3">
-          <ToggleButton Classes="nav" Content="Study" IsChecked="{Binding IsStudyPage}" Command="{Binding NavigateStudyCommand}"/>
-          <ToggleButton Classes="nav" Content="Decks" IsChecked="{Binding IsDecksPage}" Command="{Binding NavigateDecksCommand}"/>
-          <ToggleButton Classes="nav" Content="Insights" IsChecked="{Binding IsInsightsPage}" Command="{Binding OpenInsightsCommand}"/>
-          <ToggleButton Classes="nav" Content="Library" IsChecked="{Binding IsLibraryPage}" Command="{Binding NavigateLibraryCommand}"/>
-          <ToggleButton Classes="nav" Content="Generate / Import" IsChecked="{Binding IsImportPage}" Command="{Binding NavigateImportCommand}"/>
-        </StackPanel>
-
-        <StackPanel Grid.Row="2" Spacing="8">
-          <Expander Header="Advanced: local data" IsExpanded="False">
-            <StackPanel Spacing="5" Margin="0,5,0,0">
-              <TextBlock Text="Maintenance controls for the local SQLite database and rolling backups. Normal saved actions are persisted automatically." TextWrapping="Wrap" Classes="secondary" />
-              <TextBlock Text="Database" FontWeight="SemiBold" FontSize="11" />
-              <TextBlock Text="{Binding LocalData.DatabaseLocation}" TextWrapping="Wrap" Classes="secondary" />
-              <TextBlock Text="Rolling backup folder" FontWeight="SemiBold" FontSize="11" Margin="0,3,0,0" />
-              <TextBox Text="{Binding LocalData.BackupDirectoryInput}" Watermark="Local backup folder" FontSize="11" />
-              <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4">
-                <Button Content="Apply" Command="{Binding LocalData.ApplyBackupDirectoryCommand}" />
-                <Button Content="Reset" Command="{Binding LocalData.ResetBackupDirectoryCommand}" />
-              </WrapPanel>
-              <Button Content="Backup now" Command="{Binding LocalData.CreateBackupCommand}" HorizontalContentAlignment="Left" />
-              <Button Content="Export backup..." Command="{Binding LocalData.ExportBackupCommand}" HorizontalContentAlignment="Left" />
-              <TextBlock Text="Automatic snapshots stay local; the five most recent rolling backups are retained. Content imports are backed up before commit." TextWrapping="Wrap" Classes="secondary" />
-            </StackPanel>
-          </Expander>
-        </StackPanel>
-      </Grid>
-    </Border>
-
-    <Grid Grid.Column="1" Grid.Row="0">
-      <desktop:StudyView IsVisible="{Binding IsStudyPage}"/>
-      <desktop:InsightsView IsVisible="{Binding IsInsightsPage}"/>
-      <desktop:DecksView IsVisible="{Binding IsDecksPage}"/>
-      <desktop:LibraryView IsVisible="{Binding IsLibraryPage}"/>
-      <desktop:ImportView IsVisible="{Binding IsImportPage}"/>
-    </Grid>
-
-    <Border Grid.Column="1" Grid.Row="1" BorderBrush="#22000000" BorderThickness="0,1,0,0" Margin="4,8,4,0" Padding="0,8,0,0">
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-        <TextBlock Text="Status" FontWeight="SemiBold" FontSize="11" />
-        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="secondary" />
-      </Grid>
-    </Border>
-  </Grid>
+        Title="Illumination"
+        Width="1120"
+        Height="740"
+        MinWidth="920"
+        MinHeight="620">
+  <desktop:IlluminationProductSurface />
 </Window>
