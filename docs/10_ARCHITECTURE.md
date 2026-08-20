@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary end-user presentation on Windows and iPhone. An Avalonia host may remain optional for standalone administration and development. Core local operation requires no server; optional server, Docker, or Conveyance-backed delivery infrastructure may support connectivity or future synchronization.
+Accepted V1 architecture baseline: local-first single-user executable capability runtime using .NET 10 LTS, SQLite, and EF Core. Wiiii Got This is the primary containing product for the integrated system and may host Illumination through explicit provider-owned presentation/application boundaries; Illumination retains ownership of learning semantics, workflows, local persistence, scheduling state, and provider-specific consumer presentation. Core local operation requires no server; optional server, Docker, or Conveyance-backed delivery infrastructure may support connectivity or future synchronization.
+
+The existing Avalonia Desktop application remains the standalone/admin/dev/acceptance host for v0.9. A reusable Illumination-owned Product Surface for WGT/standalone reuse is tracked by #54 and must not expose Illumination Domain objects or SQLite handles to WGT. The current function-rich Desktop information architecture is not the final production UX baseline.
 
 ## 1. Architectural Goal
 
@@ -15,7 +17,7 @@ The architecture must support:
 - fast study interactions,
 - structured JSON import,
 - later Vocation integration through published contracts,
-- later Wiiii Got This capability integration,
+- Wiiii Got This hosting/composition without domain leakage,
 - possible shared physical infrastructure without shared domain ownership.
 
 ## 2. Bounded Context
@@ -31,7 +33,7 @@ Internal subdomains are modular responsibility boundaries, not deployment bounda
 A practical logical decomposition is:
 
 ```text
-Presentation / Client Adapters
+Provider Presentation / Client Adapters
             │
             ▼
 Application Layer
@@ -54,10 +56,18 @@ Import Adapter / Validation
         ▼
 Application Layer
 
-Vocation / Wiiii Got This
+Wiiii Got This host
         │
         ▼
-Published Contract Adapters
+Illumination-owned presentation/application boundary
+        │
+        ▼
+Application Layer
+
+Vocation
+        │
+        ▼
+Published Contract Adapter when needed
         │
         ▼
 Application Layer
@@ -92,23 +102,28 @@ Must not depend on:
 Coordinates use cases such as:
 
 - content creation/editing,
-- deck organization,
-- starting study sessions,
+- Deck organization,
+- starting Study Sessions,
 - revealing assistance,
 - recording Reviews,
-- import processing,
-- querying progress,
+- non-destructive Practice now and explicit Restart learning,
+- deterministic learning-generation profile derivation,
+- Application-owned external-generation prompt composition,
+- Content Bundle validation/import,
+- querying Learning Insight,
 - future integration operations.
 
 It may define application ports/interfaces required by adapters.
 
 ## 6. Presentation
 
-Wiiii Got This is the primary end-user presentation for Illumination on Windows and iPhone.
+Illumination owns the presentation semantics of its substantial learning workflows. Wiiii Got This owns containing-product navigation, host chrome, lifecycle/platform integration, transitions, global product composition, and genuine cross-service compositions.
 
-It may host Illumination locally in-process, but only through explicit Illumination-owned application or published-contract boundaries. Wiiii Got This must not use Illumination domain objects directly.
+Wiiii Got This must not reimplement Illumination business semantics merely to host the product, use Illumination Domain objects directly, or read/write Illumination SQLite.
 
-The existing Avalonia project may remain as an optional standalone/admin/dev host using CommunityToolkit.Mvvm. It is not the mandatory primary product UI.
+The v0.9 Avalonia Desktop application remains a standalone/admin/dev/acceptance host. Its current function-inventory layout is not the target production information architecture.
+
+A reusable provider-owned Product Surface is the post-v0.9 direction tracked by #54. The service-local extraction/packaging details remain subject to the corresponding architecture/acceptance gate; no universal plugin/UI protocol is implied.
 
 ## 7. Persistence
 
@@ -125,7 +140,7 @@ The local store persists at least:
 - Hints,
 - Deck membership,
 - Reviews,
-- entered text/code responses,
+- entered text/code responses where retained,
 - current Learning State,
 - lifecycle state,
 - Study Session history,
@@ -156,18 +171,19 @@ The import boundary must:
 - map boundary DTOs into Illumination application/domain operations,
 - provide explicit import results.
 
-Generated JSON types are boundary types, not domain entities.
+Generated JSON types are boundary types, not domain entities. Content Bundle 1.0 remains the v0.9 validated generation/import contract.
 
-## 10. Published Contract Boundary
+## 10. Published Contract / Host Boundary
 
-Future Vocation and Wiiii Got This integrations must use explicit versioned contracts.
+Future Vocation integrations use explicit versioned published contracts when concrete semantics require them.
 
-Published contracts:
+WGT hosting may use a provider-specific presentation/runtime boundary at the outer composition layer. That boundary:
 
-- expose only required semantics,
-- do not expose persistence schema,
-- do not serialize internal domain classes by accident,
-- evolve independently from internal implementation details.
+- exposes only required semantics/artifacts,
+- does not expose persistence schema,
+- does not serialize or import internal Domain classes by accident,
+- does not hand WGT a DbContext or SQLite handle,
+- remains provider-specific unless a later system Architecture decision establishes a common contract.
 
 ## 11. Scheduling Component
 
@@ -188,24 +204,27 @@ Its output conceptually includes:
 
 The deterministic scheduling semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
 
+`Practice now` does not mutate authoritative Learning State merely to make material immediately available. `Restart learning` is an explicit authoritative reset of current scheduling state while preserving immutable Review history and Deck membership.
+
 ## 12. Analytics / Learning Insight
 
-Analytics are projections/read models over authoritative state and history.
+Learning Insight is a projection/read model over authoritative state and history.
 
-A future statistics component may exist for performance or organization, but it must not own:
+It must not own:
 
 - Review history,
 - current due state,
 - scheduling transitions.
+
+v0.9 uses derived learning evidence to build deterministic generation guidance rather than asking an external LLM to infer learning state from raw scheduler internals. Richer evidence-based Learning Analytics remains post-v0.9 work.
 
 ## 13. Configuration
 
 Some domain/application behavior is configurable, including at least directionally:
 
 - whether automatic evaluation is used when available,
-- whether hint use influences assessment/scheduling.
-
-Automatic evaluation uses a global default with a per-Study-Session override. Hint influence is likewise controlled by the accepted default and per-session policy described in the scheduling semantics.
+- whether hint use influences assessment/scheduling,
+- generation language/proficiency/exercise constraints where applicable.
 
 Do not turn configuration into global mutable flags embedded throughout the domain.
 
@@ -219,13 +238,11 @@ Any future technical device authentication is an infrastructure concern and does
 
 ## 14. Multi-Device and Wiiii Got This Concerns
 
-Wiiii Got This may later expose Illumination capabilities on other devices, including iPhone.
+Wiiii Got This may host Illumination across multiple platform families through provider-owned presentation/runtime integration.
 
-Because authoritative learning data is local, multi-device access requires an explicit future access/synchronization design.
+Because authoritative learning data is local, multi-device access still requires an explicit future access/synchronization design.
 
-Possible design directions include direct access to a running Illumination instance, device-to-device replication, or opaque protected delivery through an accepted Conveyance mode in which remote infrastructure cannot interpret the learning payload. These are possibilities only; no concrete mechanism is selected.
-
-No synchronization mechanism is selected yet.
+Possible design directions include device-to-device replication or opaque protected delivery through an accepted Conveyance mode in which remote infrastructure cannot interpret the learning payload. These are possibilities only; no concrete mechanism is selected.
 
 A remote server must not become a hidden requirement for ordinary Illumination use.
 
@@ -250,16 +267,16 @@ Existing personal familiarity may only be a tie-breaker between otherwise simila
 
 ## 16. Remaining Architecture Scope
 
-The V1 implementation gate is satisfied. Future decisions are limited to details outside the accepted baseline, such as concrete integration transport when a contract is required.
+The V1 implementation gate is satisfied. Future decisions include concrete Product Surface packaging/platform evidence, integration transport when a published contract is required, and synchronization semantics when multi-device learning state becomes an implemented requirement.
 
 ## Accepted V1 Architecture Direction
 
 Illumination V1 runtime is:
 
-- a local-first,
+- local-first,
 - single-user,
-- executable capability runtime,
-- with an embedded local database,
+- an executable capability runtime,
+- with embedded local authoritative persistence,
 - requiring no remote server for core operation.
 
 Selected stack:
@@ -267,13 +284,11 @@ Selected stack:
 - C# / .NET 10 LTS,
 - SQLite for authoritative local persistence,
 - EF Core with the SQLite provider for persistence infrastructure,
-- optional Avalonia/CommunityToolkit.Mvvm host for standalone administration and development.
+- Avalonia/CommunityToolkit.Mvvm for the current Desktop/provider-presentation direction.
 
 Tests use xUnit.net v3. Time-dependent domain tests use a controllable `TimeProvider`/clock abstraction.
 
-This selection is based on the accepted product architecture, not on the user's existing skillset.
-
-A Wiiii Got This adapter/host may expose explicit versioned contracts without making Illumination's runtime a web application.
+Wiiii Got This may host the provider-owned presentation/runtime boundary without acquiring learning-domain ownership.
 
 Docker, server, or relay infrastructure is optional and must not become mandatory for core local operation.
 
@@ -281,26 +296,22 @@ Optional future delivery/synchronization infrastructure is a separate concern. C
 
 ## Local Backup Direction
 
-Illumination must support local backup without requiring cloud storage.
+Illumination supports local backup without requiring cloud storage.
 
-V1 direction:
+Current direction:
 
 - automatic rolling local backups,
 - mandatory backup before database migrations,
-- backup before large/structurally significant imports where practical,
-- manual export/backup operation,
-- configurable local backup destination,
+- backup before Content Bundle commit / structurally significant imports,
+- manual backup/export operation,
+- configurable local rolling-backup destination,
 - no automatic remote/cloud upload.
-
-Backup retention counts and exact file format may be chosen during implementation planning.
 
 ## Future Multi-Device Requirement
 
-Wiiii Got This should eventually make Illumination usable on iPhone even when the primary PC is off.
+The intended future product should allow device-local Illumination use across supported WGT platform families rather than requiring the primary PC to remain online.
 
-The intended future behavior therefore requires an iPhone-side local copy of the Illumination data needed for study.
-
-The synchronization/replication mechanism is deliberately not specified inside Illumination V1.
+The synchronization/replication mechanism is deliberately not specified inside the current release.
 
 Requirements for that later design:
 
@@ -308,5 +319,4 @@ Requirements for that later design:
 - remote readable storage is not assumed,
 - device-local operation after synchronization is a goal,
 - Illumination must first define future domain-specific publication, change, command, authority, merge, conflict, and reconciliation semantics,
-- an accepted Conveyance delivery mode may transport the resulting opaque information only after those semantics are defined,
-- Current Object is not a bidirectional learning-synchronization solution by default.
+- an accepted Conveyance delivery mode may transport the resulting opaque information only after those semantics are defined.

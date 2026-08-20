@@ -2,783 +2,412 @@
 
 ## Status
 
-Behavioral acceptance baseline.
+Behavioral acceptance baseline through **v0.9.0**.
 
-Scheduling acceptance tests use the deterministic semantics defined in `docs/08A_SCHEDULING_SEMANTICS.md`.
+The exact deterministic scheduling formulas and queue semantics are defined in `docs/08A_SCHEDULING_SEMANTICS.md`. This document defines product-level acceptance behavior. Automated tests remain the executable evidence; manual real-use checks are required where workflow clarity or external ChatGPT output cannot be established by deterministic tests alone.
 
-The v0.2 acceptance scope is Study Sessions, five-grade Learning Assessment, Review history, deterministic long-term Learning State/scheduling, and optional opaque submitted-response retention. The v0.3 first slice adds session learning-stack semantics, deterministic assessment previews, Study transparency, and structured Content Acquisition; v0.4 covers Content Quality & Curation; v0.5 covers response interaction and evaluation workflows.
+The current stable capability line includes:
 
-Content Quality & Curation is the next capability slice before the remaining v0.4 interaction work. Quality state is distinct from technical import validity and learner scheduling.
+- Learning Items, Decks and many-to-many membership;
+- five-grade Study and deterministic scheduling/relearning;
+- Content Bundle 1.0 generation/validation/import;
+- Content Quality & Curation;
+- response interaction/evaluation modes;
+- Learning Insight and history projections;
+- local backup/migration safety;
+- v0.9 Deck coherence, Practice/Restart semantics, learning-aware generation and usability hardening.
 
-## 1. Learning Item Creation
+The current standalone Desktop host remains an admin/dev/acceptance-capable surface. Its information density is **not** acceptance of the final production Product Surface UX.
 
-### Scenario: create a basic item
+## 1. Learning Item Creation and Editing
+
+### Basic creation
 
 Given no existing item
-When the learner creates one independent question with a Reference Solution
-Then Illumination stores one Learning Item
-And the item is available for review
-And it begins with new Learning State.
+When the learner creates an independent prompt with a non-empty Reference Solution
+Then exactly one Learning Item is stored
+And it starts with new Learning State
+And zero or more ordered hints may be retained.
 
-### Scenario: reject missing solution
+### Required solution
 
 Given a new Learning Item
-When no Reference Solution is supplied
+When the Reference Solution is empty
 Then creation is rejected.
 
-### Scenario: zero hints allowed
+### Authoring and Deck assignment
 
-Given a valid Learning Item
-When no hints are supplied
-Then creation succeeds.
+Given one or more existing Decks
+When a Learning Item is created or edited through the normal authoring workflow
+Then explicit Deck assignment can be managed without creating duplicate Learning Item identity or duplicate Learning State.
 
-### Scenario: multiple hints allowed
+## 2. Deck Membership and Lifecycle
 
-Given a valid Learning Item
-When several ordered hints are supplied
-Then all hints can be retained and revealed progressively.
+### One item in several Decks
 
-## 2. Deck Membership
+Given one Learning Item belongs to several Decks
+Then every Deck references the same Learning Item identity
+And no duplicate Learning State or Review history is created.
 
-### Scenario: one item in several decks
+### Membership removal preserves learning
 
-Given one existing Learning Item
-And two existing Decks
-When the item is added to both Decks
-Then both Decks contain the same Learning Item identity
-And no duplicate Learning State is created.
+Given one item belongs to several Decks
+When membership in one Deck is removed
+Then Review history and Learning State remain unchanged
+And other memberships remain.
 
-### Scenario: removing membership preserves progress
+### Deck deletion coherence
 
-Given an item with Review history in two Decks
-When the item is removed from one Deck
-Then its Review history remains unchanged
-And its Learning State remains unchanged
-And it remains in the other Deck.
+Given a Deck contains existing Learning Items
+When the Deck is deleted
+Then its projection disappears consistently from Deck, Library, Study, Generate and Insight reads
+And its Learning Items, Review history and Learning State remain unless those Learning Items are explicitly deleted.
 
-## 3. Basic Review
+### Explicit Learning Item deletion
 
-### Scenario: mental/self-assessed review
+Given an existing Learning Item
+When permanent item deletion is explicitly confirmed
+Then the item and its associated Learning State/Review history are removed according to the deletion policy
+And no ghost Deck projection remains.
 
-Given an active due Learning Item
-When the learner reviews it without entering a stored answer
-And reveals the Reference Solution
-And submits one of the five Learning Assessment grades
-Then one Review is recorded
-And Learning State is updated according to the scheduling model.
+## 3. Study and Review
 
-Every completed Review changes a new Learning Item to `IsNew = false`.
+### Self-assessed review
 
-## 4. Direct Multiple Choice (v0.5)
+Given an Active due Learning Item
+When the learner reveals the Reference Solution and submits one of the five Learning Assessment grades
+Then one immutable Review is recorded
+And Learning State is updated according to the scheduling model
+And a new item becomes `IsNew = false`.
 
-Given an item authored with direct answer choices
-When the learner selects an answer
-Then Illumination can determine automatic correctness when the item supports it
-And the learner can still complete the configured final assessment flow.
+### Five-grade order
 
-## 5. Answer Choices as Assistance (v0.5)
-
-Given a normal question with optional assistance choices
-When the learner first attempts free recall
-And later reveals the assistance choices
-Then the item remains the same Learning Item
-And revealing those choices is recorded as assistance if the configured history requires it
-And they are not treated as if the item had originally required direct multiple choice.
-
-## 6. Hint Behavior (v0.5)
-
-### Default hint policy
-
-Given an item with several hints
-And default hint policy
-When the learner reveals any number of hints
-Then no automatic assessment penalty is applied merely because hints were used.
-
-### Configured hint influence
-
-Given hint influence is enabled
-When the learner uses hints
-Then the configured evaluation/scheduling policy may use that fact.
-
-When enabled, hint use lowers the automatic suggested assessment by at most one grade, without forcing the learner's final grade.
-
-## 7. Automatic Evaluation (v0.5)
-
-### Disabled
-
-Given an item that can be automatically checked
-And automatic evaluation is disabled
-When the learner supplies a response
-Then Illumination does not require automatic correctness to determine the final Learning Assessment
-And the learner can assess manually.
-
-### Enabled where supported
-
-Given automatic evaluation is enabled
-And the item supports machine checking
-When the learner supplies a response
-Then Illumination may calculate correctness
-And correctness is distinguishable from the final five-grade Learning Assessment.
-
-### Unsupported item
-
-Given automatic evaluation is enabled globally or for the current scope
-And an item cannot be reliably checked automatically
-When it is reviewed
-Then the learner can still complete the review through manual assessment.
-
-## 8. Scheduling Direction
-
-### Ordered assessment behavior
-
-Given two otherwise comparable active items
-When one receives a worse normal assessment grade than the other
-Then it must be scheduled no later than the better-assessed item.
-
-For the current Study Session, the stronger invariant is:
+For otherwise comparable state, the accepted direction is:
 
 ```text
 Nochmal <= Schwer <= Unsicher < Gut < Leicht
 ```
 
-`Nochmal`, `Schwer`, and `Unsicher` remain in the current session learning stack. `Gut` and `Leicht` graduate into future normal scheduling.
+`Nochmal`, `Schwer`, and `Unsicher` remain in the current learning stack. `Gut` and `Leicht` graduate to future normal scheduling.
 
-### Lowest grade
+### Session reinsertion
 
-Given an active item
-When the learner submits the lowest assessment grade
-Then the item is treated as requiring very rapid relearning
-And it remains in the current session learning stack with a target of 1 intervening card when enough other cards exist.
-If too few other cards remain, it goes to the end of the current learning stack; if no other card remains, it remains the next/current item.
+Given enough other cards remain:
 
-### Second-lowest grade
+- `Nochmal` returns after one intervening queue entry;
+- `Schwer` returns after five intervening queue entries;
+- `Unsicher` returns at the end of the current learning stack.
 
-Given an active item
-When the learner submits the second-lowest assessment grade
-Then the item returns soon
-But less aggressively than an otherwise comparable item receiving the lowest grade
-And it remains in the current session learning stack with a target of 5 intervening cards when enough other cards exist.
+When too few cards remain, `Nochmal`/`Schwer` append to the current learning stack. In a single-card learning stack, `Nochmal`, `Schwer`, or `Unsicher` keep that item current/next rather than making it disappear.
 
-### Highest grade
+### Session completion with unfinished relearning
 
-Given an active item
-When the learner submits the highest assessment grade
-Then its normal next-review interval is substantially longer than for lower successful grades
-And the item is not automatically marked Mastered.
+Given reinforcement-required items remain
+When the learner explicitly completes the Study Session
+Then the session may end
+And unfinished items remain immediately due/relearning-required
+And no successful future interval is invented.
+
+### Assessment preview
+
+Given unchanged Learning State, Study Session state and controlled time
+When grade previews are requested
+Then no Review or mutation is created.
+
+When the same grade is subsequently submitted without state/time changes, the real queue/scheduling result matches the preview.
+
+### Immutable Review history
+
+Given the same Learning Item receives several grades in one Study Session
+Then every submitted grade remains a separate immutable Review using its real completion time.
+
+## 4. Scheduling and Lifecycle
 
 ### Successful repetition
 
-Given an active item repeatedly reviewed successfully
-When the scheduling model processes those Reviews
-Then normal review intervals generally become longer over successful repetitions.
+Given repeated successful Reviews
+Then future normal intervals generally grow according to the accepted scheduling model.
 
-Exact timings follow the initial constants in `docs/08A_SCHEDULING_SEMANTICS.md`.
+### Lapse after long stability
 
-## 9. Suspension
+Given a long-stable Learning Item:
 
-Given an active item
-When the learner suspends it
-Then it remains stored
-And Review history remains stored
-And it is excluded from normal study selection.
+- `Nochmal` strongly reduces retained stability and caps it at the accepted rapid-relearning bound;
+- `Schwer` reduces retained stability and caps it at the accepted harder-relearning bound;
+- later `Gut`/`Leicht` growth starts from the reduced state rather than restoring the old interval automatically.
 
-Given a suspended item
-When the learner reactivates it
-Then it becomes immediately due while retaining its Review history and retained scheduling state.
+### Suspend / Reactivate
 
-## 10. Mastered
+Suspending excludes an item from normal Study while preserving history/state. Reactivating preserves history/state and makes the item immediately due.
 
-Given an active item
-When the learner marks it Mastered
-Then it remains stored
-And Review history remains stored
-And it is excluded from normal study selection.
+### Mastered / Unmark Mastered
 
-Given a Mastered item
-When the learner unmarks Mastered
-Then it becomes immediately due while retaining its Review history and retained scheduling state.
+Mastered excludes an item from normal Study while preserving history/state. Unmarking Mastered preserves history/state and makes the item immediately due.
 
-## 11. Low-Interaction Session (v0.5)
+## 5. Practice Now versus Restart Learning (v0.9)
 
-Given a study scope containing suitable and unsuitable items
-When the learner starts a low-interaction session
-Then only items designated suitable for that mode are selected
-And the learner can complete suitable reviews with minimal required input.
+### Practice now is non-destructive
 
-Suitability is determined by the item's explicit `lowInteractionEligible` property.
+Given an Active Learning Item or Deck whose cards are not normally due
+When the learner chooses **Practice now**
+Then material may be practiced immediately
+And merely starting/using Practice now does not rewrite authoritative Review history or current Learning State to make the item due.
 
-## 12. Import
+### Restart one Learning Item
 
-### Valid bundle
+Given an Active future-scheduled Learning Item with existing Review history
+When the learner explicitly confirms **Restart learning**
+Then current scheduling state resets to the accepted new-learning baseline
+And the item is immediately eligible for a fresh normal Study Session
+And immutable Review history remains visible as historical evidence.
 
-Given a supported versioned JSON bundle
-And all items are structurally and semantically valid
-When the bundle is imported
-Then valid Illumination-owned content is created according to the contract
-And an explicit import result is returned.
+### Restart a Deck
 
-### Realistic bulk bundle
+Given a Deck with several Active Learning Items
+When the learner confirms Deck-level Restart learning
+Then eligible current scheduling state is reset deliberately
+And historical Reviews and Deck membership remain
+And a fresh normal Study Session still obeys the configured new-item limit.
 
-Given a valid bundle with N Learning Item creates, one Deck create, and N assignment operations
-When the bundle is previewed and the selected operations are imported into SQLite
-Then exactly N Learning Items are persisted
-And the Deck contains exactly N memberships
-And the imported content is immediately available through Content Management and Study.
+The UI must explain that a new-item limit may prevent every restarted card from appearing in the first session; this is not a failed reset.
 
+## 6. Study Queue and New-Item Limit
 
-### Explicit update identity
+Given a normal Study scope containing relearning, due and new material
+Then relearning has priority over ordinary due material
+And ordinary due material has priority over new material.
 
-Given an existing Learning Item with a stable Illumination identifier
-And an imported update operation explicitly references that identifier
-When the bundle is valid
-Then the intended Learning Item may be updated according to the import contract
-And its Review history and Learning State are not reset merely because content was edited.
+Multiple selected Decks use set-union semantics: an item present in several selected Decks appears only once.
 
-### No fuzzy mutation
+The default new-item limit is 20 unless explicitly overridden; the learner may explicitly request all new items.
 
-Given an imported new item whose text resembles an existing Learning Item
-And no explicit update operation references the existing stable identifier
-When the bundle is imported
-Then Illumination must not silently mutate the existing item based only on semantic or textual similarity.
+## 7. Response Modes and Assisted Evaluation
 
-### Unsupported version
+Supported v0.9 interaction modes include `SelfAssessed`, `Selection`, `ShortText`, and `Code`.
 
-Given a JSON bundle with an unsupported contract version
-When import is attempted
-Then it is rejected explicitly
-And no content is silently interpreted under another version.
+### Selection
 
-### Invalid item
+When Assisted evaluation is enabled, exact correctness is true only when the selected choice-ID set exactly equals the authored correct-choice-ID set. Choice order is irrelevant.
 
-Given an invalid imported item
-When validation runs
-Then the validation issue is reported
-And no invalid authoritative Learning Item is silently created.
+### ShortText
 
-### Mixed-validity bundle
+When compared with `acceptedShortAnswers`, comparison:
 
-Given a bundle containing valid and invalid entries
-When validation completes
-Then valid and invalid entries are clearly separated
-And invalid entries are not committed
-And the learner may explicitly accept the valid subset
-And rejected/corrected content may be imported later without invalidating the already accepted subset.
+- trims surrounding whitespace;
+- uses Unicode normalization Form C;
+- uses ordinal case-insensitive equality;
+- does not alter punctuation or internal whitespace;
+- does not use fuzzy/semantic matching.
+
+### Code
+
+A Code response may be captured and shown beside the Reference Solution, but v0.9 does not execute or compile arbitrary learner code. Assisted evaluation therefore falls back to learner assessment unless a separately accepted evaluator exists.
+
+### SelfAssessed
+
+No machine-checkable response is required. The learner controls the final five-grade assessment.
+
+### Hints and assistance
+
+Hints may be revealed progressively. By default hint use does not automatically penalize the final assessment. Where `ConsiderAssistance` is explicitly enabled, assistance may conservatively lower the *suggested* grade without taking the final grade away from the learner.
+
+Correctness/suggested assessment remain distinct from the learner-confirmed final grade.
+
+## 8. Low-Interaction Study
+
+Given a Study scope with mixed `lowInteractionEligible` values
+When low-interaction filtering is requested
+Then only otherwise-eligible items with `lowInteractionEligible = true` participate.
+
+This filter does not create separate Learning State, transform ResponseMode, or invent Review history.
+
+## 9. Content Bundle 1.0 Validation and Import
+
+### Contract boundary
+
+External generated JSON is untrusted until it passes Content Bundle 1.0 parsing, structural validation, semantic/dependency validation and explicit import selection.
+
+Unsupported versions or malformed envelopes are rejected explicitly.
+
+### Mixed-validity preview
+
+Given valid and invalid operations in one bundle
+Then preview shows both classes clearly
+And invalid operations are not selectable
+And valid operations may be selected independently when dependencies remain satisfied.
 
 ### Accepted-subset atomicity
 
-Given a mixed-validity bundle
-When the learner selects valid operations for import
-Then dependencies are validated again for that selected subset
-And all selected operations commit in one transaction.
+When a selected subset is committed
+Then dependencies are revalidated
+And the selected operations commit atomically in one transaction.
 
-Given an infrastructure failure while committing the selected subset
-Then every operation in that selected subset is rolled back
-And no partial accepted-subset mutation remains.
-
-### Bundle-level validation
-
-Given malformed JSON, an invalid root, a missing/invalid contract, an unsupported version, or missing/non-array operations
-When the bundle is parsed
-Then an explicit bundle-level diagnostic is returned
-And no content is mutated.
+On infrastructure failure, no partial accepted-subset mutation remains.
 
-Malformed JSON may produce a repair prompt containing the parser diagnostic, required Content Bundle 1.0 contract/version, supplied invalid JSON, and an instruction to repair rather than redesign and return corrected JSON only.
-
-### Per-operation validation
+### Identity and no fuzzy mutation
 
-Given a bundle containing one malformed operation and other structurally valid operations
-When validation runs
-Then valid and invalid operations both remain visible in the preview
-And the malformed operation is not selectable
-And valid operations may be selected independently.
+Create operations receive Illumination-owned stable IDs. `localRef` is bundle-local coordination, not durable identity.
 
-### LocalRef dependencies
+Textual/semantic similarity alone must never silently turn a create into an update. Existing content changes only through explicit supported update identity/semantics.
 
-Given valid create operations for a Deck `localRef` and Learning Item `localRef` plus an assignment referencing them
-When the selected subset is validated
-Then the assignment resolves deterministically.
+### Minor versus semantic update
 
-Given an assignment whose referenced create operation is invalid or unselected
-Then the assignment is not committable
-And the dependency diagnostic is explicit
-And an independently valid item or Deck create may still be accepted.
+A `minor` update preserves current Learning State, lifecycle, memberships and Review history.
 
-### Create identity and operation safety
+A `semantic` update preserves immutable Review history and lifecycle/membership, while resetting current scheduling to the accepted new-learning baseline and making the item immediately due.
 
-Given a valid create operation
-When it is committed
-Then a new Illumination-owned stable ID is assigned
-And the bundle `localRef` does not become permanent identity
-And normal new Learning State starts
-And no Review history is invented.
+### Import result/provenance
 
-Given a valid assignment operation
-When it is committed
-Then explicit Deck membership is added
-And no duplicate Learning State is created
-And scheduling/history is not reset.
+Successful import returns explicit created/updated IDs, memberships, skipped/rejected operation information and retained lightweight provenance where applicable.
 
-Given an imported new item whose text resembles an existing Learning Item
-And no explicit update operation references the existing stable identifier
-When the bundle is imported
-Then the existing item is not mutated.
+After a successful selected-subset import, a second commit requires a new current preview; repeated clicking cannot accidentally duplicate the same accepted batch.
 
-Given a normalized exact duplicate prompt
-When a create operation is previewed
-Then a duplicate warning may be shown
-And the operation remains a create operation unless the learner explicitly selects an update.
+### Malformed JSON repair
 
-### Update significance
+Malformed JSON imports nothing. Illumination may create a repair prompt that includes the parser diagnostic and requires repaired Content Bundle 1.0 JSON rather than redesigning the requested content.
 
-Given an explicit `minor` update
-When it is accepted
-Then content changes
-And current Learning State, lifecycle, memberships, and Review history remain unchanged.
+## 10. Content Quality and Curation
 
-Given an explicit `semantic` update
-When it is accepted
-Then content changes
-And immutable Review history and lifecycle remain
-And memberships remain unless separately changed by assignment
-And current scheduling resets to `IsNew = true`, difficulty `5.0`, stability `0.5`, reinforcement not required
-And the item is immediately due at the update time.
+Quality state is evidence, not factual certainty and not scheduling state.
 
-Given an explicit Deck update
-When its supported metadata is changed
-Then the Deck changes accordingly
-And membership is not silently altered.
+- User Flags are user-owned and do not alter scheduling or content revision.
+- Quality Reviews are immutable and bound to the reviewed content revision.
+- Editing quality-relevant content increments `ContentRevision` once per logical update and invalidates older current-revision assurance without deleting history.
+- Explicit supersession keeps superseded Quality Reviews as immutable history.
+- Current quality precedence is `NeedsReview` > `Warning` > `Pass` > no assurance.
+- `Warning` is non-blocking.
+- `NeedsReview` is highly visible but remains subject to explicit user acceptance where the workflow permits.
+- Suggested corrections never mutate authoritative content without an explicit normal update action.
 
-### Import preview, result, and provenance
+## 11. Learning Insight
 
-Given a parsed bundle
-When preview is requested
-Then each operation exposes its index/type, localRef or target stable ID, summary, validity, diagnostics, warnings, dependencies, and selectable state
-And the preview creates no content, membership, Review, scheduling, or successful import-history mutation.
+Given authoritative Learning Items, memberships, Reviews, Study Sessions and Learning State
+When Insight views are opened/refreshed
+Then projections are derived from current authoritative data
+And distinguish at least new, due/relearning, Suspended and Mastered material where applicable.
 
-Given an accepted subset commits successfully
-Then the result identifies created/updated item and Deck IDs, applied memberships, skipped/rejected operation indices, diagnostics where applicable, and a batch identity where retained.
+Insight projections must not become a second source of truth and must not invent opaque mastery values.
 
-Given an accepted subset commits successfully
-Then lightweight local provenance retains import/batch ID, timestamp, contract/version, optional bundle metadata, and operation counts/results.
+## 12. Learning-Aware Existing-Deck Generation (v0.9)
 
-### Import requires current preview
+### Fresh evidence
 
-Given a selected subset has been imported successfully
-When the learner attempts Import Selected again without a new validation preview
-Then no second commit occurs.
+Given an existing Deck with Review/Learning State history
+When the learner opens the normal Existing Deck generation path
+Then generation context is derived from current evidence rather than a stale cached snapshot.
 
-## 13. Progress Views
+### Deterministic generation profile
 
-Given Reviews and Learning State exist
-When progress is requested
-Then the view is derived from authoritative state/history
-And can distinguish at least new, due, Suspended, and Mastered material
-And later can distinguish unstable/stable material according to the selected scheduling model.
+The Application layer derives a compact deterministic Learning Generation Profile/Brief from Illumination-owned evidence. It distinguishes:
 
-## 13A. Content Quality and Curation
+- reviewed versus unreviewed/new material;
+- due/relearning/weak evidence;
+- comparatively stable/established evidence;
+- aggregate confirmed assessment evidence;
+- existing-content inventory needed for duplicate avoidance.
 
-### User flags do not alter scheduling
+It does not invent an opaque universal mastery score and does not delegate authoritative learning-state interpretation to ChatGPT.
 
-Given a Learning Item in Study
-When the learner adds or removes a user-owned flag
-Then Review scheduling and Learning State remain unchanged
-And the flag can be used by later filtering.
+### Progression intent
 
-### Current-revision Pass
+Existing-Deck generation differentiates the accepted intents:
 
-Given a Quality Review with outcome `Pass` bound to the Learning Item's current content revision
-When current quality state is requested
-Then that evidence is recognized for the current revision.
+- reinforce/practice weak areas at approximately the current requested level;
+- continue/add new material at the current level;
+- advance/progress to harder material without silently jumping several levels.
 
-### Content revision semantics
+Normal production wording may later replace the internal `Reinforce`/`Continue`/`Advance` labels; their v0.9 semantics remain generation intent, not scheduler state.
 
-Given a new Learning Item
-Then its ContentRevision is `1`
-When one successful logical update changes one or more quality-relevant fields (Prompt, Reference Solution, Hints, response mode, answer choices, or accepted short answers)
-Then ContentRevision increases exactly once
-When an update changes no quality-relevant content
-Then ContentRevision does not increase
-And changing scheduling state, lifecycle, Deck membership, User Flags, or `lowInteractionEligible` does not increase it.
+### Language controls
 
-### Content edit invalidates current assurance
+Where language-learning generation is selected, the prompt can carry:
 
-Given a current-revision Quality Review
-When the Prompt, Reference Solution, or other semantically relevant content changes
-Then the content revision increases
-And the old Quality Review remains immutable history
-And it no longer counts as assurance for the current revision.
+- instruction/source/target language;
+- CEFR A1–C2 target where applicable;
+- requested exercise profile such as vocabulary, phrases, translation, grammar, comprehension or mixed practice.
 
-### Explicit Quality Review supersession
+Vocabulary/card-style requests must instruct the external model to produce concise independently reviewable material rather than unrelated essay tasks.
 
-Given multiple Quality Reviews for one Learning Item and current content revision
-When an accepted Quality Review explicitly supersedes selected older reviews
-Then the superseded reviews remain immutable history
-And only non-superseded reviews contribute to Current Quality State
-And Review Type does not cause automatic supersession.
+### Anti-duplication and bounded context
 
-### Current quality precedence
+Existing content remains available for duplicate avoidance, but prompt context is structured/bounded rather than an unbounded dump of scheduler internals.
 
-Given non-superseded current-revision Quality Reviews with different outcomes
-Then Current Quality State precedence is `NeedsReview`, then `Warning`, then `Pass`, then no assurance.
+### Application-owned prompt composition
 
-### Warning is non-blocking
+Semantic generation instructions are composed in Application code from typed options/context. Desktop presentation must not independently append competing semantic rules.
 
-Given a structurally and semantically valid import with a Quality Review outcome of `Warning`
-When the learner previews import
-Then the warning is visible
-And it does not automatically block import.
+### External real-use acceptance
 
-### NeedsReview is visible
+For v0.9 release acceptance, real ChatGPT output through the normal Existing Deck flow was manually exercised and accepted as release-worthy. Future UX/analytics improvements identified during that testing are follow-up product work, not retroactive v0.9 blockers.
 
-Given a Quality Review outcome of `NeedsReview`
-When content is shown or imported
-Then the state and findings are highly visible
-And the learner may consciously accept the content.
+Content Bundle 1.0 remains the validated output/import contract; no direct paid LLM API is required.
 
-### Source-grounded evidence is not generic verification
+## 13. Local Data Reliability
 
-Given a `SourceGroundedReview`
-Then it remains identified as that Review Type
-And it is not represented as generic `Verified` certainty.
+### Backup before migration
 
-### Suggested correction requires explicit action
+Before a database migration mutates the local database, a readable local backup is created according to the migration coordinator policy.
 
-Given a Quality Review with a suggested correction
-When the review result is previewed
-Then the Learning Item is unchanged
-And content changes only after the learner explicitly applies the correction through normal update semantics.
+### Rolling backups
 
-### Flags and quality state are independent
+Normal Desktop operation can create change-aware rolling local snapshots with the accepted retention policy and configurable persistent backup location.
 
-Given a Learning Item with User Flags and a machine or user Quality Review
-Then flags and current quality state remain separately addressable
-And changing one does not silently change the other.
+### Backup before import
 
-### User-defined multiple flags
+Before a selected Content Bundle commit changes authoritative content, backup protection runs without weakening the atomic import transaction.
 
-Given user-defined flag definitions
-When a learner applies multiple flags to one Learning Item
-Then all selected flags remain independently addressable
-And their meanings are user-owned rather than fixed by Illumination.
+### Manual backup/export
 
-### Quality review workflow
+Manual local backup and portable export remain available without remote infrastructure.
 
-Given a Learning Item or generated bundle
-When a quality-review prompt is generated and a structured result is returned
-Then findings are previewed before explicit acceptance
-And no direct LLM API is required
-And the accepted immutable result is bound to the reviewed content revision.
+v0.9 does not introduce cloud backup or authoritative staged database replacement/restore.
 
-### v0.4 release integration coverage
-
-The release test suite exercises the complete persistence path rather than only isolated
-service doubles.  The integrated scenarios include:
-
-- a realistic multi-item Content Bundle whose mixed `Pass`, `Warning`, and `NeedsReview`
-  results are previewed, explicitly selected, and atomically imported;
-- `localRef` plus content-fingerprint binding for pre-import reviews, including rejection
-  of changed/fingerprint-stale results and import of unselected items without assurance;
-- stable Learning Item ID plus `ContentRevision` binding for existing-item review exchange;
-- immutable review history with explicit same-item/same-revision supersession;
-- persistence/reload of multiple user-defined flags without changing revision, scheduling,
-  or quality state;
-- migration of a released v0.3 database to v0.4 with ContentRevision `1`, preserved
-  scheduling/review data, and backup-before-migration enforcement; and
-- Desktop checks that both review surfaces require explicit selection, while Warning and
-  NeedsReview remain consciously selectable and Study flag toggles leave the active session
-  intact.
-
-Quality Review is evidence supplied by an external review exchange, not factual verification.
-Acceptance is always explicit; suggested corrections are advisory and are never applied as
-part of review acceptance.  Supersession is an explicit user choice and never inferred from
-evidence type or outcome.
-
-## 14. Vocation Boundary
-
-Given no Vocation integration is configured
-When Illumination is used
-Then all core learning workflows remain available independently.
-
-Given a future Vocation reference
-When coverage is queried
-Then Illumination returns only the published summary
-And does not expose internal persistence or mutable domain objects.
-
-## 15. Wiiii Got This Boundary
-
-Given Wiiii Got This presents Illumination on Windows or iPhone
-When the learner invokes an Illumination capability
-Then the capability executes through an Illumination-owned application boundary
-And Illumination remains authoritative for the resulting learning-state change.
-
-Given Wiiii Got This is unavailable
-When Illumination runtime/application capabilities are invoked locally
-Then core Illumination workflows remain available without requiring Wiiii Got This.
-
-## 16. Acceptance Scope Notes
-
-The five-grade names, scheduling transitions, lifecycle behavior, and Content Bundle 1.0 envelope are accepted and testable. Content Acquisition validation, accepted-subset atomicity, update significance, preview, result, and provenance semantics are also accepted and testable. Later response interaction/evaluation behavior remains outside this baseline.
-
-## 17. Canonical Deck and Deletion Behavior
-
-### Same item in several Decks
-
-Given one Learning Item belongs to several Decks
-When one Deck is deleted
-Then the Learning Item remains
-And its Review history and Learning State remain unchanged.
-
-### Explicit item deletion
-
-Given an existing Learning Item
-When the learner explicitly confirms permanent deletion
-Then the Learning Item and its associated Learning State and Review history are removed.
-
-## 18. Review Response Persistence (v0.2 opaque payload)
-
-Given a v0.2 Review has an optional submitted response payload
-When the Review is completed
-Then the opaque payload may be retained with the Review
-And it is not interpreted or automatically evaluated.
-
-Given a v0.2 Review has no submitted response payload
-When the Review is completed
-Then no artificial response text is required.
-
-Actual text/code interaction workflows are v0.5, including conservative normalized short-text matching; arbitrary code execution remains out of scope.
-
-## 19. Five-Grade Behavior
-
-Given an active item is rated `Nochmal`
-Then, where the session has enough intervening material, it should return after one other card.
-
-Given an active item is rated `Schwer`
-Then, where the session has enough intervening material, it should return after five other cards.
-
-Given an active item is rated `Unsicher`
-Then it remains in the current session learning stack
-And it is appended to the end of that stack
-And it does not receive normal positive stability growth or a future normal dueAt
-And reinforcement remains required.
-
-Given an item is rated `Leicht`
-Then its next normal interval is longer than for `Gut`
-And it is not automatically marked Mastered.
-
-Given an item is in the session learning stack
-When it receives `Gut`
-Then it leaves the current session learning stack
-And reinforcement is cleared
-And a future normal dueAt is calculated from the retained stability.
-
-Given an item is in the session learning stack
-When it receives `Leicht`
-Then it leaves the current session learning stack
-And reinforcement is cleared
-And its future normal dueAt is later than `Gut` for comparable state.
-
-### Session reinsertion and completion
-
-Given enough other cards remain
-When the current item receives `Nochmal`
-Then it returns after exactly one intervening queue entry.
-
-Given enough other cards remain
-When the current item receives `Schwer`
-Then it returns after exactly five intervening queue entries.
-
-Given fewer other queue entries remain than the requested separation
-When the current item receives `Nochmal` or `Schwer`
-Then it is appended to the end of the current learning stack.
-
-Given a single-card session
-When the only remaining item receives `Nochmal`, `Schwer`, or `Unsicher`
-Then it remains the next/current learning item rather than disappearing.
-
-Given reinforcement-required items remain in an active Study Session
-When the learner explicitly completes the Study Session
-Then the session can end
-And those items remain immediately due/reinforcement-required for a future session
-And no successful future interval is invented.
-
-### Assessment preview and transparency
-
-Given unchanged Learning State, Study Session state, and controlled time
-When assessment previews are requested
-Then no Review is created
-And Learning State and the session learning stack remain unchanged.
-
-Given an assessment preview is obtained
-When the learner submits the same grade without state/time changes
-Then the actual scheduling and session-stack result matches the preview.
-
-The Application read model exposes enough information for presentation to show the current item, remaining queue-entry count, a bounded upcoming queue preview where useful, repeated/relearning entries, and the projected effect of each grade.
-
-### Review history within one session
-
-Given the same card receives several grades in one Study Session
-When each grade is submitted
-Then every submitted grade is retained as its own immutable Review
-And each Review uses its actual completion timestamp.
-
-A normal Review never automatically Suspends or Masters an item.
-
-## 20. Lifecycle Actions
-
-Given a Suspended item
-When the learner Reactivates it
-Then its prior Review history and retained scheduling state remain
-And it becomes immediately due.
-
-Given a Mastered item
-When the learner Unmarks Mastered
-Then its prior Review history and retained scheduling state remain
-And it becomes immediately due.
-
-## 21. Assisted Evaluation (v0.5)
-
-Given automatic evaluation is enabled
-And a machine-checkable response is incorrect
-Then Illumination suggests `Schwer`
-And the learner may override the suggestion.
-
-Given the response is correct
-Then Illumination suggests `Gut`
-And the learner may override the suggestion.
-
-Given Assisted evaluation is enabled for a `SelfAssessed` or `Code` item
-Then no automatic correctness is produced
-And the learner chooses the final grade manually.
-
-Given Assisted evaluation is enabled for a `Selection` item
-When the selected choice-ID set exactly equals the authored correct-choice-ID set
-Then correctness is true and the suggested grade is `Gut`
-When the sets differ
-Then correctness is false and the suggested grade is `Schwer`
-And choice order does not affect correctness.
-
-Given Assisted evaluation is enabled for a `ShortText` item
-When the response is compared with `acceptedShortAnswers`
-Then comparison trims surrounding whitespace, uses Unicode normalization Form C, and uses ordinal case-insensitive equality
-And punctuation and internal whitespace are not altered
-And fuzzy or semantic matching is not used.
-
-Given a correct Assisted result with `ConsiderAssistance` enabled
-And at least one hint or assistance answer choice was revealed
-Then the suggested grade is `Unsicher` instead of `Gut`
-And the learner may choose any final grade.
-
-## 22. Low-Interaction Study Filtering (v0.5)
-
-Given a Study Session scope contains items with different explicit `lowInteractionEligible` values
-When v0.5 low-interaction filtering is requested
-Then only eligible items may participate if otherwise eligible
-And items that are not eligible are excluded.
-
-The existing authored `lowInteractionEligible` property is the filtering input. It is not inferred from ResponseMode. Filtering occurs before queue prioritization and new-item limiting, does not transform ResponseMode, and does not create separate Learning State or Review history.
-
-## 23. Study Queue
-
-Given a normal Study Session contains relearning, due, and new items
-Then relearning items have priority over ordinary due items
-And ordinary due items have priority over new items.
-
-The v0.2 session scope supports one or more selected Decks, uses set-union semantics, includes Active items only, and does not duplicate an item present in several selected Decks.
-
-Given several selected Decks contain the same Learning Item
-Then that item appears only once in the session queue.
-
-## 24. New-Item Limit
-
-Given the default Study Session settings
-Then no more than 20 new items are introduced unless the learner overrides the limit.
-
-The learner may explicitly choose all new items.
-
-## 25. Import Update Significance
-
-Given an explicit `minor` update
-When it is accepted
-Then existing Learning State and Review history remain unchanged.
-
-Given an explicit `semantic` update
-When it is accepted
-Then Review history remains
-And current scheduling state resets to new.
-
-## 26. Local-First Operation
+## 14. Local-First Operation
 
 Given no remote server is available
-When Illumination runtime/application capabilities are invoked locally
-Then core content, study, Review, scheduling, Deck, progress, and import workflows remain usable from local authoritative data.
+Then local authoritative content, Deck, Study, Review, scheduling, Insight and Content Bundle workflows remain usable.
 
+Remote infrastructure is not a hidden requirement for core operation.
 
-## 27. Malformed JSON
+## 15. Vocation Boundary
 
-Given ChatGPT returns syntactically invalid JSON
-When import is attempted
-Then no content is imported
-And the parser error is shown
-And Illumination can generate a repair prompt.
+Illumination remains usable with no Vocation integration configured.
 
-## 28. v0.5 Interaction Mode Semantics
+Any future Vocation integration exposes only explicit published semantics and must not expose Illumination persistence or mutable Domain objects.
 
-Given a direct selection item
-When Assisted evaluation is enabled
-Then Illumination can determine exact correctness only when the selected choice-ID set equals the authored correct-choice-ID set
-And at least one authored correct choice is required
-And unmarked `correct` values are treated as not correct.
+## 16. Wiiii Got This / Product Surface Boundary
 
-Given a short-text item with explicit accepted answers
-When Assisted evaluation is enabled
-Then Illumination compares conservatively after trimming surrounding whitespace and applying Unicode normalization Form C
-And uses ordinal case-insensitive equality against each accepted answer
-And does not ignore punctuation or alter internal whitespace.
+Illumination remains authoritative for learning semantics and state changes when hosted by Wiiii Got This.
 
-Given a `Code` response
-Then the captured response is shown alongside the Reference Solution
-And Illumination does not execute or compile it
-And Assisted evaluation falls back to manual assessment.
+WGT must not read/write Illumination SQLite or import Illumination Domain objects into WGT Domain/Application.
 
-Given a `SelfAssessed` response
-Then no machine-checkable response is required
-And the learner may reveal hints progressively and then the Reference Solution
-And the learner chooses the final five-grade assessment.
+The current v0.9 Desktop UI is an accepted standalone/admin/dev/acceptance host, not the final production UX. Post-v0.9 Product Surface extraction/redesign may reuse the same tested application behavior without declaring the current shell layout permanent.
 
-Given a Review with an applicable response
-Then historical facts may retain the submitted response, nullable automatic correctness, suggested assessment, hint count, assistance-choice reveal, and Reference Solution reveal
-And those facts remain separate from mutable Learning Item content and Learning State.
+## 17. v0.9 Whole-Product Release Smoke
 
-## 29. V1 Import Operation Safety
+The accepted v0.9 RC must support, on the same persisted candidate:
 
-Given a valid V1 import bundle
-Then it may create/update Learning Items and Decks and assign memberships.
+1. create/edit a Learning Item and assign Deck membership;
+2. create/rename/delete a Deck without ghost projections;
+3. start Study and submit grades;
+4. use Practice now without destructive scheduling mutation;
+5. explicitly Restart learning and observe new-learning selection semantics/new-card-limit explanation;
+6. Generate → validate → import an Existing Deck extension using current learning evidence;
+7. open Insights and observe current derived state;
+8. close/reopen and retain authoritative state;
+9. use the previously accepted Local Data/backup controls.
 
-Given a V1 bundle requests deletion, Suspend, or Mastered
-Then the operation is rejected as unsupported.
+The user completed this real-use pass on the frozen v0.9 candidate and reported follow-up product/UX ideas rather than release-blocking defects. That feedback is tracked separately for post-v0.9 work.
 
-## 30. Local Backup
+## 18. Release Evidence
 
-Given a database migration is about to run
-Then Illumination creates a local backup before mutating the database.
+A stable milestone release requires:
 
-Given normal operation
-Then rolling local backups can be produced without remote infrastructure.
+- accepted manual product gate where specified;
+- Release configuration build;
+- full automated test suite;
+- NuGet vulnerability audit;
+- reviewed release PR to `main`;
+- stable branch/tag verification.
 
-## 31. Local Capability-Runtime Operation
-
-Given the remote network is unavailable
-When Illumination runtime/application capabilities are invoked locally
-Then the local SQLite-backed core workflows remain usable without requiring a standalone Illumination UI.
-
-## 32. Lapse After Long Stability
-
-Given a Learning Item with a long existing stability
-When it receives `Nochmal`
-Then retained stability is strongly reduced and capped at 3 days while reinforcement remains required.
-
-Given a Learning Item with a long existing stability
-When it receives `Schwer`
-Then retained stability is reduced and capped at 7 days while reinforcement remains required.
-
-A subsequent `Gut` or `Leicht` Review grows from the reduced retained state rather than immediately restoring the previous long interval.
+Post-v0.9 ideas do not enter v0.9 release preparation unless they fix a demonstrated release blocker.

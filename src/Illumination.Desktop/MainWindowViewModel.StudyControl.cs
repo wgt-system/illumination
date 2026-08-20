@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Illumination.Application.Study;
@@ -8,6 +9,7 @@ namespace Illumination.Desktop;
 public sealed partial class MainWindowViewModel
 {
     private bool _studyDeckSelectionInitialized;
+    private bool _deckProjectionSubscriptionInitialized;
 
     public ObservableCollection<DeckPresentationItem> SelectedStudyDecks { get; } = [];
 
@@ -130,13 +132,32 @@ public sealed partial class MainWindowViewModel
 
     public void InitializeStudySelection()
     {
+        EnsureDeckProjectionSubscription();
         NormalizeSelectedStudyDecks();
+        ContentCuration.NormalizeDeckPresentations(DeckPresentationItems);
         if (!_studyDeckSelectionInitialized && SelectedStudyDecks.Count == 0 && SelectedStudyDeckPresentation is not null)
         {
             SelectedStudyDecks.Add(SelectedStudyDeckPresentation);
             _studyDeckSelectionInitialized = true;
             StudyDeckSelectionChanged();
         }
+    }
+
+    private void EnsureDeckProjectionSubscription()
+    {
+        if (_deckProjectionSubscriptionInitialized) return;
+        DeckPresentationItems.CollectionChanged += DeckPresentationItemsChanged;
+        _deckProjectionSubscriptionInitialized = true;
+    }
+
+    private void DeckPresentationItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // RefreshContentAsync replaces Decks first, then rebuilds DeckPresentationItems by
+        // clearing and adding entries. Normalize only once that projection is complete so
+        // valid multi-Deck Study selections survive a refresh while deleted Deck IDs vanish.
+        if (DeckPresentationItems.Count != Decks.Count) return;
+        NormalizeSelectedStudyDecks();
+        ContentCuration.NormalizeDeckPresentations(DeckPresentationItems);
     }
 
     private void NormalizeSelectedStudyDecks()

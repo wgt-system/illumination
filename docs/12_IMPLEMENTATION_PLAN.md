@@ -2,7 +2,9 @@
 
 ## Status
 
-Implementation baseline. The accepted V1 decisions satisfy the implementation gate.
+Implementation baseline through **v0.9.0**.
+
+The accepted V1 technology/domain baseline is stable enough for continued vertical-slice development. Pre-1.0 work is driven by concrete product/reliability/usability evidence rather than an artificial countdown to v1.0.
 
 ## 1. Release Model
 
@@ -12,352 +14,445 @@ Use semantic-style versions:
 vMAJOR.MINOR.PATCH
 ```
 
-Planned feature milestones before the first major release can progress as:
+Pre-1.0 feature releases continue numerically:
 
 ```text
-v0.1.0
-v0.2.0
-v0.3.0
-...
 v0.8.0
 v0.9.0
 v0.10.0
 v0.11.0
 ...
-v1.0.0
 ```
 
-The exact number of `v0.y.0` milestones is not predetermined. Minor version numbers are integers, not decimal fractions: `v0.10.0` follows `v0.9.0`; reaching `v0.9.0` does not imply `v1.0.0` next.
+Minor versions are integers, not decimal fractions. `v0.10.0` follows `v0.9.0`.
 
-Patch releases may later use the third component where needed.
+`v1.0.0` is reserved for a deliberately accepted coherent first major product baseline. It is not inferred from the previous minor number.
 
-`v1.0.0` is reserved for a deliberately completed coherent first major product baseline. It is a product-readiness decision, not an automatic consequence of the previous pre-1.0 version number.
+Patch releases may use the third component when needed for compatible fixes/hardening.
 
-## 2. Specification Gate
+## 2. Development and Release Branches
 
-The implementation gate is satisfied for the accepted V1 baseline. Scheduling semantics, canonical terminology, Content Bundle 1.0, and the technology baseline are decided and documented. Remaining application-detail decisions must not block the listed vertical slices.
+- `dev` is the normal integration branch.
+- `main` contains stable reviewed milestone releases.
+- release preparation branches use `release/vX.Y.Z` when a candidate has passed product acceptance and needs documentation/final release validation.
+- stable releases are tagged `vX.Y.Z` on the exact stable commit.
 
-## 3. Proposed Milestone Shape
+Do not mix unrelated next-milestone product work into an accepted release candidate.
 
-The following milestone sequence is the current implementation baseline.
+## 3. Architectural Baseline
 
-### Milestone A – Learning Core
+Illumination remains one local-first, single-user bounded context using:
 
-Goal:
+- C# / .NET 10 LTS;
+- SQLite authoritative local persistence;
+- EF Core SQLite infrastructure;
+- Avalonia/CommunityToolkit.Mvvm for the current provider-presentation/Desktop direction;
+- xUnit v3 for tests.
 
-- create/edit Learning Items,
-- Reference Solutions,
-- `0..*` hints,
-- Decks with many-to-many membership,
-- active/suspended/mastered lifecycle,
-- deterministic domain tests.
+Wiiii Got This is the containing product/system hub. Illumination retains ownership of learning semantics, workflows, local persistence/scheduling, and substantial provider-specific consumer presentation.
 
-No complex UI requirement should drive this milestone.
+A reusable provider-owned Product Surface is post-v0.9 integration/product work. It must not cause WGT Domain/Application to import Illumination Domain objects or read/write Illumination SQLite, and it must not silently become a generic plugin protocol.
 
-### Milestone B – Review and Scheduling
+## 4. Implementation Strategy
 
-Goal:
+Prefer **vertical product slices** over isolated layer-by-layer or Issue-by-Issue work.
 
-- study-session flow,
-- five-grade assessments,
-- Review history,
-- Learning State,
-- exact repetition algorithm,
-- due selection,
-- difficult/relearning behavior,
-- Suspend/Mastered scheduling interactions.
+A useful slice may advance several Issues at once when they share one coherent end-to-end workflow. Issues remain acceptance/ownership boundaries; they do not require artificial serial implementation.
 
-This milestone uses the accepted scheduling specification in `docs/08A_SCHEDULING_SEMANTICS.md`.
+Priority order for validation:
 
-### Milestone C – Structured Content Acquisition
+1. domain invariants;
+2. Application use cases/projections;
+3. persistence/migration behavior;
+4. presentation workflow;
+5. end-to-end/manual product behavior where needed;
+6. cross-repository host integration only after provider behavior is reviewed.
 
-Goal:
+Parallel work is appropriate only where file/contract overlap is low and accepted boundaries are clear.
 
-- prompt generation,
-- Content Bundle 1.0 validation and import,
-- mixed-validity preview and atomic accepted-subset commit,
-- new-content import,
-- minor/semantic update behavior,
-- provenance and import result reporting,
-- malformed-JSON repair prompt,
-- deterministic duplicate warnings without auto-merge.
+## 5. Historical Pre-1.0 Milestones
 
-Uses the published Content Bundle 1.0 contract and explicit stable Illumination identifiers for intentional updates.
+### v0.1.0 – Local Content Foundation (released)
 
-### Milestone D – Content Quality and Curation
+Delivered:
 
-Goal:
+- solution/layer baseline;
+- Learning Item and Deck domain;
+- SQLite persistence/migrations;
+- content-management Application behavior;
+- initial Desktop/admin/dev capability surface;
+- backup/hardening baseline.
 
-- User Flags and flag filtering,
-- user-defined flag definitions with multiple flags per Learning Item, independent of scheduling, content revision, and quality assurance,
-- immutable Quality Reviews with `Pass`, `Warning`, and `NeedsReview`,
-- ModelReview, SourceGroundedReview, and UserReview evidence types,
-- ContentRevision starting at `1`, exact change-sensitive increments, explicit review supersession, and derived current quality state with deterministic precedence,
-- quality-review prompts, findings preview, explicit acceptance, and optional correction application.
+### v0.2.0 – Study and Scheduling (released)
 
-### Milestone E – Interaction Variants
+Delivered:
 
-Goal:
+- Study Session;
+- five-grade assessment (`Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`);
+- deterministic Learning State/scheduling;
+- durable relearning priority with session-local queue behavior;
+- due/new/relearning prioritization;
+- multiple selected Decks with set-union deduplication;
+- default 20-new-item limit plus explicit override/all-new;
+- immutable Review history;
+- lifecycle reactivation/unmastering semantics.
 
-- SelfAssessed interaction refinement,
-- direct multiple choice,
-- optional answer-choice assistance,
-- short text response,
-- small coding response,
-- Manual/Assisted evaluation,
-- hints and assistance/reveal workflows,
-- optional hint influence,
-- low-interaction filtering.
+### v0.3.0 – Study Refinement and Content Acquisition (released)
 
-### Milestone F – Learning Insight
+Delivered:
 
-Goal:
+- exact learning-stack reinsertion semantics;
+- deterministic assessment previews;
+- Study queue transparency;
+- Content Bundle 1.0 generation/parse/validation;
+- mixed-validity preview;
+- atomic accepted-subset commit;
+- `localRef` dependency resolution;
+- explicit update significance;
+- malformed-JSON repair prompts;
+- import results/provenance.
 
-- Deck summaries,
-- due/new/relearning views,
-- Review history views,
-- Suspended/Mastered management,
-- useful learning-progress dashboard.
+### v0.4.0 – Content Quality and Curation (released)
 
-### Milestone G – Integration Surface
+Delivered:
 
-Only when required:
-
-- versioned Illumination published capabilities,
-- Wiiii Got This integration,
-- Vocation Learning Reference / coverage contract.
-
-Do not implement speculative integration endpoints before concrete consumers and semantics exist.
-
-## 4. V1 Direction
-
-The first major release should include at least the product behaviors already declared V1-worthy:
-
-- repeatable Learning Items,
-- Decks,
-- `0..*` hints,
-- five-grade assessment,
-- scheduling,
-- configurable automatic evaluation support,
-- default no-penalty hint behavior with optional configurable influence,
-- Suspension,
-- Mastered,
-- structured ChatGPT JSON content generation/import,
-- progress visibility,
-- single-user local-first operation.
-
-The exact milestone in which each becomes usable may vary. Satisfying individual V1-capability criteria does not by itself declare the complete product `v1.0.0`; that release remains an explicit product-readiness decision.
-
-## 5. Testing Strategy Direction
-
-Before coding, convert domain invariants and acceptance scenarios into executable test targets.
-
-Priority order:
-
-1. pure domain-rule tests,
-2. application-use-case tests,
-3. import-contract tests,
-4. persistence integration tests,
-5. application-capability interaction tests,
-6. published-contract tests when integrations exist.
-
-Scheduling must be deterministic under controlled time.
-
-## 6. Codex/Luna Use
-
-Codex/Luna should only receive implementation work after:
-
-- relevant specification is stable,
-- file/module scope is known,
-- expected behavior is written as acceptance criteria,
-- contracts are versioned where applicable.
-
-Parallel work is appropriate only for genuinely independent tasks with little file/contract overlap.
-
-## 7. No Premature Microservices
-
-Milestones describe capabilities, not deployables.
-
-Do not map:
-
-- Scheduling,
-- Statistics,
-- Decks,
-- Import
-
-to separate network services without an actual architectural reason.
-
-## 8. Next Planning Step
-
-Continue from the current stable release with the next explicitly accepted pre-1.0 product milestone. Select scope from concrete product, reliability, usability, performance, migration, or consumer-driven integration needs; do not manufacture integration contracts or infer `v1.0.0` from version numbering.
-
-## Accepted V1 Technology Baseline
-
-- C# / .NET 10 LTS
-- SQLite
-- executable capability runtime with Wiiii Got This as the primary end-user presentation
-- no mandatory remote server
-- optional server/Docker/Conveyance-backed delivery infrastructure for connectivity or future synchronization only
-
-Implementation planning should use this baseline unless a later ADR explicitly supersedes it.
-
-## Concrete Pre-1.0 Milestones
-
-### v0.1.0
-
-Scope: Local Content Foundation.
-
-Deliver in order:
-
-1. Bootstrap solution architecture (C#/.NET 10 LTS capability runtime, EF Core infrastructure, and test baseline; optional Avalonia host may remain available for administration/development).
-2. Learning Item and Deck domain.
-3. SQLite persistence and migrations.
-4. Content-management application capabilities and their optional/admin/dev host integration.
-5. Backup, hardening, and v0.1.0 acceptance.
-
-### v0.2.0 – Study and Scheduling
-
-Deliver:
-
-- Study Session,
-- five-grade assessment (`Nochmal`, `Schwer`, `Unsicher`, `Gut`, `Leicht`),
-- deterministic scheduling state,
-- durable short-term reinforcement prioritization with session-local stack ordering,
-- due/new/relearning prioritization,
-- one or more selected Decks with set-union queue deduplication and Active items only,
-- default 20-new-item limit with explicit override/all-new behavior,
-- Review history,
-- optional opaque submitted response payload retention,
-- Reactivate for Suspended and UnmarkMastered for Mastered,
-- scheduling simulations/acceptance tests.
-
-### v0.3.0 – Study Refinement and Content Acquisition
-
-Deliver:
-
-- Session learning-stack semantics and deterministic assessment previews:
-  - `Nochmal` returns after 1 intervening card when possible,
-  - `Schwer` returns after 5 intervening cards when possible,
-  - `Unsicher` returns at the end of the current learning stack,
-  - `Gut` and `Leicht` graduate into future normal scheduling,
-  - small-queue and single-card fallback remains explicit,
-  - unfinished reinforcement remains durable across sessions while stack position remains session-local.
-- Standalone Study transparency and compact UI integration, including remaining-session information, bounded queue preview, and grade-outcome previews near the five grade controls.
-- structured Content Acquisition using the canonical Content Bundle 1.0 schema:
-  - prompt generation for substantial content requests,
-  - parse/envelope, per-operation structural, and semantic/dependency validation,
-  - mixed-validity preview with explicit accepted-subset selection,
-  - atomic accepted-subset commit,
-  - localRef dependency resolution,
-  - minor/semantic update semantics,
-  - deterministic duplicate warnings,
-  - malformed-JSON repair prompt,
-  - import results and lightweight provenance.
-
-v0.2 does not interpret submitted response payloads. v0.3 adds session refinement, Study transparency, and Content Acquisition. v0.4 is Content Quality & Curation. Response interaction workflows, automatic correctness/grade suggestions, hint influence, and low-interaction filtering belong to v0.5.
-
-The v0.3 first slice is session learning-stack semantics, grade previews, standalone Study transparency, and Content Acquisition. Content Acquisition is pulled forward so realistic Study/scheduler validation is practical without manually authoring large item sets.
-
-### v0.4.0 – Content Quality and Curation
-
-Deliver:
-
-- User Flags and flag filtering,
-- immutable Quality Reviews with current-revision binding,
-- derived current quality state,
-- Standard/Strict/SourceGrounded generation quality modes,
-- quality-review prompt and structured-result workflow,
-- explicit review acceptance and optional normal content correction.
+- User Flags;
+- immutable Quality Reviews;
+- content revision binding;
+- derived current quality state;
+- Standard/Strict/SourceGrounded review/generation quality concepts;
+- structured quality-review exchange;
+- explicit review acceptance/correction application.
 
 ### v0.5.0 – Interaction Modes and Evaluation (released)
 
-The v0.5 implementation is released and covered by the integrated acceptance and hardening baseline.
+Delivered:
 
-Deliver:
+- `SelfAssessed`, `Selection`, `ShortText`, `Code` interaction flows;
+- Manual/Assisted evaluation;
+- exact multiple-choice comparison;
+- conservative accepted-short-answer matching;
+- progressive hints/assistance;
+- optional assistance influence on suggested grade;
+- durable interaction facts on Review;
+- low-interaction filtering.
 
-- `SelfAssessed`, `Selection`, `ShortText`, and `Code` end-to-end interaction workflows over the existing authored response fields,
-- Manual and Assisted evaluation with advisory correctness and grade suggestions,
-- exact multi-choice set comparison and conservative accepted-short-answer comparison,
-- progressive hint and explicit assistance-answer-choice reveal workflows,
-- optional `ConsiderAssistance` suggestion influence without changing the final learner-selected grade,
-- durable v0.5 interaction facts on Review,
-- optional low-interaction filtering by the existing persisted `lowInteractionEligible` property.
+Not delivered:
 
-v0.5 does not introduce arbitrary code execution, fuzzy or semantic answer checking, direct LLM/API integration, Content Bundle 1.0 changes, or scheduler redesign.
+- arbitrary code execution;
+- fuzzy/semantic answer grading;
+- direct paid LLM API;
+- scheduler redesign.
 
 ### v0.6.0 – Learning Insight (released)
 
-The v0.6 implementation is released and covered by the accepted integrated test, build, and Desktop startup baseline. Shipped scope includes the Desktop shell/page structure, Learning Insight, Review and Study Session history, filtering/search, DeckLearningContext, learning-aware follow-up Deck generation, Reinforce/Continue/Advance progression modes, generation ResponseMode controls, language-learning prompt hardening, improved JSON drag/drop, and explicit Suspended/Mastered lifecycle management.
+Delivered:
 
-Deliver:
+- Deck summaries;
+- due/new/relearning views;
+- lifecycle management;
+- Study Session/Review history;
+- filtering/search;
+- `DeckLearningContext` foundation;
+- existing-Deck follow-up generation;
+- initial `Reinforce`/`Continue`/`Advance` generation intents;
+- generation ResponseMode/language controls;
+- shell/page structure.
 
-- Deck summaries,
-- due/new/relearning views,
-- Suspended/Mastered management,
-- Study Session history,
-- Review history,
-- useful filtering/search,
-- a typed DeckLearningContext for later follow-Deck generation.
-
-The v0.6 foundation is a derived read capability over authoritative local Learning
-Items, current Deck membership, Reviews, and Study Sessions. It does not introduce a
-separate analytics source of truth, arbitrary mastery scoring, denormalized statistics,
-or a generated prompt/LLM integration. The five-grade distribution is based only on
-learner-confirmed final assessments.
+Learning Insight remains derived from authoritative state/history; it is not a second source of truth and does not create a synthetic mastery score.
 
 ### v0.7.0 – Product Refinement (released)
 
-The v0.7 implementation is released after the explicit Product Refinement hardening gate in Issue #19 and the accepted Release build, full test suite, and NuGet vulnerability audit. Shipped scope includes richer Content Bundle generation/import previews, language and follow-up generation controls, existing-content improvement prompts, Deck export and direct Deck actions, bulk content curation and Study flags, focus-aware Study shortcuts, Learning Insights activity history and due forecasts, local backup/export controls, migration hardening, and repository/C4 maintenance improvements.
+Delivered:
 
-The v0.7 release gate deliberately removed two unaccepted product semantics that appeared during refinement: product-level resume/finish controls for persisted unfinished Study Sessions and staged replacement of the authoritative local SQLite database. Durable Study state, normal explicit session completion, rolling/manual backups, portable backup export, and backup-before-migration safety remain within the accepted baseline.
+- richer Content Bundle generation/import previews;
+- language/follow-up generation controls;
+- content-improvement prompts;
+- Deck export/direct actions;
+- bulk curation and Study flags;
+- focus-aware Study shortcuts;
+- Insight activity/due forecasts;
+- local backup/export controls;
+- migration hardening;
+- repository/C4 maintenance.
+
+Rejected from stable scope:
+
+- invented persisted resume/finish semantics for unfinished Study Sessions;
+- staged replacement of authoritative SQLite as a casual UI workflow.
 
 ### v0.8.0 – Local Data Reliability & Runtime Coherence (released)
 
-The v0.8 implementation is released after the focused reliability gate in Issue #35 and successful Release build, full test suite, and NuGet vulnerability audit.
+Delivered:
 
-Shipped scope includes:
+- fresh Insight projection when opened after Study changes;
+- change-aware automatic rolling SQLite snapshots;
+- five-snapshot retention;
+- backup-before-migration;
+- backup-before-Content-Bundle commit;
+- persistent configurable local backup location;
+- explicit local DB/backup-path presentation;
+- manual backup and portable export.
 
-- fresh Learning Insights projection when the Insights surface is opened after Study activity,
-- change-aware automatic rolling local SQLite snapshots on normal Desktop startup,
-- preserved five-snapshot rolling retention and backup-before-migration behavior,
-- backup-before-Content-Bundle-commit protection without weakening the existing atomic accepted-subset import transaction,
-- persistent configurable local rolling-backup location loaded before migration and runtime composition,
-- explicit local database/backup-path presentation plus manual backup and portable export controls.
+Not delivered:
 
-v0.8 does not add authoritative database restore/replacement, cloud backup, remote readable persistence, synchronization/Conveyance semantics, speculative WGT/Vocation published contracts, scheduler redesign, or new learning-domain semantics.
+- authoritative database restore/replacement;
+- cloud backup;
+- remote readable persistence;
+- synchronization semantics;
+- speculative WGT/Vocation contracts.
 
-Use further `v0.y.0` releases as needed for:
+### v0.9.0 – Product Usability & Learning-Aware Generation (released)
 
-- usability,
-- scheduler tuning,
-- backup/export improvements,
-- content-management refinements,
-- performance,
-- migration hardening,
-- other concrete product-completeness work.
+v0.9 is accepted after real-use testing of the frozen candidate and final Release validation.
 
-The pre-1.0 line may continue through `v0.9.0`, `v0.10.0`, `v0.11.0`, and beyond. Do not force `v1.0.0` after a fixed number of pre-1.0 milestones or because a particular minor number was reached.
+Delivered:
 
-### v1.0.0 – Coherent Independent Illumination
+- coherent Deck projections and deletion behavior across product reads;
+- clearer Learning Item authoring with direct Deck assignment;
+- CEFR A1–C2 language-generation controls;
+- explicit language exercise profiles;
+- controlled progression and existing-content anti-duplication;
+- non-destructive **Practice now**;
+- explicit authoritative **Restart learning** for item/Deck scheduling reset while preserving immutable history/membership;
+- real SQLite/Desktop restart verification and scheduler/new-card-limit explanation;
+- deterministic Application-owned Learning Generation Profile/Brief derived from current learning evidence;
+- Application-owned semantic prompt composition;
+- fresh learning evidence automatically used by Existing Deck generation;
+- Content Bundle 1.0 retained as the validated output/import boundary;
+- rationalized Study/Library/Generate/Decks/Insights shell hierarchy;
+- clearer first-use/filter/empty states;
+- Desktop runtime/API warning hardening.
 
-`v1.0.0` requires a deliberately accepted complete first major Illumination product baseline, with the stable independent capability runtime covering at least:
+v0.9 explicitly does **not** declare the current standalone/admin/dev Desktop information architecture the final production UX.
 
-- content acquisition,
-- Deck organization,
-- repeated study,
-- deterministic scheduling,
-- progress/history,
-- local authoritative persistence,
-- backup/migration safety,
-- acceptance-tested core invariants.
+## 6. Accepted v0.9 Product Semantics
 
-These capabilities are necessary but not by themselves sufficient to declare `v1.0.0`; remaining product-completeness, usability, integration, deployment, or quality requirements may continue to be addressed in further `v0.y.0` milestones.
+### Practice now
 
-Wiiii Got This may provide the primary end-user presentation; a complete separate Illumination end-user UI is not required.
+Practice is immediate access without rewriting authoritative scheduling merely to make an item due.
 
-Vocation and Wiiii Got This integrations are not prerequisites for `v1.0.0`; they evolve through separate published-contract milestones when their semantics are needed.
+### Restart learning
 
-The v0.6 Desktop slice exposes the existing Learning Insight read models and hands a
-selected source Deck's derived `DeckLearningContext` to the existing Content
-Acquisition prompt workflow. It does not introduce a mastery score, mutate the source
-Deck, or change Content Bundle 1.0.
+Restart is an explicit destructive-to-current-scheduling action, not a history deletion. It resets current scheduling to the accepted new-learning baseline while preserving immutable Review history and membership. Normal Study new-item limits still apply after Deck restart.
+
+### Learning-aware generation
+
+Generation uses a deterministic Application-owned summary of decision-relevant evidence rather than raw unbounded scheduler dumps. The external LLM remains a content generator, not the authority for Learning State or mastery.
+
+### Progression intent
+
+`Reinforce`, `Continue`, and `Advance` are v0.9 generation intents, not scheduler states. Their production UI wording may be replaced post-v0.9 with clearer goal language without changing the underlying accepted distinction.
+
+## 7. Post-v0.9 Product Line
+
+The following items are active **post-v0.9 planning/implementation work**. They are not retroactive v0.9 release scope and should be implemented as coherent vertical slices rather than one isolated Issue at a time.
+
+### Product Surface extraction / WGT integration — #54
+
+Goal:
+
+- replay the reusable Illumination-owned Product Surface from the accepted v0.9 baseline;
+- preserve current Study/Decks/Library/Generate/Insights semantics;
+- keep the standalone Desktop host as optional admin/dev/acceptance host;
+- host the same provider-owned consumer surface from WGT;
+- keep Illumination Domain/persistence private;
+- repin WGT only to a reviewed provider revision;
+- physically validate WGT-hosted Windows entry, substantive workflows and return to Atlas.
+
+Do not merge the old stale Product Surface branch wholesale over v0.9.
+
+### Flexible Deck facets / learning profiles — #69
+
+Goal:
+
+Separate:
+
+1. user-owned topic/subject labels (zero or more per Deck);
+2. learning/exercise profiles such as language, general recall, coding/problem-solving, geospatial;
+3. observed learning evidence derived from Reviews/Learning State/sessions.
+
+Avoid a mandatory single Deck `Category` enum unless a real invariant later requires it.
+
+### Evidence-based Learning Analytics — #70
+
+Goal:
+
+Build inspectable metrics over authoritative history/state, including candidates such as:
+
+- acquisition effort/time;
+- retention/forgetting behavior;
+- stability growth;
+- lapse/relearning rates;
+- normalized response-latency trends;
+- assistance/hint dependence;
+- calibration between deterministic correctness evidence and learner-confirmed assessment;
+- weak/relearning versus established/new material;
+- scope comparisons by Deck/topic/profile/time.
+
+Before locking formulas, review current spaced-retrieval, forgetting-model, response-time/knowledge-tracing and metacognitive-calibration literature. Distinguish evidence-backed measures from exploratory product metrics. Do not fabricate population-level psychometric validity from one user's sparse local data.
+
+The resulting deterministic summaries should feed future content generation without making ChatGPT authoritative for learning state.
+
+### Goal-first Create / Extend workflow — #71
+
+Goal:
+
+Separate the normal user intent into:
+
+- create new learning material;
+- extend an existing Deck using current learning evidence and duplicate-avoidance context.
+
+Replace ambiguous normal-UI progression vocabulary with clear goals such as:
+
+- practice weak areas;
+- add new material at this level;
+- progress to harder material.
+
+Profile-specific configuration must reveal only relevant controls.
+
+Generated batch review must be bounded:
+
+- review cards one-by-one when desired;
+- trust/accept a validated batch directly;
+- optionally review only deterministic problem cases;
+- never require scrolling through an arbitrarily long generated-card list to reach the finish action.
+
+### Focused production Product Surface — #72
+
+Goal:
+
+Design the real consumer UI around progressive disclosure rather than the current function inventory.
+
+Candidate top-level product destinations:
+
+- Study;
+- Library;
+- Create/Extend;
+- Insights.
+
+Deck management may become contextual inside Library if workflow testing supports it.
+
+Explore compact circular **icon-only** top-right navigation/actions with:
+
+- no permanent text inside normal circles;
+- hover/focus labels;
+- accessible names;
+- touch-safe discovery and hit targets;
+- clear active state;
+- no requirement to force every action into a circle.
+
+Study becomes a focus mode with minimal chrome and content centered.
+
+Assessment policy should evolve toward:
+
+1. Manual;
+2. Assisted;
+3. Automatic where deterministic evaluation is genuinely supported, with immediate undo/override.
+
+Unsupported auto-grading must fall back to learner control rather than inventing correctness.
+
+### Learning-generation refinement — #56 follow-on relationship
+
+The v0.9 deterministic Learning Generation Profile is shipped. Post-v0.9 Analytics/facets/Create-Extend work may enrich the bounded generation brief with better evidence and workflow semantics without introducing an opaque mastery score or moving prompt semantics back into Desktop presentation code.
+
+### Orientation geospatial capability
+
+Future geospatial learning exercises should consume an accepted Orientation-owned generic geospatial/map capability through explicit architecture boundaries.
+
+Illumination should not clone Orientation's map stack or treat map capability as Deck identity. Language + geography and similar composed exercise profiles should remain possible.
+
+### Coding/problem-solving profile
+
+Coding must be modeled as its own learning/evaluation profile rather than a stray ResponseMode mixed into language-learning configuration.
+
+Do not imply arbitrary code execution/automatic grading before a specific safe deterministic evaluator/runtime policy is accepted.
+
+## 8. Product UX Working Principles
+
+These are post-v0.9 design principles to validate in implementation, not excuses to remove functionality.
+
+- one dominant task/state per view;
+- progressive disclosure of contextual/advanced actions;
+- bounded dynamic-result regions;
+- primary actions remain visible/reachable independent of result count;
+- explicit workflow transitions such as configure → act → review → finish;
+- minimal persistent chrome during focused Study;
+- mouse, keyboard, touch and accessibility remain first-class;
+- admin/dev/diagnostic controls stay separable from the normal consumer path.
+
+## 9. Learning Analytics / Generation Data Rule
+
+Authoritative facts remain:
+
+- Learning Items/content revision;
+- Deck membership;
+- Reviews and confirmed final assessments;
+- Study Sessions;
+- current Learning State/lifecycle;
+- explicit interaction facts such as correctness/hint use/response payload/timing when validly captured.
+
+Analytics and generation profiles are deterministic projections over those facts. They must expose definitions/units, handle sparse data honestly, and never become a hidden competing source of truth.
+
+## 10. Testing Strategy
+
+Every new slice should cover, as applicable:
+
+- deterministic Domain tests;
+- Application projection/use-case tests;
+- SQLite migration/integration tests;
+- prompt/contract tests;
+- presentation-state tests;
+- physical Desktop/WGT smoke where framework/host behavior cannot be proved in unit tests;
+- vulnerability audit before stable releases.
+
+Time-dependent tests use controlled time.
+
+## 11. Codex/Luna Use
+
+Codex/Luna implementation work should receive:
+
+- stable acceptance direction;
+- clear architectural ownership;
+- known module/file scope where possible;
+- explicit non-goals;
+- tests/validation expectations.
+
+Do not create branch/Issue churn merely to simulate progress. Parallelize coherent independent slices, and coordinate shared Application/presentation contracts explicitly.
+
+## 12. No Premature Microservices or Plugin Protocol
+
+Milestones describe capabilities, not deployables.
+
+Do not map Scheduling, Analytics, Decks, Import, generation profiles, or Product Surface subareas to separate network services without an actual architectural reason.
+
+Do not generalize one provider-specific Product Surface integration into a universal downloadable plugin/UI protocol without a separate accepted system Architecture decision.
+
+## 13. v1.0 Direction
+
+`v1.0.0` requires an intentionally accepted complete independent Illumination product baseline, including at least:
+
+- content acquisition;
+- Deck/content organization;
+- repeated Study;
+- deterministic scheduling;
+- progress/history and useful learning analysis;
+- local authoritative persistence;
+- backup/migration safety;
+- coherent production UX;
+- acceptance-tested invariants.
+
+These are necessary but not automatically sufficient. WGT/Vocation integration is not a prerequisite for v1.0 unless concrete product readiness later makes it one.
+
+## 14. Immediate Next Step after v0.9
+
+Proceed from the released v0.9 baseline with the Product Surface/production-UX line and related Learning Intelligence work as vertical slices. The current highest-leverage sequence is:
+
+1. replay #54 from v0.9 and establish the clean reusable provider surface;
+2. implement an initial production shell/navigation + Create/Extend slice spanning #71/#72;
+3. introduce #69 facets/profile foundations where required by Create/Analytics;
+4. build #70 Analytics projections and connect them to generation briefs;
+5. add provider/capability-specific exercise profiles such as Coding and Orientation-backed geospatial work only through accepted boundaries;
+6. repin/rebuild WGT against reviewed provider revisions as substantial Illumination Product Surface slices land.
+
+This sequence is directional, not a requirement to finish each Issue completely before work on the next one begins.

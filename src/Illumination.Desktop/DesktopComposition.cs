@@ -40,8 +40,12 @@ internal static class DesktopComposition
         }
 
         var contextFactory = new DesktopDbContextFactory(options);
-        var content = new ContentManagementService(new EfCoreContentPersistence(contextFactory), timeProvider);
         var contentPersistence = new EfCoreContentPersistence(contextFactory);
+        var content = new ContentManagementService(contentPersistence, timeProvider);
+        var learningStateMaintenance = new LearningStateMaintenanceService(
+            contentPersistence,
+            new EfCoreLearningStateBatchPersistence(contextFactory),
+            timeProvider);
         var curation = new ContentCurationService(contentPersistence, contentPersistence);
         var qualityExchange = new QualityReviewExchangeService(contentPersistence, contentPersistence);
         var insights = new LearningInsightService(new EfCoreLearningInsightPersistence(contextFactory), timeProvider);
@@ -58,7 +62,10 @@ internal static class DesktopComposition
         var viewModel = new MainWindowViewModel(content, study, acquisition, curation, qualityExchange, timeProvider, insights);
         viewModel.ConfigureLocalData(backupService, settingsStore, databasePath, defaultBackupDirectory);
         viewModel.ConfigureDeckExport(new ContentBundleExportService(content));
+        viewModel.ConfigureLearningStateMaintenance(learningStateMaintenance);
         viewModel.ContentAcquisition.ConfigureContentPreview(content);
+        viewModel.ContentAcquisition.ConfigureExistingDeckContent(() => viewModel.LearningItems.ToArray());
+        viewModel.ContentAcquisition.ConfigureDeckLearningContextProvider(insights.GetDeckLearningContextAsync);
         await viewModel.InitializeAsync();
         return viewModel;
     }

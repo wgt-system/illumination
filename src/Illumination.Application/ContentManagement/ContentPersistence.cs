@@ -20,6 +20,13 @@ public interface IContentPersistence
 
 }
 
+public interface ILearningStateBatchPersistence
+{
+    Task SaveLearningStatesAtomicallyAsync(
+        IReadOnlyList<LearningStateMaintenanceSnapshot> states,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IUserFlagDefinitionPersistence
 {
     Task<IReadOnlyList<UserFlagDefinitionSnapshot>> ListUserFlagDefinitionsAsync(CancellationToken cancellationToken = default);
@@ -46,6 +53,14 @@ public sealed record LearningItemSnapshot(
     int ContentRevision = 1,
     IReadOnlyList<QualityReviewSnapshot>? QualityReviews = null,
     IReadOnlyList<Guid>? UserFlagDefinitionIds = null);
+
+public sealed record LearningStateMaintenanceSnapshot(
+    Guid LearningItemId,
+    bool IsNew,
+    DateTimeOffset DueAt,
+    double Difficulty,
+    double StabilityDays,
+    bool IsInShortTermRelearning);
 
 public sealed record HintSnapshot(string Text);
 
