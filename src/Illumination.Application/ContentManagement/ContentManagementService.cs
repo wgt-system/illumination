@@ -98,7 +98,7 @@ public sealed class ContentManagementService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var deck = ExecuteDomain(() => Deck.Create(command.Name));
+        var deck = ExecuteDomain(() => Deck.Create(command.Name, command.TopicLabels));
         await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
         return ToView(deck);
     }
@@ -124,6 +124,18 @@ public sealed class ContentManagementService
         ArgumentNullException.ThrowIfNull(command);
         var deck = await LoadDeckAsync(id, cancellationToken);
         ExecuteDomain(() => deck.Rename(command.Name));
+        await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
+        return ToView(deck);
+    }
+
+    public async Task<DeckView> SetDeckTopicLabelsAsync(
+        Guid id,
+        SetDeckTopicLabelsCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var deck = await LoadDeckAsync(id, cancellationToken);
+        ExecuteDomain(() => deck.ReplaceTopicLabels(command.TopicLabels));
         await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
         return ToView(deck);
     }
@@ -235,7 +247,7 @@ public sealed class ContentManagementService
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
-        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name);
+        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name, snapshot.TopicLabels);
         foreach (var learningItemId in snapshot.LearningItemIds)
         {
             deck.AddLearningItem(LearningItemId.From(learningItemId));
@@ -269,7 +281,8 @@ public sealed class ContentManagementService
     private static DeckSnapshot ToSnapshot(Deck deck) => new(
         deck.Id.Value,
         deck.Name,
-        deck.LearningItemIds.Select(x => x.Value).ToArray());
+        deck.LearningItemIds.Select(x => x.Value).ToArray(),
+        deck.TopicLabels.ToArray());
 
     private static LearningItemView ToView(LearningItemSnapshot snapshot) => new(
         snapshot.Id,
@@ -288,9 +301,9 @@ public sealed class ContentManagementService
 
     private static LearningItemView ToView(LearningItem item, IReadOnlyList<Guid> itemSnapshotDeckIds) => ToView(ToSnapshot(item) with { DeckIds = itemSnapshotDeckIds });
 
-    private static DeckView ToView(DeckSnapshot snapshot) => new(snapshot.Id, snapshot.Name, snapshot.LearningItemIds);
+    private static DeckView ToView(DeckSnapshot snapshot) => new(snapshot.Id, snapshot.Name, snapshot.LearningItemIds, snapshot.TopicLabels);
 
-    private static DeckView ToView(Deck deck) => new(deck.Id.Value, deck.Name, deck.LearningItemIds.Select(x => x.Value).ToArray());
+    private static DeckView ToView(Deck deck) => new(deck.Id.Value, deck.Name, deck.LearningItemIds.Select(x => x.Value).ToArray(), deck.TopicLabels.ToArray());
 
     private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
     {
