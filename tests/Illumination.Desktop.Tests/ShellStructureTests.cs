@@ -5,19 +5,25 @@ namespace Illumination.Desktop.Tests;
 public sealed class ShellStructureTests
 {
     [Fact]
-    public void Main_window_is_a_shell_with_explicit_page_views_and_study_default()
+    public void Product_surface_is_the_shell_with_explicit_page_views_and_study_default()
     {
         var root = FindRepositoryRoot();
-        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
-        Assert.DoesNotContain("<TabControl", shell);
-        Assert.Contains("IsVisible=\"{Binding IsStudyPage}\"", shell);
-        Assert.Contains("<desktop:StudyView", shell);
-        Assert.Contains("IsVisible=\"{Binding IsInsightsPage}\"", shell);
-        Assert.Contains("<desktop:InsightsView", shell);
-        Assert.Contains("<desktop:DecksView", shell);
-        Assert.Contains("<desktop:LibraryView", shell);
-        Assert.Contains("<desktop:ImportView", shell);
-        Assert.True(shell.IndexOf("Study", StringComparison.Ordinal) < shell.IndexOf("Decks", StringComparison.Ordinal));
+        var surface = ReadProductSurface(root);
+        var window = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+
+        Assert.DoesNotContain("<TabControl", surface);
+        Assert.Contains("IsVisible=\"{Binding IsStudyPage}\"", surface);
+        Assert.Contains("<desktop:StudyView", surface);
+        Assert.Contains("IsVisible=\"{Binding IsInsightsPage}\"", surface);
+        Assert.Contains("<desktop:InsightsView", surface);
+        Assert.Contains("<desktop:DecksView", surface);
+        Assert.Contains("<desktop:LibraryView", surface);
+        Assert.Contains("<desktop:ImportView", surface);
+        Assert.True(surface.IndexOf("Study", StringComparison.Ordinal) < surface.IndexOf("Decks", StringComparison.Ordinal));
+
+        Assert.Contains("<desktop:IlluminationProductSurface", window);
+        Assert.DoesNotContain("<desktop:StudyView", window);
+        Assert.DoesNotContain("LocalData.DatabaseLocation", window);
 
         var insights = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "InsightsView.axaml"));
         Assert.Contains("SuspendCommand", insights);
@@ -30,10 +36,10 @@ public sealed class ShellStructureTests
     public void Insights_navigation_refreshes_the_derived_read_model_when_opened()
     {
         var root = FindRepositoryRoot();
-        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var surface = ReadProductSurface(root);
         var coherence = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindowViewModel.RuntimeCoherence.cs"));
 
-        Assert.Contains("Command=\"{Binding OpenInsightsCommand}\"", shell);
+        Assert.Contains("Command=\"{Binding OpenInsightsCommand}\"", surface);
         Assert.Contains("SelectedPage = DesktopPage.Insights", coherence);
         Assert.Contains("await Insights.RefreshAsync()", coherence);
     }
@@ -53,22 +59,22 @@ public sealed class ShellStructureTests
     public void Local_data_controls_expose_the_accepted_v08_backup_policy_without_restore_semantics()
     {
         var root = FindRepositoryRoot();
-        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var surface = ReadProductSurface(root);
         var composition = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "DesktopComposition.cs"));
 
-        Assert.Contains("LocalData.DatabaseLocation", shell);
-        Assert.Contains("LocalData.BackupDirectoryInput", shell);
-        Assert.Contains("LocalData.ApplyBackupDirectoryCommand", shell);
-        Assert.Contains("LocalData.ResetBackupDirectoryCommand", shell);
-        Assert.Contains("Backup now", shell);
-        Assert.Contains("Export backup", shell);
-        Assert.Contains("five most recent rolling backups", shell);
-        Assert.Contains("Content imports are backed up before commit", shell);
+        Assert.Contains("LocalData.DatabaseLocation", surface);
+        Assert.Contains("LocalData.BackupDirectoryInput", surface);
+        Assert.Contains("LocalData.ApplyBackupDirectoryCommand", surface);
+        Assert.Contains("LocalData.ResetBackupDirectoryCommand", surface);
+        Assert.Contains("Backup now", surface);
+        Assert.Contains("Export backup", surface);
+        Assert.Contains("five most recent rolling backups", surface);
+        Assert.Contains("Content imports are backed up before commit", surface);
         Assert.Contains("LocalDataSettingsStore", composition);
         Assert.Contains("LocalSqliteAutomaticBackupPolicy", composition);
         Assert.Contains("BackupBeforeContentAcquisitionPersistence", composition);
-        Assert.DoesNotContain("Restore backup", shell);
-        Assert.DoesNotContain("pending restore", shell, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Restore backup", surface);
+        Assert.DoesNotContain("pending restore", surface, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("LocalSqliteRestoreService", composition);
         Assert.False(File.Exists(Path.Combine(root, "src", "Illumination.Infrastructure", "Persistence", "LocalSqliteRestoreService.cs")));
     }
@@ -82,6 +88,9 @@ public sealed class ShellStructureTests
         Assert.Contains("DragDrop.Drop=\"OnBundleDrop\"", import);
         Assert.Contains("DragDrop.DragOver=\"OnBundleDragOver\"", import);
     }
+
+    private static string ReadProductSurface(string root) =>
+        File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "IlluminationProductSurface.axaml"));
 
     private static string FindRepositoryRoot()
     {
