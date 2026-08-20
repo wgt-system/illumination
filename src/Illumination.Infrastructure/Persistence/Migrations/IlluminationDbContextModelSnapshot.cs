@@ -72,6 +72,25 @@ namespace Illumination.Infrastructure.Persistence.Migrations
                     b.ToTable("AnswerChoices", (string)null);
                 });
 
+            modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckLearningActivityProfileRecord", b =>
+                {
+                    b.Property<Guid>("DeckId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("DeckId");
+
+                    b.Property<string>("Profile")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Profile");
+
+                    b.HasKey("DeckId", "Profile");
+
+                    b.HasIndex("Profile")
+                        .HasDatabaseName("IX_DeckLearningActivityProfiles_Profile");
+
+                    b.ToTable("DeckLearningActivityProfiles", (string)null);
+                });
+
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckLearningItemRecord", b =>
                 {
                     b.Property<Guid>("DeckId")
@@ -505,6 +524,17 @@ namespace Illumination.Infrastructure.Persistence.Migrations
                     b.Navigation("LearningItem");
                 });
 
+            modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckLearningActivityProfileRecord", b =>
+                {
+                    b.HasOne("Illumination.Infrastructure.Persistence.DeckRecord", "Deck")
+                        .WithMany("LearningActivityProfiles")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deck");
+                });
+
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckLearningItemRecord", b =>
                 {
                     b.HasOne("Illumination.Infrastructure.Persistence.DeckRecord", "Deck")
@@ -635,6 +665,8 @@ namespace Illumination.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckRecord", b =>
                 {
+                    b.Navigation("LearningActivityProfiles");
+
                     b.Navigation("Memberships");
 
                     b.Navigation("TopicLabels");
