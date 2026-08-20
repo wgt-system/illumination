@@ -5,19 +5,30 @@ namespace Illumination.Desktop.Tests;
 public sealed class ShellUxStructureTests
 {
     [Fact]
-    public void Shell_keeps_primary_navigation_separate_from_local_data_maintenance()
+    public void Product_surface_keeps_primary_navigation_separate_from_local_data_maintenance()
     {
         var root = FindRepositoryRoot();
-        var shell = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+        var surface = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "IlluminationProductSurface.axaml"));
 
-        Assert.Contains("Content=\"Study\"", shell);
-        Assert.Contains("Content=\"Decks\"", shell);
-        Assert.Contains("Content=\"Insights\"", shell);
-        Assert.Contains("Content=\"Library\"", shell);
-        Assert.Contains("Content=\"Generate / Import\"", shell);
-        Assert.Contains("Advanced: local data", shell);
-        Assert.Contains("Maintenance controls for the local SQLite database", shell);
-        Assert.Equal(1, CountOccurrences(shell, "{Binding StatusMessage}"));
+        Assert.Contains("Content=\"Study\"", surface);
+        Assert.Contains("Content=\"Decks\"", surface);
+        Assert.Contains("Content=\"Insights\"", surface);
+        Assert.Contains("Content=\"Library\"", surface);
+        Assert.Contains("Content=\"Generate / Import\"", surface);
+        Assert.Contains("Advanced: local data", surface);
+        Assert.Contains("Maintenance controls for the local SQLite database", surface);
+        Assert.Equal(1, CountOccurrences(surface, "{Binding StatusMessage}"));
+    }
+
+    [Fact]
+    public void Standalone_window_is_only_a_host_for_the_provider_surface()
+    {
+        var root = FindRepositoryRoot();
+        var window = File.ReadAllText(Path.Combine(root, "src", "Illumination.Desktop", "MainWindow.axaml"));
+
+        Assert.Contains("<desktop:IlluminationProductSurface", window);
+        Assert.DoesNotContain("Content=\"Study\"", window);
+        Assert.DoesNotContain("Advanced: local data", window);
     }
 
     private static int CountOccurrences(string value, string token)
