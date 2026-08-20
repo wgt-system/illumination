@@ -15,6 +15,14 @@ public enum LearningItemLifecycle
     Mastered,
 }
 
+public enum DeckLearningActivityProfile
+{
+    GeneralRecall,
+    LanguageLearning,
+    CodingProblemSolving,
+    Geospatial,
+}
+
 public sealed record HintInput(string Text);
 
 public sealed record AnswerChoiceInput(string Text, bool IsCorrect = false, string? Id = null);
@@ -39,11 +47,16 @@ public sealed record UpdateLearningItemCommand(
     IReadOnlyList<string>? AcceptedShortAnswers = null,
     bool LowInteractionEligible = false);
 
-public sealed record CreateDeckCommand(string Name, IReadOnlyList<string>? TopicLabels = null);
+public sealed record CreateDeckCommand(
+    string Name,
+    IReadOnlyList<string>? TopicLabels = null,
+    IReadOnlyList<DeckLearningActivityProfile>? LearningActivityProfiles = null);
 
 public sealed record RenameDeckCommand(string Name);
 
 public sealed record SetDeckTopicLabelsCommand(IReadOnlyList<string> TopicLabels);
+
+public sealed record SetDeckLearningActivityProfilesCommand(IReadOnlyList<DeckLearningActivityProfile> Profiles);
 
 public sealed record LearningItemView(
     Guid Id,
@@ -68,10 +81,16 @@ public sealed record DeckView(
     Guid Id,
     string Name,
     IReadOnlyList<Guid> LearningItemIds,
-    IReadOnlyList<string> TopicLabels)
+    IReadOnlyList<string> TopicLabels,
+    IReadOnlyList<DeckLearningActivityProfile> LearningActivityProfiles)
 {
     public DeckView(Guid id, string name, IReadOnlyList<Guid> learningItemIds)
-        : this(id, name, learningItemIds, [])
+        : this(id, name, learningItemIds, [], [])
+    {
+    }
+
+    public DeckView(Guid id, string name, IReadOnlyList<Guid> learningItemIds, IReadOnlyList<string> topicLabels)
+        : this(id, name, learningItemIds, topicLabels, [])
     {
     }
 }
