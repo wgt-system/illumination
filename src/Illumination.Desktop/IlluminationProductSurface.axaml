@@ -39,7 +39,7 @@
               <TextBlock Text="Database" FontWeight="SemiBold" FontSize="11" />
               <TextBlock Text="{Binding LocalData.DatabaseLocation}" TextWrapping="Wrap" Classes="secondary" />
               <TextBlock Text="Rolling backup folder" FontWeight="SemiBold" FontSize="11" Margin="0,3,0,0" />
-              <TextBox Text="{Binding LocalData.BackupDirectoryInput}" Watermark="Local backup folder" FontSize="11" />
+              <TextBox Text="{Binding LocalData.BackupDirectoryInput}" PlaceholderText="Local backup folder" FontSize="11" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="4" LineSpacing="4">
                 <Button Content="Apply" Command="{Binding LocalData.ApplyBackupDirectoryCommand}" />
                 <Button Content="Reset" Command="{Binding LocalData.ResetBackupDirectoryCommand}" />
