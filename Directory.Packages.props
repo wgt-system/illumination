@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Do not inherit a containing WGT checkout's central package version policy. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,7 @@
+<Project>
+  <!--
+    Illumination may be checked out below a WGT host during cross-repository builds.
+    Keep provider build/analyzer policy rooted here instead of inheriting an unrelated
+    parent repository's Directory.Build.props.
+  -->
+</Project>

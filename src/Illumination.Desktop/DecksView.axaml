@@ -36,7 +36,7 @@
                     IsExpanded="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:ZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="6" Margin="0,5,0,0">
               <TextBlock Text="A Deck groups cards for Study. A card may belong to more than one Deck while keeping one shared Learning State." Classes="secondary" TextWrapping="Wrap" />
-              <TextBox Text="{Binding NewDeckName}" Watermark="Deck name" />
+              <TextBox Text="{Binding NewDeckName}" PlaceholderText="Deck name" />
               <Button Content="Create Deck" Command="{Binding CreateDeckCommand}" HorizontalAlignment="Left" />
             </StackPanel>
           </Expander>
@@ -85,7 +85,7 @@
                     IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="8" Margin="0,5,0,0">
               <TextBlock Text="Rename, export or delete the selected Deck. Deleting a Deck removes only the Deck and memberships; its cards, Reviews and Learning State remain." Classes="secondary" TextWrapping="Wrap" />
-              <TextBox Text="{Binding RenameDeckName}" Watermark="New Deck name" />
+              <TextBox Text="{Binding RenameDeckName}" PlaceholderText="New Deck name" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
                 <Button Content="Rename" Command="{Binding RenameDeckCommand}" />
                 <Button Content="Delete Deck" Command="{Binding DeleteSelectedDeckCommand}" />
