@@ -16,6 +16,7 @@ internal static class DeckTopicPersistenceConfiguration
             .HasMaxLength(Deck.MaximumTopicLabelLength)
             .UseCollation("NOCASE")
             .IsRequired();
+        labels.HasIndex(x => x.Label).HasDatabaseName("IX_DeckTopicLabels_Label");
 
         modelBuilder.Entity<DeckRecord>()
             .HasMany(x => x.TopicLabels)
