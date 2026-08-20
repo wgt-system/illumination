@@ -72,12 +72,20 @@ public static class DomainPersistenceMapper
         {
             DeckId = record.DeckId, LearningItemId = id.Value,
         }));
+        record.TopicLabels.AddRange(deck.TopicLabels.Select(label => new DeckTopicLabelRecord
+        {
+            DeckId = record.DeckId,
+            Label = label,
+        }));
         return record;
     }
 
     public static Deck ToDomain(DeckRecord record)
     {
-        var deck = Deck.Create(DeckId.From(record.DeckId), record.Name);
+        var deck = Deck.Create(
+            DeckId.From(record.DeckId),
+            record.Name,
+            record.TopicLabels.OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase).Select(x => x.Label));
         foreach (var membership in record.Memberships.OrderBy(x => x.LearningItemId))
         {
             deck.AddLearningItem(LearningItemId.From(membership.LearningItemId));
