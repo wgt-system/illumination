@@ -73,16 +73,19 @@ public class ContentManagementPersistenceTests
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
         await using var factory = new FixedDbContextFactory(connection);
+        var deckId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         await using (var setup = await factory.CreateDbContextAsync())
         {
-            await setup.Database.MigrateAsync("20260819000000_AddLearningGenerationProfile");
-            setup.Decks.Add(new DeckRecord { DeckId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), Name = "Existing" });
+            var migrations = (await setup.Database.GetMigrationsAsync()).ToArray();
+            Assert.EndsWith("AddDeckTopicLabels", Assert.IsType<string>(migrations[^1]));
+            await setup.Database.MigrateAsync(migrations[^2]);
+            setup.Decks.Add(new DeckRecord { DeckId = deckId, Name = "Existing" });
             await setup.SaveChangesAsync();
             await setup.Database.MigrateAsync();
         }
 
         var service = new ContentManagementService(new EfCoreContentPersistence(factory), TimeProvider.System);
-        var migrated = await service.GetDeckAsync(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        var migrated = await service.GetDeckAsync(deckId);
 
         Assert.Empty(migrated.TopicLabels);
     }
