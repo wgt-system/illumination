@@ -77,6 +77,11 @@ public static class DomainPersistenceMapper
             DeckId = record.DeckId,
             Label = label,
         }));
+        record.LearningActivityProfiles.AddRange(deck.LearningActivityProfiles.Select(profile => new DeckLearningActivityProfileRecord
+        {
+            DeckId = record.DeckId,
+            Profile = profile,
+        }));
         return record;
     }
 
@@ -85,7 +90,8 @@ public static class DomainPersistenceMapper
         var deck = Deck.Create(
             DeckId.From(record.DeckId),
             record.Name,
-            record.TopicLabels.OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase).Select(x => x.Label));
+            record.TopicLabels.OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase).Select(x => x.Label),
+            record.LearningActivityProfiles.OrderBy(x => x.Profile).Select(x => x.Profile));
         foreach (var membership in record.Memberships.OrderBy(x => x.LearningItemId))
         {
             deck.AddLearningItem(LearningItemId.From(membership.LearningItemId));
