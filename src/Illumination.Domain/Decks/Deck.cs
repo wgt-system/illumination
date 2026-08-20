@@ -8,13 +8,19 @@ public sealed class Deck
 
     private readonly HashSet<LearningItemId> _learningItemIds = [];
     private readonly HashSet<string> _topicLabels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<LearningActivityProfile> _learningActivityProfiles = [];
 
-    private Deck(DeckId id, string name, IEnumerable<string>? topicLabels = null)
+    private Deck(
+        DeckId id,
+        string name,
+        IEnumerable<string>? topicLabels = null,
+        IEnumerable<LearningActivityProfile>? learningActivityProfiles = null)
     {
         DomainName.RequireNonWhitespace(name, nameof(name));
         Id = id;
         Name = name;
         ReplaceTopicLabels(topicLabels);
+        ReplaceLearningActivityProfiles(learningActivityProfiles);
     }
 
     public DeckId Id { get; }
@@ -27,9 +33,22 @@ public sealed class Deck
         .OrderBy(label => label, StringComparer.OrdinalIgnoreCase)
         .ToArray();
 
-    public static Deck Create(string name, IEnumerable<string>? topicLabels = null) => new(DeckId.New(), name, topicLabels);
+    public IReadOnlyCollection<LearningActivityProfile> LearningActivityProfiles => _learningActivityProfiles
+        .OrderBy(profile => profile)
+        .ToArray();
 
-    public static Deck Create(DeckId id, string name, IEnumerable<string>? topicLabels = null) => new(id, name, topicLabels);
+    public static Deck Create(
+        string name,
+        IEnumerable<string>? topicLabels = null,
+        IEnumerable<LearningActivityProfile>? learningActivityProfiles = null) =>
+        new(DeckId.New(), name, topicLabels, learningActivityProfiles);
+
+    public static Deck Create(
+        DeckId id,
+        string name,
+        IEnumerable<string>? topicLabels = null,
+        IEnumerable<LearningActivityProfile>? learningActivityProfiles = null) =>
+        new(id, name, topicLabels, learningActivityProfiles);
 
     public void Rename(string name)
     {
@@ -47,6 +66,17 @@ public sealed class Deck
         _topicLabels.Clear();
         foreach (var label in normalized)
             _topicLabels.Add(label);
+    }
+
+    public void ReplaceLearningActivityProfiles(IEnumerable<LearningActivityProfile>? profiles)
+    {
+        var normalized = (profiles ?? []).Distinct().ToArray();
+        if (normalized.Any(profile => !Enum.IsDefined(profile)))
+            throw new ArgumentOutOfRangeException(nameof(profiles), "Unsupported Deck learning activity profile.");
+
+        _learningActivityProfiles.Clear();
+        foreach (var profile in normalized)
+            _learningActivityProfiles.Add(profile);
     }
 
     public void AddLearningItem(LearningItemId learningItemId)
