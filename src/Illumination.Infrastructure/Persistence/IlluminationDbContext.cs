@@ -11,6 +11,7 @@ public class IlluminationDbContext(DbContextOptions<IlluminationDbContext> optio
     public DbSet<DeckRecord> Decks => Set<DeckRecord>();
     public DbSet<DeckLearningItemRecord> DeckLearningItems => Set<DeckLearningItemRecord>();
     public DbSet<DeckTopicLabelRecord> DeckTopicLabels => Set<DeckTopicLabelRecord>();
+    public DbSet<DeckLearningActivityProfileRecord> DeckLearningActivityProfiles => Set<DeckLearningActivityProfileRecord>();
     public DbSet<ReviewRecord> Reviews => Set<ReviewRecord>();
     public DbSet<StudySessionRecord> StudySessions => Set<StudySessionRecord>();
     public DbSet<StudySessionDeckRecord> StudySessionDecks => Set<StudySessionDeckRecord>();
@@ -26,5 +27,6 @@ public class IlluminationDbContext(DbContextOptions<IlluminationDbContext> optio
     {
         PersistenceModelConfiguration.Configure(modelBuilder);
         DeckTopicPersistenceConfiguration.Configure(modelBuilder);
+        DeckLearningActivityProfilePersistenceConfiguration.Configure(modelBuilder);
     }
 }

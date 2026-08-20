@@ -101,6 +101,27 @@
                       CommandParameter="{Binding #DeckTopicLabelsEditor.Text}"
                       HorizontalAlignment="Left" />
 
+              <TextBlock Text="Learning profiles" FontWeight="SemiBold" Margin="0,4,0,0" />
+              <TextBlock Text="Optional, composable activity facets. These describe how the Deck may be learned; they are separate from subject topics and from observed learning evidence." Classes="secondary" TextWrapping="Wrap" />
+              <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6">
+                <CheckBox Content="General recall"
+                          IsChecked="{Binding SelectedDeck.LearningActivityProfiles, Converter={x:Static desktop:LearningActivityProfilesContainsConverter.Instance}, ConverterParameter=GeneralRecall, Mode=OneWay}"
+                          Command="{Binding ToggleSelectedDeckLearningActivityProfileCommand}"
+                          CommandParameter="GeneralRecall" />
+                <CheckBox Content="Language learning"
+                          IsChecked="{Binding SelectedDeck.LearningActivityProfiles, Converter={x:Static desktop:LearningActivityProfilesContainsConverter.Instance}, ConverterParameter=LanguageLearning, Mode=OneWay}"
+                          Command="{Binding ToggleSelectedDeckLearningActivityProfileCommand}"
+                          CommandParameter="LanguageLearning" />
+                <CheckBox Content="Coding / problem solving"
+                          IsChecked="{Binding SelectedDeck.LearningActivityProfiles, Converter={x:Static desktop:LearningActivityProfilesContainsConverter.Instance}, ConverterParameter=CodingProblemSolving, Mode=OneWay}"
+                          Command="{Binding ToggleSelectedDeckLearningActivityProfileCommand}"
+                          CommandParameter="CodingProblemSolving" />
+                <CheckBox Content="Geospatial"
+                          IsChecked="{Binding SelectedDeck.LearningActivityProfiles, Converter={x:Static desktop:LearningActivityProfilesContainsConverter.Instance}, ConverterParameter=Geospatial, Mode=OneWay}"
+                          Command="{Binding ToggleSelectedDeckLearningActivityProfileCommand}"
+                          CommandParameter="Geospatial" />
+              </WrapPanel>
+
               <TextBlock Text="Portable content" FontWeight="SemiBold" Margin="0,4,0,0" />
               <TextBlock Text="Content Bundle export contains the Deck and its cards. Learning progress and Review history stay in the local database." Classes="secondary" TextWrapping="Wrap" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">

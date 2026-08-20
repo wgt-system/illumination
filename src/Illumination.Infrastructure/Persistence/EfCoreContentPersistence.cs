@@ -59,6 +59,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
             .AsNoTracking()
             .Include(x => x.Memberships)
             .Include(x => x.TopicLabels)
+            .Include(x => x.LearningActivityProfiles)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.DeckId)
             .ToArrayAsync(cancellationToken);
@@ -139,6 +140,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
             .AsNoTracking()
             .Include(x => x.Memberships)
             .Include(x => x.TopicLabels)
+            .Include(x => x.LearningActivityProfiles)
             .SingleOrDefaultAsync(x => x.DeckId == id, cancellationToken);
 
         return record is null ? null : ToSnapshot(record);
@@ -151,6 +153,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         var existing = await context.Decks
             .Include(x => x.Memberships)
             .Include(x => x.TopicLabels)
+            .Include(x => x.LearningActivityProfiles)
             .SingleOrDefaultAsync(x => x.DeckId == snapshot.Id, cancellationToken);
 
         var replacement = DomainPersistenceMapper.ToRecord(domainDeck);
@@ -163,10 +166,13 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
             existing.Name = replacement.Name;
             context.DeckLearningItems.RemoveRange(existing.Memberships);
             context.DeckTopicLabels.RemoveRange(existing.TopicLabels);
+            context.DeckLearningActivityProfiles.RemoveRange(existing.LearningActivityProfiles);
             existing.Memberships.Clear();
             existing.TopicLabels.Clear();
+            existing.LearningActivityProfiles.Clear();
             existing.Memberships.AddRange(replacement.Memberships);
             existing.TopicLabels.AddRange(replacement.TopicLabels);
+            existing.LearningActivityProfiles.AddRange(replacement.LearningActivityProfiles);
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -223,6 +229,11 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
             .Select(x => x.Label)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray(),
+        record.LearningActivityProfiles
+            .Select(x => ToApplication(x.Profile))
+            .Distinct()
+            .OrderBy(x => x)
             .ToArray());
 
     private static LearningItem ToDomain(LearningItemSnapshot snapshot) => LearningItem.Restore(
@@ -247,7 +258,11 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
-        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name, snapshot.TopicLabels);
+        var deck = Deck.Create(
+            DeckId.From(snapshot.Id),
+            snapshot.Name,
+            snapshot.TopicLabels,
+            snapshot.LearningActivityProfiles.Select(ToDomain));
         foreach (var learningItemId in snapshot.LearningItemIds)
         {
             deck.AddLearningItem(LearningItemId.From(learningItemId));
@@ -273,6 +288,15 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Domain lifecycle."),
     };
 
+    private static DeckLearningActivityProfile ToApplication(LearningActivityProfile profile) => profile switch
+    {
+        LearningActivityProfile.GeneralRecall => DeckLearningActivityProfile.GeneralRecall,
+        LearningActivityProfile.LanguageLearning => DeckLearningActivityProfile.LanguageLearning,
+        LearningActivityProfile.CodingProblemSolving => DeckLearningActivityProfile.CodingProblemSolving,
+        LearningActivityProfile.Geospatial => DeckLearningActivityProfile.Geospatial,
+        _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unsupported Domain Deck learning activity profile."),
+    };
+
     private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
     {
         LearningItemResponseMode.SelfAssessed => ResponseMode.SelfAssessed,
@@ -288,5 +312,14 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         LearningItemLifecycle.Suspended => LearningItemLifecycleState.Suspended,
         LearningItemLifecycle.Mastered => LearningItemLifecycleState.Mastered,
         _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Application lifecycle."),
+    };
+
+    private static LearningActivityProfile ToDomain(DeckLearningActivityProfile profile) => profile switch
+    {
+        DeckLearningActivityProfile.GeneralRecall => LearningActivityProfile.GeneralRecall,
+        DeckLearningActivityProfile.LanguageLearning => LearningActivityProfile.LanguageLearning,
+        DeckLearningActivityProfile.CodingProblemSolving => LearningActivityProfile.CodingProblemSolving,
+        DeckLearningActivityProfile.Geospatial => LearningActivityProfile.Geospatial,
+        _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unsupported Application Deck learning activity profile."),
     };
 }

@@ -1,8 +1,8 @@
 using Illumination.Application.ContentManagement;
+using Illumination.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Illumination.Infrastructure.Persistence;
 using Xunit;
 
 #pragma warning disable xUnit1051
@@ -30,9 +30,16 @@ public class ContentManagementPersistenceTests
             "Solution",
             Hints: [new HintInput("Hint")],
             LowInteractionEligible: true));
-        var deck = await service.CreateDeckAsync(new CreateDeckCommand("Deck", [" Indonesian ", "Geography", "indonesian"]));
+        var deck = await service.CreateDeckAsync(new CreateDeckCommand(
+            "Deck",
+            [" Indonesian ", "Geography", "indonesian"],
+            [DeckLearningActivityProfile.LanguageLearning, DeckLearningActivityProfile.Geospatial]));
         await service.AddLearningItemToDeckAsync(deck.Id, item.Id);
         await service.SetDeckTopicLabelsAsync(deck.Id, new SetDeckTopicLabelsCommand(["Language", "Travel"]));
+        await service.SetDeckLearningActivityProfilesAsync(
+            deck.Id,
+            new SetDeckLearningActivityProfilesCommand(
+                [DeckLearningActivityProfile.GeneralRecall, DeckLearningActivityProfile.LanguageLearning]));
         await service.UpdateLearningItemAsync(item.Id, new UpdateLearningItemCommand(
             "Changed",
             "Changed solution",
@@ -49,14 +56,24 @@ public class ContentManagementPersistenceTests
         Assert.Equal([deck.Id], reloaded.DeckIds);
         Assert.Equal([item.Id], deckView.LearningItemIds);
         Assert.Equal(["Language", "Travel"], deckView.TopicLabels);
+        Assert.Equal(
+            [DeckLearningActivityProfile.GeneralRecall, DeckLearningActivityProfile.LanguageLearning],
+            deckView.LearningActivityProfiles);
         Assert.Equal(deckView.TopicLabels, Assert.Single(listedDecks).TopicLabels);
+        Assert.Equal(deckView.LearningActivityProfiles, Assert.Single(listedDecks).LearningActivityProfiles);
         Assert.Equal([item.Id], listedItems.Select(x => x.Id));
         Assert.Equal([deck.Id], listedDecks.Select(x => x.Id));
 
-        await using (var verifyTopics = await factory.CreateDbContextAsync())
+        await using (var verifyFacets = await factory.CreateDbContextAsync())
         {
-            var topicRows = await verifyTopics.DeckTopicLabels.AsNoTracking().OrderBy(x => x.Label).ToArrayAsync();
+            var topicRows = await verifyFacets.DeckTopicLabels.AsNoTracking().OrderBy(x => x.Label).ToArrayAsync();
             Assert.Equal(["Language", "Travel"], topicRows.Select(x => x.Label));
+
+            var profileRows = await verifyFacets.DeckLearningActivityProfiles.AsNoTracking().OrderBy(x => x.Profile).ToArrayAsync();
+            Assert.Equal(2, profileRows.Length);
+            Assert.Equal(
+                ["GeneralRecall", "LanguageLearning"],
+                profileRows.Select(x => x.Profile.ToString()));
         }
 
         await service.DeleteDeckAsync(deck.Id);
@@ -65,6 +82,7 @@ public class ContentManagementPersistenceTests
         await Assert.ThrowsAsync<ContentNotFoundException>(() => service.GetDeckAsync(deck.Id));
         await using var verifyDelete = await factory.CreateDbContextAsync();
         Assert.Empty(await verifyDelete.DeckTopicLabels.ToListAsync());
+        Assert.Empty(await verifyDelete.DeckLearningActivityProfiles.ToListAsync());
     }
 
     [Fact]
@@ -77,8 +95,9 @@ public class ContentManagementPersistenceTests
         await using (var setup = await factory.CreateDbContextAsync())
         {
             var migrations = setup.Database.GetMigrations().ToArray();
-            Assert.EndsWith("AddDeckTopicLabels", Assert.IsType<string>(migrations[^1]));
-            await setup.Database.MigrateAsync(migrations[^2]);
+            var topicMigrationIndex = Array.FindIndex(migrations, migration => migration.EndsWith("AddDeckTopicLabels", StringComparison.Ordinal));
+            Assert.True(topicMigrationIndex > 0);
+            await setup.Database.MigrateAsync(migrations[topicMigrationIndex - 1]);
             setup.Decks.Add(new DeckRecord { DeckId = deckId, Name = "Existing" });
             await setup.SaveChangesAsync();
             await setup.Database.MigrateAsync();
@@ -88,6 +107,31 @@ public class ContentManagementPersistenceTests
         var migrated = await service.GetDeckAsync(deckId);
 
         Assert.Empty(migrated.TopicLabels);
+    }
+
+    [Fact]
+    public async Task Existing_decks_migrate_to_learning_activity_profiles_without_inventing_a_default()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var factory = new FixedDbContextFactory(connection);
+        var deckId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        await using (var setup = await factory.CreateDbContextAsync())
+        {
+            var migrations = setup.Database.GetMigrations().ToArray();
+            Assert.EndsWith("AddDeckLearningActivityProfiles", Assert.IsType<string>(migrations[^1]));
+            await setup.Database.MigrateAsync(migrations[^2]);
+            setup.Decks.Add(new DeckRecord { DeckId = deckId, Name = "Existing profile-less Deck" });
+            await setup.SaveChangesAsync();
+            await setup.Database.MigrateAsync();
+        }
+
+        var service = new ContentManagementService(new EfCoreContentPersistence(factory), TimeProvider.System);
+        var migrated = await service.GetDeckAsync(deckId);
+
+        Assert.Empty(migrated.LearningActivityProfiles);
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.DeckLearningActivityProfiles.Where(x => x.DeckId == deckId).ToArrayAsync());
     }
 
     [Fact]
@@ -124,6 +168,28 @@ public class ContentManagementPersistenceTests
 
         await using var verify = await factory.CreateDbContextAsync();
         Assert.Empty(await verify.LearningItems.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Invalid_Deck_learning_activity_profile_is_rejected_before_persistence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var factory = new FixedDbContextFactory(connection);
+        await using (var setup = await factory.CreateDbContextAsync())
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        var service = new ContentManagementService(new EfCoreContentPersistence(factory), TimeProvider.System);
+
+        await Assert.ThrowsAsync<ContentValidationException>(() => service.CreateDeckAsync(new CreateDeckCommand(
+            "Invalid",
+            LearningActivityProfiles: [(DeckLearningActivityProfile)999])));
+
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.Decks.ToListAsync());
+        Assert.Empty(await verify.DeckLearningActivityProfiles.ToListAsync());
     }
 
     [Fact]

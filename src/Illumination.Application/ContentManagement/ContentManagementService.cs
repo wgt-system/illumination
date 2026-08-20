@@ -98,7 +98,10 @@ public sealed class ContentManagementService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var deck = ExecuteDomain(() => Deck.Create(command.Name, command.TopicLabels));
+        var deck = ExecuteDomain(() => Deck.Create(
+            command.Name,
+            command.TopicLabels,
+            command.LearningActivityProfiles?.Select(ToDomain)));
         await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
         return ToView(deck);
     }
@@ -136,6 +139,18 @@ public sealed class ContentManagementService
         ArgumentNullException.ThrowIfNull(command);
         var deck = await LoadDeckAsync(id, cancellationToken);
         ExecuteDomain(() => deck.ReplaceTopicLabels(command.TopicLabels));
+        await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
+        return ToView(deck);
+    }
+
+    public async Task<DeckView> SetDeckLearningActivityProfilesAsync(
+        Guid id,
+        SetDeckLearningActivityProfilesCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var deck = await LoadDeckAsync(id, cancellationToken);
+        ExecuteDomain(() => deck.ReplaceLearningActivityProfiles(command.Profiles.Select(ToDomain)));
         await _persistence.SaveDeckAsync(ToSnapshot(deck), cancellationToken);
         return ToView(deck);
     }
@@ -247,7 +262,11 @@ public sealed class ContentManagementService
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
-        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name, snapshot.TopicLabels);
+        var deck = Deck.Create(
+            DeckId.From(snapshot.Id),
+            snapshot.Name,
+            snapshot.TopicLabels,
+            snapshot.LearningActivityProfiles.Select(ToDomain));
         foreach (var learningItemId in snapshot.LearningItemIds)
         {
             deck.AddLearningItem(LearningItemId.From(learningItemId));
@@ -282,7 +301,8 @@ public sealed class ContentManagementService
         deck.Id.Value,
         deck.Name,
         deck.LearningItemIds.Select(x => x.Value).ToArray(),
-        deck.TopicLabels.ToArray());
+        deck.TopicLabels.ToArray(),
+        deck.LearningActivityProfiles.Select(ToApplication).ToArray());
 
     private static LearningItemView ToView(LearningItemSnapshot snapshot) => new(
         snapshot.Id,
@@ -301,9 +321,19 @@ public sealed class ContentManagementService
 
     private static LearningItemView ToView(LearningItem item, IReadOnlyList<Guid> itemSnapshotDeckIds) => ToView(ToSnapshot(item) with { DeckIds = itemSnapshotDeckIds });
 
-    private static DeckView ToView(DeckSnapshot snapshot) => new(snapshot.Id, snapshot.Name, snapshot.LearningItemIds, snapshot.TopicLabels);
+    private static DeckView ToView(DeckSnapshot snapshot) => new(
+        snapshot.Id,
+        snapshot.Name,
+        snapshot.LearningItemIds,
+        snapshot.TopicLabels,
+        snapshot.LearningActivityProfiles);
 
-    private static DeckView ToView(Deck deck) => new(deck.Id.Value, deck.Name, deck.LearningItemIds.Select(x => x.Value).ToArray(), deck.TopicLabels.ToArray());
+    private static DeckView ToView(Deck deck) => new(
+        deck.Id.Value,
+        deck.Name,
+        deck.LearningItemIds.Select(x => x.Value).ToArray(),
+        deck.TopicLabels.ToArray(),
+        deck.LearningActivityProfiles.Select(ToApplication).ToArray());
 
     private static ResponseMode ToDomain(LearningItemResponseMode mode) => mode switch
     {
@@ -322,6 +352,15 @@ public sealed class ContentManagementService
         _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Learning Item lifecycle."),
     };
 
+    private static LearningActivityProfile ToDomain(DeckLearningActivityProfile profile) => profile switch
+    {
+        DeckLearningActivityProfile.GeneralRecall => LearningActivityProfile.GeneralRecall,
+        DeckLearningActivityProfile.LanguageLearning => LearningActivityProfile.LanguageLearning,
+        DeckLearningActivityProfile.CodingProblemSolving => LearningActivityProfile.CodingProblemSolving,
+        DeckLearningActivityProfile.Geospatial => LearningActivityProfile.Geospatial,
+        _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unsupported Deck learning activity profile."),
+    };
+
     private static LearningItemResponseMode ToApplication(ResponseMode mode) => mode switch
     {
         ResponseMode.SelfAssessed => LearningItemResponseMode.SelfAssessed,
@@ -337,6 +376,15 @@ public sealed class ContentManagementService
         LearningItemLifecycleState.Suspended => LearningItemLifecycle.Suspended,
         LearningItemLifecycleState.Mastered => LearningItemLifecycle.Mastered,
         _ => throw new ArgumentOutOfRangeException(nameof(lifecycle), lifecycle, "Unsupported Domain lifecycle."),
+    };
+
+    private static DeckLearningActivityProfile ToApplication(LearningActivityProfile profile) => profile switch
+    {
+        LearningActivityProfile.GeneralRecall => DeckLearningActivityProfile.GeneralRecall,
+        LearningActivityProfile.LanguageLearning => DeckLearningActivityProfile.LanguageLearning,
+        LearningActivityProfile.CodingProblemSolving => DeckLearningActivityProfile.CodingProblemSolving,
+        LearningActivityProfile.Geospatial => DeckLearningActivityProfile.Geospatial,
+        _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unsupported Domain Deck learning activity profile."),
     };
 
     private static IEnumerable<Hint>? ToDomainHints(IReadOnlyList<HintInput>? hints) => hints?.Select(x => new Hint(x.Text));

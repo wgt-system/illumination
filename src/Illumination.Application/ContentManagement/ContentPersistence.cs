@@ -70,10 +70,16 @@ public sealed record DeckSnapshot(
     Guid Id,
     string Name,
     IReadOnlyList<Guid> LearningItemIds,
-    IReadOnlyList<string> TopicLabels)
+    IReadOnlyList<string> TopicLabels,
+    IReadOnlyList<DeckLearningActivityProfile> LearningActivityProfiles)
 {
     public DeckSnapshot(Guid id, string name, IReadOnlyList<Guid> learningItemIds)
-        : this(id, name, learningItemIds, [])
+        : this(id, name, learningItemIds, [], [])
+    {
+    }
+
+    public DeckSnapshot(Guid id, string name, IReadOnlyList<Guid> learningItemIds, IReadOnlyList<string> topicLabels)
+        : this(id, name, learningItemIds, topicLabels, [])
     {
     }
 }

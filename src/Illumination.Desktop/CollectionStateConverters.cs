@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using Avalonia.Data.Converters;
+using Illumination.Application.ContentManagement;
 
 namespace Illumination.Desktop;
 
@@ -56,6 +57,26 @@ public sealed class TopicLabelsToTextConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is IEnumerable<string> labels ? string.Join(", ", labels) : string.Empty;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class LearningActivityProfilesContainsConverter : IValueConverter
+{
+    public static LearningActivityProfilesContainsConverter Instance { get; } = new();
+
+    private LearningActivityProfilesContainsConverter() { }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not IEnumerable<DeckLearningActivityProfile> profiles ||
+            parameter is not string profileName ||
+            !Enum.TryParse<DeckLearningActivityProfile>(profileName, out var profile))
+            return false;
+
+        return profiles.Contains(profile);
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
