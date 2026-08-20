@@ -8,5 +8,5 @@
         Height="740"
         MinWidth="920"
         MinHeight="620">
-  <desktop:IlluminationProductSurface />
+  <desktop:IlluminationProductSurface x:Name="ProductSurface" />
 </Window>
