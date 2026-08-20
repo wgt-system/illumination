@@ -76,7 +76,7 @@ public class ContentManagementPersistenceTests
         var deckId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         await using (var setup = await factory.CreateDbContextAsync())
         {
-            var migrations = (await setup.Database.GetMigrationsAsync()).ToArray();
+            var migrations = setup.Database.GetMigrations().ToArray();
             Assert.EndsWith("AddDeckTopicLabels", Assert.IsType<string>(migrations[^1]));
             await setup.Database.MigrateAsync(migrations[^2]);
             setup.Decks.Add(new DeckRecord { DeckId = deckId, Name = "Existing" });
