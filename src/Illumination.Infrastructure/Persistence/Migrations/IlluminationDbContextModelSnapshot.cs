@@ -105,6 +105,27 @@ namespace Illumination.Infrastructure.Persistence.Migrations
                     b.ToTable("Decks", (string)null);
                 });
 
+            modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckTopicLabelRecord", b =>
+                {
+                    b.Property<Guid>("DeckId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("DeckId");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE")
+                        .HasColumnName("Label");
+
+                    b.HasKey("DeckId", "Label");
+
+                    b.HasIndex("Label")
+                        .HasDatabaseName("IX_DeckTopicLabels_Label");
+
+                    b.ToTable("DeckTopicLabels", (string)null);
+                });
+
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.HintRecord", b =>
                 {
                     b.Property<Guid>("LearningItemId")
@@ -503,6 +524,17 @@ namespace Illumination.Infrastructure.Persistence.Migrations
                     b.Navigation("LearningItem");
                 });
 
+            modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckTopicLabelRecord", b =>
+                {
+                    b.HasOne("Illumination.Infrastructure.Persistence.DeckRecord", "Deck")
+                        .WithMany("TopicLabels")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deck");
+                });
+
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.HintRecord", b =>
                 {
                     b.HasOne("Illumination.Infrastructure.Persistence.LearningItemRecord", "LearningItem")
@@ -604,6 +636,8 @@ namespace Illumination.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.DeckRecord", b =>
                 {
                     b.Navigation("Memberships");
+
+                    b.Navigation("TopicLabels");
                 });
 
             modelBuilder.Entity("Illumination.Infrastructure.Persistence.LearningItemRecord", b =>

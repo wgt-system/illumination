@@ -15,7 +15,7 @@ public class BootstrapTests
 
         using var context = new IlluminationDbContext(options);
 
-        Assert.Equal(16, context.Model.GetEntityTypes().Count());
+        Assert.Equal(17, context.Model.GetEntityTypes().Count());
     }
 
     [Fact]

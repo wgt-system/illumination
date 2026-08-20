@@ -39,9 +39,11 @@ public sealed record UpdateLearningItemCommand(
     IReadOnlyList<string>? AcceptedShortAnswers = null,
     bool LowInteractionEligible = false);
 
-public sealed record CreateDeckCommand(string Name);
+public sealed record CreateDeckCommand(string Name, IReadOnlyList<string>? TopicLabels = null);
 
 public sealed record RenameDeckCommand(string Name);
+
+public sealed record SetDeckTopicLabelsCommand(IReadOnlyList<string> TopicLabels);
 
 public sealed record LearningItemView(
     Guid Id,
@@ -62,7 +64,17 @@ public sealed record HintView(string Text);
 
 public sealed record AnswerChoiceView(string Text, bool IsCorrect, string Id = "");
 
-public sealed record DeckView(Guid Id, string Name, IReadOnlyList<Guid> LearningItemIds);
+public sealed record DeckView(
+    Guid Id,
+    string Name,
+    IReadOnlyList<Guid> LearningItemIds,
+    IReadOnlyList<string> TopicLabels)
+{
+    public DeckView(Guid id, string name, IReadOnlyList<Guid> learningItemIds)
+        : this(id, name, learningItemIds, [])
+    {
+    }
+}
 
 public sealed class ContentNotFoundException : Exception
 {

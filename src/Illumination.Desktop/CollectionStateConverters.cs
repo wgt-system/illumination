@@ -47,3 +47,16 @@ public sealed class EnumerableIsEmptyConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+public sealed class TopicLabelsToTextConverter : IValueConverter
+{
+    public static TopicLabelsToTextConverter Instance { get; } = new();
+
+    private TopicLabelsToTextConverter() { }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is IEnumerable<string> labels ? string.Join(", ", labels) : string.Empty;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

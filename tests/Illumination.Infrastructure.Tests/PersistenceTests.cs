@@ -25,7 +25,7 @@ public class PersistenceTests
         var tableNames = new List<string>();
         while (reader.Read()) tableNames.Add(reader.GetString(0));
 
-        Assert.Equal(["AcceptedShortAnswers", "AnswerChoices", "DeckLearningItems", "Decks", "Hints", "ImportProvenance", "LearningItemUserFlags", "LearningItems", "QualityReviews", "Reviews", "StudyPreferences", "StudySessionDecks", "StudySessionQueue", "StudySessionReviews", "StudySessions", "UserFlagDefinitions"], tableNames);
+        Assert.Equal(["AcceptedShortAnswers", "AnswerChoices", "DeckLearningItems", "DeckTopicLabels", "Decks", "Hints", "ImportProvenance", "LearningItemUserFlags", "LearningItems", "QualityReviews", "Reviews", "StudyPreferences", "StudySessionDecks", "StudySessionQueue", "StudySessionReviews", "StudySessions", "UserFlagDefinitions"], tableNames);
     }
 
     [Fact]

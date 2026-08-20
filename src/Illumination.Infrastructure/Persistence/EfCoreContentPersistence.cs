@@ -58,6 +58,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         var records = await context.Decks
             .AsNoTracking()
             .Include(x => x.Memberships)
+            .Include(x => x.TopicLabels)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.DeckId)
             .ToArrayAsync(cancellationToken);
@@ -137,6 +138,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         var record = await context.Decks
             .AsNoTracking()
             .Include(x => x.Memberships)
+            .Include(x => x.TopicLabels)
             .SingleOrDefaultAsync(x => x.DeckId == id, cancellationToken);
 
         return record is null ? null : ToSnapshot(record);
@@ -148,6 +150,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var existing = await context.Decks
             .Include(x => x.Memberships)
+            .Include(x => x.TopicLabels)
             .SingleOrDefaultAsync(x => x.DeckId == snapshot.Id, cancellationToken);
 
         var replacement = DomainPersistenceMapper.ToRecord(domainDeck);
@@ -159,8 +162,11 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
         {
             existing.Name = replacement.Name;
             context.DeckLearningItems.RemoveRange(existing.Memberships);
+            context.DeckTopicLabels.RemoveRange(existing.TopicLabels);
             existing.Memberships.Clear();
+            existing.TopicLabels.Clear();
             existing.Memberships.AddRange(replacement.Memberships);
+            existing.TopicLabels.AddRange(replacement.TopicLabels);
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -212,7 +218,12 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
     private static DeckSnapshot ToSnapshot(DeckRecord record) => new(
         record.DeckId,
         record.Name,
-        record.Memberships.Select(x => x.LearningItemId).Distinct().ToArray());
+        record.Memberships.Select(x => x.LearningItemId).Distinct().ToArray(),
+        record.TopicLabels
+            .Select(x => x.Label)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray());
 
     private static LearningItem ToDomain(LearningItemSnapshot snapshot) => LearningItem.Restore(
         LearningItemId.From(snapshot.Id),
@@ -236,7 +247,7 @@ public sealed class EfCoreContentPersistence : IContentPersistence, IUserFlagDef
 
     private static Deck ToDomain(DeckSnapshot snapshot)
     {
-        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name);
+        var deck = Deck.Create(DeckId.From(snapshot.Id), snapshot.Name, snapshot.TopicLabels);
         foreach (var learningItemId in snapshot.LearningItemIds)
         {
             deck.AddLearningItem(LearningItemId.From(learningItemId));

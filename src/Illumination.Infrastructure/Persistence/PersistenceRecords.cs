@@ -97,6 +97,7 @@ public sealed class DeckRecord
     public Guid DeckId { get; set; }
     public string Name { get; set; } = null!;
     public List<DeckLearningItemRecord> Memberships { get; } = [];
+    public List<DeckTopicLabelRecord> TopicLabels { get; } = [];
 }
 
 public sealed class DeckLearningItemRecord
@@ -105,6 +106,13 @@ public sealed class DeckLearningItemRecord
     public Guid LearningItemId { get; set; }
     public DeckRecord Deck { get; set; } = null!;
     public LearningItemRecord LearningItem { get; set; } = null!;
+}
+
+public sealed class DeckTopicLabelRecord
+{
+    public Guid DeckId { get; set; }
+    public string Label { get; set; } = null!;
+    public DeckRecord Deck { get; set; } = null!;
 }
 
 public sealed class ReviewRecord

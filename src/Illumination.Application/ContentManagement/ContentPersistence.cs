@@ -66,7 +66,17 @@ public sealed record HintSnapshot(string Text);
 
 public sealed record AnswerChoiceSnapshot(string Text, bool IsCorrect, string Id = "");
 
-public sealed record DeckSnapshot(Guid Id, string Name, IReadOnlyList<Guid> LearningItemIds);
+public sealed record DeckSnapshot(
+    Guid Id,
+    string Name,
+    IReadOnlyList<Guid> LearningItemIds,
+    IReadOnlyList<string> TopicLabels)
+{
+    public DeckSnapshot(Guid id, string name, IReadOnlyList<Guid> learningItemIds)
+        : this(id, name, learningItemIds, [])
+    {
+    }
+}
 
 public enum QualityReviewOutcomeSnapshot { Pass, Warning, NeedsReview }
 

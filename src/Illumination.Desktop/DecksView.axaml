@@ -84,12 +84,23 @@
           <Expander Header="Manage selected Deck" IsExpanded="False"
                     IsVisible="{Binding DeckPresentationItems.Count, Converter={x:Static desktop:NonZeroCountToBooleanConverter.Instance}}">
             <StackPanel Spacing="8" Margin="0,5,0,0">
-              <TextBlock Text="Rename, export or delete the selected Deck. Deleting a Deck removes only the Deck and memberships; its cards, Reviews and Learning State remain." Classes="secondary" TextWrapping="Wrap" />
+              <TextBlock Text="Rename, classify, export or delete the selected Deck. Deleting a Deck removes only the Deck and memberships; its cards, Reviews and Learning State remain." Classes="secondary" TextWrapping="Wrap" />
               <TextBox Text="{Binding RenameDeckName}" Watermark="New Deck name" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
                 <Button Content="Rename" Command="{Binding RenameDeckCommand}" />
                 <Button Content="Delete Deck" Command="{Binding DeleteSelectedDeckCommand}" />
               </WrapPanel>
+
+              <TextBlock Text="Topics" FontWeight="SemiBold" Margin="0,4,0,0" />
+              <TextBlock Text="Optional user-owned labels for subject classification. Separate multiple topics with commas or line breaks; an empty value clears all topics." Classes="secondary" TextWrapping="Wrap" />
+              <TextBox x:Name="DeckTopicLabelsEditor"
+                       Text="{Binding SelectedDeck.TopicLabels, Converter={x:Static desktop:TopicLabelsToTextConverter.Instance}, Mode=OneWay}"
+                       Watermark="e.g. Indonesian, Grammar" />
+              <Button Content="Replace topics"
+                      Command="{Binding ReplaceSelectedDeckTopicsCommand}"
+                      CommandParameter="{Binding #DeckTopicLabelsEditor.Text}"
+                      HorizontalAlignment="Left" />
+
               <TextBlock Text="Portable content" FontWeight="SemiBold" Margin="0,4,0,0" />
               <TextBlock Text="Content Bundle export contains the Deck and its cards. Learning progress and Review history stay in the local database." Classes="secondary" TextWrapping="Wrap" />
               <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">

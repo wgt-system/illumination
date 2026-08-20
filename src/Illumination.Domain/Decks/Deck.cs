@@ -4,13 +4,17 @@ namespace Illumination.Domain.Decks;
 
 public sealed class Deck
 {
-    private readonly HashSet<LearningItemId> _learningItemIds = [];
+    public const int MaximumTopicLabelLength = 80;
 
-    private Deck(DeckId id, string name)
+    private readonly HashSet<LearningItemId> _learningItemIds = [];
+    private readonly HashSet<string> _topicLabels = new(StringComparer.OrdinalIgnoreCase);
+
+    private Deck(DeckId id, string name, IEnumerable<string>? topicLabels = null)
     {
         DomainName.RequireNonWhitespace(name, nameof(name));
         Id = id;
         Name = name;
+        ReplaceTopicLabels(topicLabels);
     }
 
     public DeckId Id { get; }
@@ -19,14 +23,30 @@ public sealed class Deck
 
     public IReadOnlyCollection<LearningItemId> LearningItemIds => _learningItemIds.ToArray();
 
-    public static Deck Create(string name) => new(DeckId.New(), name);
+    public IReadOnlyCollection<string> TopicLabels => _topicLabels
+        .OrderBy(label => label, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
-    public static Deck Create(DeckId id, string name) => new(id, name);
+    public static Deck Create(string name, IEnumerable<string>? topicLabels = null) => new(DeckId.New(), name, topicLabels);
+
+    public static Deck Create(DeckId id, string name, IEnumerable<string>? topicLabels = null) => new(id, name, topicLabels);
 
     public void Rename(string name)
     {
         DomainName.RequireNonWhitespace(name, nameof(name));
         Name = name;
+    }
+
+    public void ReplaceTopicLabels(IEnumerable<string>? topicLabels)
+    {
+        var normalized = (topicLabels ?? [])
+            .Select(NormalizeTopicLabel)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        _topicLabels.Clear();
+        foreach (var label in normalized)
+            _topicLabels.Add(label);
     }
 
     public void AddLearningItem(LearningItemId learningItemId)
@@ -37,5 +57,17 @@ public sealed class Deck
     public void RemoveLearningItem(LearningItemId learningItemId)
     {
         _learningItemIds.Remove(learningItemId);
+    }
+
+    private static string NormalizeTopicLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Deck topic label must not be null, empty, or whitespace.", nameof(value));
+
+        var normalized = value.Trim();
+        if (normalized.Length > MaximumTopicLabelLength)
+            throw new ArgumentException($"Deck topic label must not exceed {MaximumTopicLabelLength} characters.", nameof(value));
+
+        return normalized;
     }
 }

@@ -30,8 +30,9 @@ public class ContentManagementPersistenceTests
             "Solution",
             Hints: [new HintInput("Hint")],
             LowInteractionEligible: true));
-        var deck = await service.CreateDeckAsync(new CreateDeckCommand("Deck"));
+        var deck = await service.CreateDeckAsync(new CreateDeckCommand("Deck", [" Indonesian ", "Geography", "indonesian"]));
         await service.AddLearningItemToDeckAsync(deck.Id, item.Id);
+        await service.SetDeckTopicLabelsAsync(deck.Id, new SetDeckTopicLabelsCommand(["Language", "Travel"]));
         await service.UpdateLearningItemAsync(item.Id, new UpdateLearningItemCommand(
             "Changed",
             "Changed solution",
@@ -47,13 +48,46 @@ public class ContentManagementPersistenceTests
         Assert.True(reloaded.LowInteractionEligible);
         Assert.Equal([deck.Id], reloaded.DeckIds);
         Assert.Equal([item.Id], deckView.LearningItemIds);
+        Assert.Equal(["Language", "Travel"], deckView.TopicLabels);
+        Assert.Equal(deckView.TopicLabels, Assert.Single(listedDecks).TopicLabels);
         Assert.Equal([item.Id], listedItems.Select(x => x.Id));
         Assert.Equal([deck.Id], listedDecks.Select(x => x.Id));
+
+        await using (var verifyTopics = await factory.CreateDbContextAsync())
+        {
+            var topicRows = await verifyTopics.DeckTopicLabels.AsNoTracking().OrderBy(x => x.Label).ToArrayAsync();
+            Assert.Equal(["Language", "Travel"], topicRows.Select(x => x.Label));
+        }
 
         await service.DeleteDeckAsync(deck.Id);
 
         Assert.Equal(item.Id, (await service.GetLearningItemAsync(item.Id)).Id);
         await Assert.ThrowsAsync<ContentNotFoundException>(() => service.GetDeckAsync(deck.Id));
+        await using var verifyDelete = await factory.CreateDbContextAsync();
+        Assert.Empty(await verifyDelete.DeckTopicLabels.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Migrated_existing_decks_start_with_no_invented_topic_labels()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var factory = new FixedDbContextFactory(connection);
+        var deckId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await using (var setup = await factory.CreateDbContextAsync())
+        {
+            var migrations = setup.Database.GetMigrations().ToArray();
+            Assert.EndsWith("AddDeckTopicLabels", Assert.IsType<string>(migrations[^1]));
+            await setup.Database.MigrateAsync(migrations[^2]);
+            setup.Decks.Add(new DeckRecord { DeckId = deckId, Name = "Existing" });
+            await setup.SaveChangesAsync();
+            await setup.Database.MigrateAsync();
+        }
+
+        var service = new ContentManagementService(new EfCoreContentPersistence(factory), TimeProvider.System);
+        var migrated = await service.GetDeckAsync(deckId);
+
+        Assert.Empty(migrated.TopicLabels);
     }
 
     [Fact]
